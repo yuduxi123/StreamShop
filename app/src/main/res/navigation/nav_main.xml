@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/navigation_feed">
+
+    <fragment
+        android:id="@+id/navigation_feed"
+        android:name="com.bytedance.streamshop.ui.feed.FeedFragment"
+        android:label="首页"
+        tools:layout="@layout/fragment_feed" />
+
+    <fragment
+        android:id="@+id/navigation_live"
+        android:name="com.bytedance.streamshop.ui.live.LiveFragment"
+        android:label="直播"
+        tools:layout="@layout/fragment_live" />
+
+    <fragment
+        android:id="@+id/navigation_cart"
+        android:name="com.bytedance.streamshop.ui.cart.CartFragment"
+        android:label="购物车"
+        tools:layout="@layout/fragment_cart" />
+
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.bytedance.streamshop.ui.profile.ProfileFragment"
+        android:label="我的"
+        tools:layout="@layout/fragment_profile" />
+</navigation>

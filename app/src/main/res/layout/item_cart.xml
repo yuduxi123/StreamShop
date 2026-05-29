@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="100dp"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:padding="8dp">
+
+        <!-- Checkbox -->
+        <CheckBox
+            android:id="@+id/cart_item_check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Product thumbnail -->
+        <ImageView
+            android:id="@+id/cart_item_image"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_avatar_placeholder" />
+
+        <!-- Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/cart_item_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="商品名称" />
+
+            <TextView
+                android:id="@+id/cart_item_price"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_gravity="bottom"
+                android:gravity="bottom"
+                android:textColor="#FF3B30"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="¥0" />
+
+        </LinearLayout>
+
+        <!-- Quantity controls (hidden in manage mode) -->
+        <LinearLayout
+            android:id="@+id/cart_item_qty_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:gravity="center">
+
+            <ImageButton
+                android:id="@+id/cart_item_minus"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_minus"
+                android:background="@drawable/bg_qty_btn"
+                android:scaleType="centerInside"
+                android:contentDescription="减" />
+
+            <TextView
+                android:id="@+id/cart_item_quantity"
+                android:layout_width="36dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:textSize="14sp"
+                android:textColor="@android:color/black"
+                android:text="1" />
+
+            <ImageButton
+                android:id="@+id/cart_item_plus"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_plus"
+                android:background="@drawable/bg_qty_btn"
+                android:scaleType="centerInside"
+                android:contentDescription="加" />
+        </LinearLayout>
+
+        <!-- Delete button (visible only in manage mode) -->
+        <ImageButton
+            android:id="@+id/cart_item_delete"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            android:contentDescription="删除"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

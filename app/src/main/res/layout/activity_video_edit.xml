@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5">
+
+    <!-- Top bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:background="@android:color/white"
+        android:paddingHorizontal="4dp">
+
+        <ImageButton
+            android:id="@+id/video_edit_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            android:contentDescription="返回" />
+
+        <TextView
+            android:id="@+id/video_edit_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="新建视频"
+            android:textSize="18sp"
+            android:textColor="@android:color/black"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/video_edit_save"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="保存"
+            android:textSize="13sp"
+            android:backgroundTint="#1a1a2e"
+            android:textColor="@android:color/white"
+            android:paddingHorizontal="16dp" />
+    </LinearLayout>
+
+    <!-- Form -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="视频标题 *"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/video_edit_input_title"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="@android:color/white"
+                android:paddingHorizontal="12dp"
+                android:textSize="14sp"
+                android:hint="请输入视频标题"
+                android:singleLine="true" />
+
+            <!-- Video file picker -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="视频文件 *"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@android:color/white"
+                android:padding="12dp">
+
+                <Button
+                    android:id="@+id/video_edit_pick_video"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="从相册选择视频"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#1a1a2e" />
+
+                <TextView
+                    android:id="@+id/video_edit_video_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="未选择"
+                    android:textSize="12sp"
+                    android:textColor="#999999"
+                    android:visibility="gone" />
+
+                <ProgressBar
+                    android:id="@+id/video_edit_video_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="4dp"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Cover image picker -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="封面图片"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@android:color/white"
+                android:padding="12dp">
+
+                <Button
+                    android:id="@+id/video_edit_pick_cover"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="从相册选择封面"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#4A90D9" />
+
+                <ImageView
+                    android:id="@+id/video_edit_cover_preview"
+                    android:layout_width="120dp"
+                    android:layout_height="160dp"
+                    android:layout_marginTop="8dp"
+                    android:scaleType="centerCrop"
+                    android:background="#F0F0F0"
+                    android:visibility="gone" />
+
+                <ProgressBar
+                    android:id="@+id/video_edit_cover_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="4dp"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Associated Products -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="关联商品"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@android:color/white"
+                android:padding="12dp">
+
+                <Button
+                    android:id="@+id/video_edit_pick_product_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:text="选择商品图片"
+                    android:textSize="13sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#52C41A" />
+
+                <ImageView
+                    android:id="@+id/video_edit_product_preview"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_marginTop="8dp"
+                    android:scaleType="centerCrop"
+                    android:background="#F0F0F0"
+                    android:visibility="gone" />
+
+                <EditText
+                    android:id="@+id/video_edit_product_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#F5F5F5"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp"
+                    android:hint="商品名称"
+                    android:singleLine="true" />
+
+                <EditText
+                    android:id="@+id/video_edit_product_price"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F5F5F5"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp"
+                    android:hint="价格 (¥)"
+                    android:inputType="numberDecimal"
+                    android:singleLine="true" />
+
+                <EditText
+                    android:id="@+id/video_edit_product_stock"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F5F5F5"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp"
+                    android:hint="库存（件数）"
+                    android:inputType="number"
+                    android:singleLine="true" />
+
+                <Button
+                    android:id="@+id/video_edit_add_product"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="8dp"
+                    android:text="+ 添加到此视频"
+                    android:textSize="13sp"
+                    android:textColor="#1a1a2e"
+                    android:backgroundTint="#E8E8E8" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#F0F0F0" />
+
+                <!-- Pending product list -->
+                <TextView
+                    android:id="@+id/video_edit_product_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="暂无关联商品"
+                    android:textSize="12sp"
+                    android:textColor="#CCCCCC"
+                    android:gravity="center" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/video_edit_product_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+
+                <ProgressBar
+                    android:id="@+id/video_edit_product_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="4dp"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="标签（逗号分隔）"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/video_edit_input_tags"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="@android:color/white"
+                android:paddingHorizontal="12dp"
+                android:textSize="14sp"
+                android:hint="穿搭, 夏季, T恤"
+                android:singleLine="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="状态"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <Spinner
+                android:id="@+id/video_edit_status_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="@android:color/white" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
