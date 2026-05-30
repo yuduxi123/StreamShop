@@ -179,6 +179,7 @@ public class VideoPageFragment extends Fragment {
                 Glide.with(this)
                         .load(video.getAuthor().getAvatarUrl())
                         .circleCrop()
+                        .skipMemoryCache(true)
                         .into(avatarView);
             }
         }

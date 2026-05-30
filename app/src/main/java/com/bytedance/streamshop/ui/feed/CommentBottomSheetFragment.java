@@ -147,6 +147,7 @@ public class CommentBottomSheetFragment extends BottomSheetDialogFragment {
                 Glide.with(holder.itemView)
                         .load(comment.getUser().getAvatarUrl())
                         .circleCrop()
+                        .skipMemoryCache(true)
                         .into(holder.avatar);
             }
             holder.content.setText(comment.getContent());

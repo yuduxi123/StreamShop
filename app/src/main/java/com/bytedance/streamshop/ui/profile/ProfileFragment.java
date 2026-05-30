@@ -209,6 +209,7 @@ public class ProfileFragment extends Fragment {
         Glide.with(this)
                 .load(url)
                 .circleCrop()
+                .skipMemoryCache(true)
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .into(avatarView);
     }

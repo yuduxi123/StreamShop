@@ -49,6 +49,7 @@ public class AuthorProfileActivity extends AppCompatActivity {
                     Glide.with(this)
                             .load(user.getAvatarUrl())
                             .circleCrop()
+                            .skipMemoryCache(true)
                             .into(avatarView);
                 });
             } catch (Exception e) {

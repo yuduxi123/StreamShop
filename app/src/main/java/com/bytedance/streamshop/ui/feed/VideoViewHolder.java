@@ -191,6 +191,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 Glide.with(context)
                         .load(video.getAuthor().getAvatarUrl())
                         .circleCrop()
+                        .skipMemoryCache(true)
                         .into(avatarView);
             }
         }
