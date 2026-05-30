@@ -26,7 +26,7 @@ export class AuthService {
     const user: User = {
       id: uuidv4(),
       username,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+      avatarUrl: `https://picsum.photos/seed/${username}/200/200`,
       role: 'user',
       password: hashed,
       createdAt: new Date().toISOString(),

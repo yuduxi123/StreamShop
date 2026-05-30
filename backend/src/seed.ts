@@ -30,9 +30,9 @@ function run(): void {
 
   // Users
   const users = [
-    { id: ids.user1, username: 'alice', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice', role: 'user', password: bcrypt.hashSync('123456', 10), createdAt: '2026-01-01T00:00:00Z' },
-    { id: ids.user2, username: 'bob', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob', role: 'user', password: bcrypt.hashSync('123456', 10), createdAt: '2026-01-02T00:00:00Z' },
-    { id: ids.admin, username: 'admin', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', role: 'admin', password: bcrypt.hashSync('admin123', 10), createdAt: '2026-01-01T00:00:00Z' },
+    { id: ids.user1, username: 'alice', avatarUrl: 'https://picsum.photos/seed/alice/200/200', role: 'user', password: bcrypt.hashSync('123456', 10), createdAt: '2026-01-01T00:00:00Z' },
+    { id: ids.user2, username: 'bob', avatarUrl: 'https://picsum.photos/seed/bob/200/200', role: 'user', password: bcrypt.hashSync('123456', 10), createdAt: '2026-01-02T00:00:00Z' },
+    { id: ids.admin, username: 'admin', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', password: bcrypt.hashSync('admin123', 10), createdAt: '2026-01-01T00:00:00Z' },
   ];
   write('users.json', users);
 
