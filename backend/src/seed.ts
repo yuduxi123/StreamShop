@@ -87,8 +87,8 @@ function run(): void {
 
   // Live rooms
   const liveRooms = [
-    { id: ids.live1, title: '夏日清凉专场，冰点价来袭！', coverUrl: 'https://picsum.photos/seed/l1/720/1280', anchorId: ids.user1, status: 'live', currentProductId: ids.product1, onlineCount: 1250, likeCount: 34500, viewerCount: 8900, createdAt: now },
-    { id: ids.live2, title: '数码新品首发，限量秒杀', coverUrl: 'https://picsum.photos/seed/l2/720/1280', anchorId: ids.user2, status: 'offline', currentProductId: null, onlineCount: 0, likeCount: 12000, viewerCount: 5600, createdAt: now },
+    { id: ids.live1, title: '夏日清凉专场，冰点价来袭！', coverUrl: 'https://picsum.photos/seed/l1/720/1280', startedAt: now, anchorId: ids.user1, status: 'live', currentProductId: ids.product1, onlineCount: 1250, likeCount: 34500, viewerCount: 8900, createdAt: now },
+    { id: ids.live2, title: '数码新品首发，限量秒杀', coverUrl: 'https://picsum.photos/seed/l2/720/1280', startedAt: null, anchorId: ids.user2, status: 'offline', currentProductId: null, onlineCount: 0, likeCount: 12000, viewerCount: 5600, createdAt: now },
   ];
   write('live_rooms.json', liveRooms);
 

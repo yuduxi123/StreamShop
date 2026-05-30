@@ -13,6 +13,19 @@
         app:use_controller="false"
         app:show_buffering="when_playing" />
 
+    <TextView
+        android:id="@+id/live_stream_placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_circle_overlay"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:text="直播画面未接入"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
     <!-- Gradient overlay -->
     <View
         android:layout_width="match_parent"
