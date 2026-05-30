@@ -11,7 +11,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bytedance.streamshop.R;
@@ -45,7 +45,7 @@ public class LiveFragment extends Fragment {
         emptyView = view.findViewById(R.id.live_empty);
         apiService = new ApiService();
 
-        roomList.setLayoutManager(new LinearLayoutManager(getContext()));
+        roomList.setLayoutManager(new GridLayoutManager(getContext(), 2));
         adapter = new RoomAdapter();
         roomList.setAdapter(adapter);
 
@@ -97,26 +97,34 @@ public class LiveFragment extends Fragment {
             h.title.setText(title != null ? title : "直播间");
             Glide.with(h.itemView).load(cover).into(h.cover);
 
-            // Anchor info
             Map<String, Object> anchor = (Map<String, Object>) room.get("anchor");
             h.anchorName.setText(anchor != null ? (String) anchor.get("username") : "主播");
 
-            // Status
-            if ("live".equals(status)) {
-                int online = room.get("onlineCount") instanceof Number ? ((Number) room.get("onlineCount")).intValue() : 0;
-                h.statusText.setText("直播中 " + (online > 1000 ? nf.format(online / 1000.0) + "k" : String.valueOf(online)) + "人在看");
-                h.statusText.setTextColor(0xFFFF3B30);
-                h.enterBtn.setVisibility(View.VISIBLE);
+            boolean isLive = "live".equals(status);
+            h.liveBadge.setVisibility(isLive ? View.VISIBLE : View.GONE);
+
+            if (isLive) {
+                int online = room.get("onlineCount") instanceof Number
+                        ? ((Number) room.get("onlineCount")).intValue() : 0;
+                String onlineStr = online > 1000
+                        ? nf.format(online / 1000.0) + "k"
+                        : String.valueOf(online);
+                h.statusText.setText(onlineStr + "人在看");
+                h.statusText.setTextColor(0xCCFFFFFF);
+                h.statusText.setVisibility(View.VISIBLE);
             } else {
                 h.statusText.setText("未开播");
-                h.statusText.setTextColor(0xFF999999);
-                h.enterBtn.setVisibility(View.GONE);
+                h.statusText.setTextColor(0xCCFFFFFF);
+                h.statusText.setVisibility(View.VISIBLE);
             }
 
-            h.enterBtn.setOnClickListener(v -> {
-                Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
-                intent.putExtra("room_id", (String) room.get("id"));
-                startActivity(intent);
+            // Whole card click to enter
+            h.itemView.setOnClickListener(v -> {
+                if (isLive) {
+                    Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
+                    intent.putExtra("room_id", (String) room.get("id"));
+                    startActivity(intent);
+                }
             });
         }
 
@@ -124,14 +132,14 @@ public class LiveFragment extends Fragment {
 
         class VH extends RecyclerView.ViewHolder {
             ImageView cover;
-            TextView title, anchorName, statusText, enterBtn;
+            TextView title, anchorName, statusText, liveBadge;
             VH(View v) {
                 super(v);
                 cover = v.findViewById(R.id.room_cover);
                 title = v.findViewById(R.id.room_title);
                 anchorName = v.findViewById(R.id.room_anchor);
                 statusText = v.findViewById(R.id.room_status);
-                enterBtn = v.findViewById(R.id.room_enter_btn);
+                liveBadge = v.findViewById(R.id.room_live_badge);
             }
         }
     }

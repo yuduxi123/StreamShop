@@ -174,7 +174,7 @@
                 android:layout_height="20dp"
                 android:layout_gravity="bottom|center_horizontal"
                 android:layout_marginBottom="-2dp"
-                android:src="@drawable/ic_plus"
+                android:src="@drawable/ic_follow_selector"
                 android:background="@drawable/bg_circle_orange"
                 android:padding="2dp" />
         </FrameLayout>

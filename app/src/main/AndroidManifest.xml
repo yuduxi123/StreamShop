@@ -40,6 +40,8 @@
         <activity android:name=".ui.profile.CollectionsActivity" android:exported="false" />
         <activity android:name=".ui.profile.MyVideosActivity" android:exported="false" />
         <activity android:name=".ui.profile.VideoEditActivity" android:exported="false" />
+        <activity android:name=".ui.profile.FollowListActivity" android:exported="false" />
+        <activity android:name=".ui.profile.AuthorVideoFeedActivity" android:exported="false" />
         <activity
             android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Theme.StreamShop.Crop"

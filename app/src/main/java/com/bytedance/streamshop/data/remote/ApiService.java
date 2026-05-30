@@ -104,6 +104,15 @@ public class ApiService {
         return executePaginated(request, Video.class);
     }
 
+    public ApiResponse<Video> getUserVideos(String authorId, int page, int limit) throws IOException {
+        String url = client.getBaseUrl() + "videos?page=" + page + "&limit=" + limit;
+        if (authorId != null && !authorId.isEmpty()) {
+            url += "&authorId=" + authorId;
+        }
+        Request request = new Request.Builder().url(url).get().build();
+        return executePaginated(request, Video.class);
+    }
+
     public Video createVideo(String title, String coverUrl, String videoUrl, List<String> tags, String status) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("title", title);
@@ -543,6 +552,62 @@ public class ApiService {
                 .build();
         try (Response resp = client.getHttpClient().newCall(request).execute()) {
             return resp.isSuccessful();
+        }
+    }
+
+    // ---- Follow ----
+
+    public boolean toggleFollow(String userId) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "interactions/follow/" + userId)
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Follow failed: " + resp.code());
+            Map<String, Object> result = client.getGson().fromJson(respBody, Map.class);
+            Object val = result.get("following");
+            return val instanceof Boolean ? (Boolean) val : false;
+        }
+    }
+
+    public boolean isFollowing(String userId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "interactions/follow/" + userId + "/status")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Check follow failed: " + resp.code());
+            Map<String, Object> result = client.getGson().fromJson(respBody, Map.class);
+            Object val = result.get("following");
+            return val instanceof Boolean ? (Boolean) val : false;
+        }
+    }
+
+    public List<Map<String, Object>> getFollowing() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "interactions/following")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Get following failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
+        }
+    }
+
+    public List<Map<String, Object>> getFollowers() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "interactions/followers")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Get followers failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
         }
     }
 

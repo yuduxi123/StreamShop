@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="#F0F0F0"
     android:orientation="vertical">
 
     <TextView
@@ -10,23 +10,19 @@
         android:layout_height="48dp"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:background="@android:color/white"
+        android:background="#1A1A1A"
         android:text="直播"
         android:textSize="18sp"
-        android:textColor="@android:color/black"
+        android:textColor="#FFFFFF"
         android:textStyle="bold" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/live_room_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="12dp" />
+        android:padding="6dp"
+        android:clipToPadding="false" />
 
     <TextView
         android:id="@+id/live_empty"

@@ -23,6 +23,8 @@ import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
+import com.bytedance.streamshop.domain.model.Product;
+import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
 import com.bumptech.glide.Glide;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
@@ -59,6 +61,11 @@ public class LiveRoomActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_room);
+
+        // Make status bar transparent with white icons for dark background
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
 
         roomId = getIntent().getStringExtra("room_id");
         if (roomId == null) { finish(); return; }
@@ -105,12 +112,20 @@ public class LiveRoomActivity extends AppCompatActivity {
         androidx.media3.ui.PlayerView playerView = findViewById(R.id.live_player_view);
         playerView.setPlayer(player);
         player.setPlayWhenReady(true);
+        player.setRepeatMode(Player.REPEAT_MODE_ALL);
 
-        // Use a sample video or a generated test pattern
-        String videoUrl = "https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4";
+        // Use a sample video accessible in China
+        String videoUrl = "https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4";
         MediaItem mediaItem = MediaItem.fromUri(videoUrl);
         player.setMediaItem(mediaItem);
         player.prepare();
+
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onPlayerError(androidx.media3.common.PlaybackException error) {
+                runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "视频加载失败，请检查网络", Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 
     private void loadRoomDetail() {
@@ -189,10 +204,14 @@ public class LiveRoomActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onDisconnected() {}
+            public void onDisconnected() {
+                runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "直播连接已断开", Toast.LENGTH_SHORT).show());
+            }
 
             @Override
-            public void onError(String message) {}
+            public void onError(String message) {
+                runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "连接出错: " + message, Toast.LENGTH_SHORT).show());
+            }
         });
     }
 
@@ -232,7 +251,7 @@ public class LiveRoomActivity extends AppCompatActivity {
         MaterialButton claimBtn = card.findViewById(R.id.coupon_claim_btn);
             claimBtn.setOnClickListener(v -> {
             if (!ApiClient.getInstance().isAuthenticated()) {
-                Toast.makeText(this, "璇峰厛鐧诲綍鍚庨鍒稿埜", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "请先登录后领券", Toast.LENGTH_SHORT).show();
                 return;
             }
             String couponId = coupon.optString("id", "");
@@ -282,20 +301,9 @@ public class LiveRoomActivity extends AppCompatActivity {
             Glide.with(h.itemView).load(cover).into(h.thumb);
 
             h.itemView.setOnClickListener(v -> {
-                if (!ApiClient.getInstance().isAuthenticated()) {
-                    Toast.makeText(LiveRoomActivity.this, "璇峰厛鐧诲綍鍚庡姞鍏ヨ喘鐗╄溅", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Toast.makeText(LiveRoomActivity.this, (String) p.get("title"), Toast.LENGTH_SHORT).show();
-                // Add to cart
-                new Thread(() -> {
-                    try {
-                        apiService.addToCart((String) p.get("id"), 1);
-                        runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "宸插姞鍏ヨ喘鐗╄溅", Toast.LENGTH_SHORT).show());
-                    } catch (Exception e) {
-                        runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "鍔犲叆璐墿杞﹀け璐?璇风◢鍚庡啀璇?", Toast.LENGTH_SHORT).show());
-                    }
-                }).start();
+                Product product = mapToProduct(p);
+                ProductDetailBottomSheetFragment sheet = ProductDetailBottomSheetFragment.newInstance(product);
+                sheet.show(getSupportFragmentManager(), "product_detail");
             });
         }
 
@@ -308,16 +316,23 @@ public class LiveRoomActivity extends AppCompatActivity {
         }
     }
 
-    // Add getRoomDetail to ApiService - actually it exists as getOrderDetail-style, let me inline
-    private Map<String, Object> getRoomDetail(String id) throws Exception {
-        // Use direct API call inline
-        okhttp3.Request request = new okhttp3.Request.Builder()
-                .url(com.bytedance.streamshop.data.remote.ApiClient.getInstance().getBaseUrl() + "live/rooms/" + id)
-                .get().build();
-        try (okhttp3.Response resp = com.bytedance.streamshop.data.remote.ApiClient.getInstance().getHttpClient().newCall(request).execute()) {
-            String body = resp.body() != null ? resp.body().string() : "{}";
-            if (!resp.isSuccessful()) return null;
-            return com.bytedance.streamshop.data.remote.ApiClient.getInstance().getGson().fromJson(body, Map.class);
-        }
+    private Product mapToProduct(Map<String, Object> map) {
+        Product p = new Product();
+        p.setId((String) map.get("id"));
+        p.setTitle((String) map.get("title"));
+        p.setDescription((String) map.get("description"));
+        Object price = map.get("price");
+        p.setPrice(price instanceof Number ? ((Number) price).doubleValue() : 0);
+        Object originalPrice = map.get("originalPrice");
+        p.setOriginalPrice(originalPrice instanceof Number ? ((Number) originalPrice).doubleValue() : 0);
+        p.setCoverUrl((String) map.get("coverUrl"));
+        Object stock = map.get("stock");
+        p.setStock(stock instanceof Number ? ((Number) stock).intValue() : 0);
+        Object salesCount = map.get("salesCount");
+        p.setSalesCount(salesCount instanceof Number ? ((Number) salesCount).intValue() : 0);
+        p.setStatus((String) map.get("status"));
+        p.setCategory((String) map.get("category"));
+        p.setCreatedAt((String) map.get("createdAt"));
+        return p;
     }
 }

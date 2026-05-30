@@ -5,16 +5,16 @@
     android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center_vertical"
         android:background="#1A1A1A"
-        android:paddingHorizontal="4dp">
+        android:paddingHorizontal="4dp"
+        android:elevation="1dp">
 
         <ImageButton
-            android:id="@+id/liked_back"
+            android:id="@+id/follow_list_back"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_back"
@@ -23,30 +23,29 @@
             android:contentDescription="返回" />
 
         <TextView
+            android:id="@+id/follow_list_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="我的点赞"
+            android:text="关注列表"
             android:textSize="18sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Grid of liked videos -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/liked_grid"
+        android:id="@+id/follow_list_recycler"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="2dp"
+        android:background="@android:color/white"
         android:clipToPadding="false" />
 
-    <!-- Empty state -->
     <TextView
-        android:id="@+id/liked_empty"
+        android:id="@+id/follow_list_empty"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:text="暂无点赞视频"
+        android:text="暂无数据"
         android:textSize="15sp"
         android:textColor="#999999"
         android:visibility="gone" />

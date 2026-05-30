@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="primary">#FF3B30</color>
+    <color name="primary_dark">#D6302A</color>
+    <color name="accent">#FF6B35</color>
+
+    <!-- Backgrounds -->
+    <color name="background_dark">#1A1A1A</color>
+    <color name="background_light">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Text -->
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_primary_light">#333333</color>
+    <color name="text_secondary">#999999</color>
+    <color name="text_hint">#CCCCCC</color>
+
+    <!-- Accent -->
+    <color name="gold">#FFD700</color>
     <color name="collect_gold">#FFD700</color>
+    <color name="live_red">#FF3B30</color>
+    <color name="divider">#EEEEEE</color>
+
+    <!-- Overlay -->
+    <color name="overlay_dark">#99000000</color>
+    <color name="overlay_medium">#66000000</color>
+    <color name="overlay_light">#33000000</color>
 </resources>

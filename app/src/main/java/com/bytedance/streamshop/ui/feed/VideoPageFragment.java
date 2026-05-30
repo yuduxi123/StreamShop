@@ -37,6 +37,7 @@ import com.google.android.material.imageview.ShapeableImageView;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class VideoPageFragment extends Fragment {
@@ -59,6 +60,7 @@ public class VideoPageFragment extends Fragment {
     private ImageButton likeButton;
     private ImageButton commentButton;
     private ImageButton collectButton;
+    private ImageView followButton;
     private ViewGroup productContainer;
     private ImageView coverView;
     private SeekBar seekBar;
@@ -117,6 +119,7 @@ public class VideoPageFragment extends Fragment {
         likeButton = view.findViewById(R.id.video_like_btn);
         commentButton = view.findViewById(R.id.video_comment_btn);
         collectButton = view.findViewById(R.id.video_collect_btn);
+        followButton = view.findViewById(R.id.video_follow_btn);
         productContainer = view.findViewById(R.id.product_card_container);
         seekBar = view.findViewById(R.id.video_seekbar);
         currentTimeText = view.findViewById(R.id.video_current_time);
@@ -130,6 +133,7 @@ public class VideoPageFragment extends Fragment {
         if (likeButton != null) likeButton.setOnClickListener(v -> toggleLike());
         if (commentButton != null) commentButton.setOnClickListener(v -> showComments());
         if (collectButton != null) collectButton.setOnClickListener(v -> toggleCollect());
+        if (followButton != null) followButton.setOnClickListener(v -> toggleFollow());
 
         if (videoRoot != null) {
             videoRoot.setOnClickListener(v -> togglePlayPause());
@@ -187,6 +191,48 @@ public class VideoPageFragment extends Fragment {
         if (titleText != null) titleText.setText(video.getTitle());
         if (likeCountText != null) likeCountText.setText(formatCount(video.getLikeCount()));
         if (commentCountText != null) commentCountText.setText(formatCount(video.getCommentCount()));
+
+        loadInteractionStates();
+    }
+
+    private void loadInteractionStates() {
+        if (video == null) return;
+        if (likeButton != null) {
+            new Thread(() -> {
+                try {
+                    Map<String, Object> status = apiService.getLikeStatus("video", video.getId());
+                    Boolean liked = (Boolean) status.get("liked");
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            if (likeButton != null && liked != null) likeButton.setSelected(liked);
+                        });
+                    }
+                } catch (Exception ignored) {}
+            }).start();
+        }
+        if (collectButton != null) {
+            new Thread(() -> {
+                try {
+                    Map<String, Object> status = apiService.getCollectionStatus("video", video.getId());
+                    Boolean collected = (Boolean) status.get("collected");
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            if (collectButton != null && collected != null) collectButton.setSelected(collected);
+                        });
+                    }
+                } catch (Exception ignored) {}
+            }).start();
+        }
+        if (video.getAuthor() != null && followButton != null) {
+            new Thread(() -> {
+                try {
+                    boolean following = apiService.isFollowing(video.getAuthor().getId());
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> followButton.setSelected(following));
+                    }
+                } catch (Exception ignored) {}
+            }).start();
+        }
     }
 
     private void initPlayer(View view) {
@@ -379,6 +425,28 @@ public class VideoPageFragment extends Fragment {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         collectButton.setEnabled(true);
+                    });
+                }
+            }
+        }).start();
+    }
+
+    private void toggleFollow() {
+        if (video == null || video.getAuthor() == null || followButton == null) return;
+        followButton.setEnabled(false);
+        new Thread(() -> {
+            try {
+                boolean following = apiService.toggleFollow(video.getAuthor().getId());
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        followButton.setSelected(following);
+                        followButton.setEnabled(true);
+                    });
+                }
+            } catch (Exception e) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        if (followButton != null) followButton.setEnabled(true);
                     });
                 }
             }

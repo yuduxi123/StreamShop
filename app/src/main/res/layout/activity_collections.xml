@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center_vertical"
-        android:background="@android:color/white"
+        android:background="#1A1A1A"
         android:paddingHorizontal="4dp">
 
         <ImageButton
@@ -29,7 +29,7 @@
             android:layout_weight="1"
             android:text="我的收藏"
             android:textSize="18sp"
-            android:textColor="@android:color/black"
+            android:textColor="#FFFFFF"
             android:textStyle="bold" />
     </LinearLayout>
 

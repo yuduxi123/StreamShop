@@ -223,6 +223,15 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 });
             } catch (Exception ignored) {}
         }).start();
+        // Load follow status
+        if (video.getAuthor() != null && followButton != null) {
+            new Thread(() -> {
+                try {
+                    boolean following = apiService.isFollowing(video.getAuthor().getId());
+                    itemView.post(() -> followButton.setSelected(following));
+                } catch (Exception ignored) {}
+            }).start();
+        }
     }
 
     // --- Player ---
@@ -356,9 +365,19 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     }
 
     private void toggleFollow() {
-        if (followButton == null) return;
-        followButton.setSelected(!followButton.isSelected());
-        followButton.setAlpha(followButton.isSelected() ? 1f : 0.6f);
+        if (video == null || video.getAuthor() == null || followButton == null) return;
+        followButton.setEnabled(false);
+        new Thread(() -> {
+            try {
+                boolean following = apiService.toggleFollow(video.getAuthor().getId());
+                itemView.post(() -> {
+                    followButton.setSelected(following);
+                    followButton.setEnabled(true);
+                });
+            } catch (Exception e) {
+                itemView.post(() -> { if (followButton != null) followButton.setEnabled(true); });
+            }
+        }).start();
     }
 
     private void toggleLike() {

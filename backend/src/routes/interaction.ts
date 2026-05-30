@@ -18,8 +18,16 @@ interface CollectionData {
   createdAt: string;
 }
 
+interface FollowData {
+  id: string;
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+}
+
 const likeStorage = new StorageService<LikeData>('likes.json');
 const collectionStorage = new StorageService<CollectionData>('collections.json');
+const followStorage = new StorageService<FollowData>('follows.json');
 const videoStorage = new StorageService<any>('videos.json');
 const productStorage = new StorageService<any>('products.json');
 const vpStorage = new StorageService<any>('video_products.json');
@@ -176,6 +184,95 @@ router.get('/collections', authMiddleware, (req: AuthRequest, res: Response) => 
   });
   res.json(enriched);
 });
+
+// ---- FOLLOWS ----
+
+// POST /api/interactions/follow/:id - toggle follow a user
+router.post('/follow/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+  const followingId = req.params.id as string;
+  const followerId = req.user!.id;
+
+  if (followerId === followingId) {
+    res.status(400).json({ error: 'Cannot follow yourself' });
+    return;
+  }
+
+  // Check target user exists
+  const targetUser = userStorage.findById(followingId);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const existing = followStorage.query(
+    f => f.followerId === followerId && f.followingId === followingId
+  );
+
+  if (existing.length > 0) {
+    // Unfollow
+    followStorage.delete(existing[0].id);
+    updateFollowCount(followerId, followingId, -1);
+    res.json({ following: false });
+  } else {
+    // Follow
+    const follow: FollowData = {
+      id: followerId + '_' + followingId,
+      followerId,
+      followingId,
+      createdAt: new Date().toISOString(),
+    };
+    followStorage.create(follow);
+    updateFollowCount(followerId, followingId, 1);
+    res.json({ following: true });
+  }
+});
+
+// GET /api/interactions/follow/:id/status - check if following
+router.get('/follow/:id/status', authMiddleware, (req: AuthRequest, res: Response) => {
+  const followingId = req.params.id as string;
+  const followerId = req.user!.id;
+  const existing = followStorage.query(
+    f => f.followerId === followerId && f.followingId === followingId
+  );
+  res.json({ following: existing.length > 0 });
+});
+
+// GET /api/interactions/followers - list my followers
+router.get('/followers', authMiddleware, (req: AuthRequest, res: Response) => {
+  const items = followStorage.query(f => f.followingId === req.user!.id);
+  const enriched = items.map(item => {
+    const user = userStorage.findById(item.followerId);
+    return {
+      ...item,
+      user: user ? { id: user.id, username: user.username, avatarUrl: user.avatarUrl } : null,
+    };
+  });
+  res.json(enriched);
+});
+
+// GET /api/interactions/following - list who I follow
+router.get('/following', authMiddleware, (req: AuthRequest, res: Response) => {
+  const items = followStorage.query(f => f.followerId === req.user!.id);
+  const enriched = items.map(item => {
+    const user = userStorage.findById(item.followingId);
+    return {
+      ...item,
+      user: user ? { id: user.id, username: user.username, avatarUrl: user.avatarUrl } : null,
+    };
+  });
+  res.json(enriched);
+});
+
+function updateFollowCount(followerId: string, followingId: string, delta: number): void {
+  const follower = userStorage.findById(followerId);
+  if (follower) {
+    userStorage.update(followerId, { following: Math.max(0, (follower.following || 0) + delta) });
+  }
+  const following = userStorage.findById(followingId);
+  if (following) {
+    userStorage.update(followingId, { followers: Math.max(0, (following.followers || 0) + delta) });
+  }
+}
 
 function updateCount(targetType: string, targetId: string, delta: number): void {
   if (targetType === 'video') {

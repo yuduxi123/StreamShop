@@ -1,156 +1,304 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <!-- User info header -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:background="@android:color/white">
-
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/profile_avatar"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/ic_avatar_placeholder"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackgroundBorderless"
-            app:shapeAppearanceOverlay="@style/CircleImageView" />
-
-        <TextView
-            android:id="@+id/profile_username"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:text="未登录" />
-
-        <TextView
-            android:id="@+id/profile_login_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#FF3B30"
-            android:textSize="13sp"
-            android:text="点击登录"
-            android:clickable="true"
-            android:focusable="true" />
-    </LinearLayout>
-
-    <!-- Menu items -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="vertical"
-        android:background="@android:color/white">
+        android:orientation="vertical">
 
-        <!-- My Orders -->
+        <!-- Dark header area -->
         <LinearLayout
-            android:id="@+id/profile_orders"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="#1A1A1A"
+            android:paddingTop="40dp"
+            android:paddingBottom="24dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/profile_avatar"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_avatar_placeholder"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackgroundBorderless"
+                app:shapeAppearanceOverlay="@style/CircleImageView"
+                app:strokeWidth="2dp"
+                app:strokeColor="#33FFFFFF" />
 
             <TextView
+                android:id="@+id/profile_username"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:text="未登录" />
+
+            <TextView
+                android:id="@+id/profile_login_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="#FF3B30"
+                android:textSize="14sp"
+                android:text="点击登录"
+                android:padding="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Stats row: 获赞 / 关注 / 粉丝 -->
+            <LinearLayout
+                android:id="@+id/profile_stats_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/profile_likes_stat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:padding="8dp">
+                    <TextView
+                        android:id="@+id/profile_likes_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:text="0" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:text="获赞" />
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
+
+                <LinearLayout
+                    android:id="@+id/profile_following_stat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:padding="8dp">
+                    <TextView
+                        android:id="@+id/profile_following_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:text="0" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:text="关注" />
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="24dp" android:background="#33FFFFFF" />
+
+                <LinearLayout
+                    android:id="@+id/profile_followers_stat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:padding="8dp">
+                    <TextView
+                        android:id="@+id/profile_followers_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:text="0" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:text="粉丝" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Quick action icons row -->
+        <LinearLayout
+            android:id="@+id/profile_actions_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@android:color/white"
+            android:paddingVertical="12dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/profile_orders"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="我的订单"
-                android:textSize="15sp"
-                android:textColor="@android:color/black" />
+                android:gravity="center"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="8dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_order_icon"
+                    android:tint="#333333" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="订单"
+                    android:textSize="12sp"
+                    android:textColor="#333333" />
+            </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/profile_likes"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="查看全部 >"
-                android:textSize="13sp"
-                android:textColor="#999999" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="8dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_like_filled"
+                    android:tint="#FF3B30" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="点赞"
+                    android:textSize="12sp"
+                    android:textColor="#333333" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/profile_videos"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="8dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_video_icon"
+                    android:tint="#333333" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="视频"
+                    android:textSize="12sp"
+                    android:textColor="#333333" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/profile_collections"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="8dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_collect_filled"
+                    android:tint="#FFD700" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="收藏"
+                    android:textSize="12sp"
+                    android:textColor="#333333" />
+            </LinearLayout>
         </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="16dp" />
-
-        <!-- Liked -->
-        <LinearLayout
-            android:id="@+id/profile_likes"
+        <!-- Video grid -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/profile_video_grid"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="我的点赞" android:textSize="15sp"
-                android:textColor="@android:color/black" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text=">" android:textSize="16sp" android:textColor="#CCCCCC" />
-        </LinearLayout>
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:padding="2dp" />
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="16dp" />
-
-        <!-- My Videos -->
-        <LinearLayout
-            android:id="@+id/profile_videos"
+        <!-- Empty state -->
+        <TextView
+            android:id="@+id/profile_empty_videos"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="我的视频" android:textSize="15sp"
-                android:textColor="@android:color/black" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text=">" android:textSize="16sp" android:textColor="#CCCCCC" />
-        </LinearLayout>
+            android:layout_height="200dp"
+            android:gravity="center"
+            android:text="暂无作品"
+            android:textColor="#999999"
+            android:textSize="15sp"
+            android:visibility="gone" />
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="16dp" />
-
-        <!-- Collections -->
-        <LinearLayout
-            android:id="@+id/profile_collections"
+        <!-- Logout button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/profile_logout_btn"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="我的收藏" android:textSize="15sp"
-                android:textColor="@android:color/black" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text=">" android:textSize="16sp" android:textColor="#CCCCCC" />
-        </LinearLayout>
+            android:layout_height="44dp"
+            android:layout_marginHorizontal="32dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="32dp"
+            android:text="退出登录"
+            android:textSize="15sp"
+            android:visibility="gone"
+            app:cornerRadius="22dp"
+            app:backgroundTint="#FFF0F0"
+            android:textColor="#FF3B30" />
+
     </LinearLayout>
-
-    <!-- Logout -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/profile_logout_btn"
-        android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="24dp"
-        android:text="退出登录"
-        android:textSize="15sp"
-        android:visibility="gone"
-        app:cornerRadius="22dp"
-        app:backgroundTint="#FFF0F0"
-        android:textColor="#FF3B30" />
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

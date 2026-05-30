@@ -8,6 +8,8 @@ public class User implements Serializable {
     private String avatarUrl;
     private String role;
     private String createdAt;
+    private int followers;
+    private int following;
 
     public User() {}
 
@@ -28,4 +30,8 @@ public class User implements Serializable {
     public void setRole(String role) { this.role = role; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    public int getFollowers() { return followers; }
+    public void setFollowers(int followers) { this.followers = followers; }
+    public int getFollowing() { return following; }
+    public void setFollowing(int following) { this.following = following; }
 }

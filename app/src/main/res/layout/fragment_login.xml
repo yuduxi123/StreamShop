@@ -1,37 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="32dp"
-    android:gravity="center_horizontal"
-    android:background="#FFFFFF">
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="32dp"
+        android:gravity="center_horizontal"
+        android:background="@android:color/transparent">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="24dp"
         android:text="欢迎回来"
-        android:textSize="24sp"
-        android:textColor="@android:color/black"
+        android:textSize="22sp"
+        android:textColor="#1A1A1A"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:text="请登录您的账号"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:textColor="#999999" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/login_username_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="32dp"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:hint="账号">
+        android:hint="账号"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusTopStart="12dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/login_username"
@@ -46,9 +55,13 @@
         android:id="@+id/login_password_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:hint="密码"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusTopStart="12dp"
         app:passwordToggleEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -72,11 +85,14 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/login_btn"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="50dp"
         android:layout_marginTop="24dp"
         android:text="登录"
         android:textSize="16sp"
-        app:cornerRadius="24dp"
-        app:backgroundTint="#FF3B30" />
+        android:textStyle="bold"
+        app:cornerRadius="25dp"
+        app:backgroundTint="#FF3B30"
+        android:elevation="4dp" />
 
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>
