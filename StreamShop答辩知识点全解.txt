@@ -1,0 +1,698 @@
+================================================================================
+        StreamShop 直播电商APP — 答辩知识点完全讲解
+================================================================================
+
+【目录】
+  一、项目概述
+  二、技术架构全景
+  三、后端详解（Node.js + Express + TypeScript）
+  四、Android客户端详解（Java + Android Jetpack）
+  五、WebSocket实时通信
+  六、数据流转全链路
+  七、页面导航地图
+  八、关键代码模式讲解
+  九、所有API接口速查表
+  十、答辩常见问题准备
+
+================================================================================
+一、项目概述
+================================================================================
+
+StreamShop 是一个仿抖音风格的短视频直播电商平台，包含三个子系统：
+
+  1. Android App（Java）     — 用户端，刷视频、看直播、下单购物
+  2. Express 后端（TypeScript）— REST API + WebSocket 服务
+  3. React 管理后台（Vite）   — 管理员管理商品/订单/直播间/视频
+
+核心功能：
+  - 短视频上下滑动浏览（像抖音一样）
+  - 视频中嵌入商品卡片，点击进入商品详情
+  - 直播间实时互动（弹幕、点赞、商品讲解、优惠券推送）
+  - 购物车 → 下单 → 支付完整电商链路
+  - 用户系统（注册/登录/关注/头像裁剪）
+  - 视频上传编辑、商品管理
+
+================================================================================
+二、技术架构全景
+================================================================================
+
+┌─────────────────────────┐
+│   React 管理后台 (admin)    │  ← 管理员操作
+│   Vite + React 19 + TS    │
+└────────────┬────────────┘
+             │ HTTP REST API
+┌────────────▼────────────┐
+│   Express 后端 (backend)   │  ← 核心服务器
+│   Node.js + TypeScript    │
+│   ├─ REST API (30+ 接口)   │
+│   ├─ WebSocket (实时推送)   │
+│   └─ JSON 文件存储         │
+└────────────┬────────────┘
+             │ HTTP + WebSocket
+┌────────────▼────────────┐
+│   Android App (app)       │  ← 用户端
+│   Java + Android Jetpack  │
+│   ├─ ExoPlayer 视频播放    │
+│   ├─ ViewPager2 滑动切换   │
+│   ├─ OkHttp 网络请求       │
+│   └─ Glide 图片加载        │
+└─────────────────────────┘
+
+关键设计决策：
+  - 后端用 JSON 文件存储（非数据库），简化部署，数据在 backend/src/data/ 下
+  - Android 不用 Retrofit，直接用 OkHttp 手动构造 Request（学习底层原理）
+  - 底部导航用自定义 LinearLayout + TextView，不用 Material BottomNavigationView
+  - 所有页面跳转用显式 Intent，未使用 Navigation Graph 深层路由
+
+================================================================================
+三、后端详解
+================================================================================
+
+3.1 目录结构
+  backend/src/
+  ├── index.ts              → 入口：Express 启动 + WebSocket 挂载
+  ├── seed.ts               → 种子数据脚本（生成测试用户/视频/直播间）
+  ├── middleware/auth.ts     → JWT 认证中间件
+  ├── routes/                → 所有 API 路由（15个文件）
+  │   ├── auth.ts            → 注册、登录、获取/修改个人信息
+  │   ├── user.ts            → 获取用户公开信息
+  │   ├── video.ts           → 视频 CRUD + 浏览计数
+  │   ├── product.ts         → 商品 CRUD + 绑定视频
+  │   ├── cart.ts            → 购物车增删改查
+  │   ├── order.ts           → 订单创建/支付/取消/列表
+  │   ├── comment.ts         → 评论发表/删除/列表
+  │   ├── interaction.ts     → 点赞/收藏/关注（核心互动）
+  │   ├── live.ts            → 直播间管理 + 推流
+  │   ├── danmaku.ts         → 弹幕存储
+  │   ├── coupon.ts          → 优惠券领取
+  │   ├── flashsale.ts       → 秒杀活动
+  │   ├── recommend.ts       → 商品推荐算法
+  │   ├── stats.ts           → 数据看板统计
+  │   └── upload.ts          → 文件上传（视频/图片）
+  ├── services/
+  │   ├── auth.service.ts    → JWT 生成/验证 + 密码加密
+  │   └── storage.service.ts → JSON 文件读写基础类
+  └── websocket/wsServer.ts  → WebSocket 房间管理
+
+3.2 认证流程（JWT 机制）
+  1. 用户注册：POST /api/auth/register
+     - 接收 username + password
+     - password 用 bcryptjs.hash() 加密（不存明文）
+     - 生成 JWT token（有效载荷：userId + role）
+     - 返回 token → 客户端保存到 ApiClient.authToken
+
+  2. 用户登录：POST /api/auth/login
+     - 查找用户 → bcryptjs.compare() 验证密码
+     - 生成新 token → 返回
+
+  3. 后续请求：
+     - ApiClient 的 AuthInterceptor 自动在请求头注入：
+       Authorization: Bearer <token>
+     - 后端 auth 中间件验证 token → 解析出 userId → 注入到 req.user
+
+3.3 数据存储（JSON 文件系统）
+  所有数据存储在 backend/src/data/*.json：
+    users.json, videos.json, products.json, video_products.json,
+    carts.json, orders.json, comments.json, likes.json,
+    collections.json, follows.json, live_rooms.json, coupons.json,
+    flash_sales.json, danmaku.json, claimed_coupons.json
+
+  StorageService<T> 通用类提供：
+    - findAll()                    → 读取全部
+    - findById(id)                 → 按 id 查找
+    - query(fn)                    → 按条件过滤
+    - create(item)                 → 新增（自动生成 id + createdAt）
+    - update(id, partial)          → 更新
+    - delete(id)                   → 删除
+    - paginate(page, limit, filter)→ 分页
+
+  这种方式的优点：零依赖安装（不需要 MySQL/MongoDB），
+  缺点：并发写入不安全（但教学项目足够用）。
+
+3.4 数据丰富（Enrichment）
+  后端返回数据时，会把关联数据也填充进去，减少客户端请求次数。
+
+  例如 GET /api/videos 返回的每个视频里包含：
+    {
+      "id": "v001",
+      "title": "...",
+      "videoUrl": "...",
+      "author": { "id": "u001", "username": "...", "avatarUrl": "..." },
+      "products": [
+        { "id": "p001", "title": "...", "price": 99, "coverUrl": "..." }
+      ]
+    }
+
+  实现方式：路由处理器先查 video 表，再根据 authorId 和 video_products 表去填充。
+
+================================================================================
+四、Android 客户端详解
+================================================================================
+
+4.1 目录结构
+  app/src/main/java/com/bytedance/streamshop/
+  ├── MainActivity.java          → 主活动，管理底部导航
+  ├── StreamShopApp.java          → Application 扩展类
+  ├── data/
+  │   ├── remote/
+  │   │   ├── ApiClient.java      → OkHttp 单例 + 认证拦截器
+  │   │   ├── ApiService.java     → 所有 API 调用方法（40+个）
+  │   │   ├── ApiResponse.java    → 分页响应泛型类
+  │   │   └── LiveWebSocketClient.java → WebSocket 客户端
+  │   └── repository/
+  │       └── VideoRepository.java → 视频数据仓库（缓存+分页）
+  ├── domain/model/               → 数据模型（POJO，10个）
+  │   ├── Video.java, User.java, Product.java, CartItem.java
+  │   ├── Order.java, OrderItem.java, Comment.java
+  │   ├── Danmaku.java, LiveRoom.java
+  └── ui/
+      ├── feed/     → 视频流（FeedFragment, VideoViewHolder, FeedPagerAdapter）
+      ├── live/     → 直播（LiveFragment, LiveRoomActivity, DanmakuView）
+      ├── cart/     → 购物车（CartFragment, CartViewModel）
+      ├── login/    → 登录注册（LoginActivity, LoginFragment, RegisterFragment）
+      ├── order/    → 订单（OrderConfirmActivity, PaymentActivity, OrderListActivity）
+      └── profile/  → 个人中心（ProfileFragment, AuthorProfileActivity 等10个类）
+
+4.2 底部导航实现（MainActivity.java）
+
+  原理：不用系统的 BottomNavigationView，而是自定义 LinearLayout + 4 个 TextView。
+
+  布局（activity_main.xml）：
+    ├── FragmentContainerView（上方内容区，约束到导航栏顶部）
+    └── LinearLayout（48dp 高，黑色背景，4 个等宽 TextView）
+
+  Java 逻辑：
+    1. 初始化 tabs[] 数组：nav_feed, nav_live, nav_cart, nav_profile
+    2. 初始化 tabDestIds[][] 映射到导航图中的 destination ID
+    3. 每个 tab 设置 onClickListener → selectTab(index)
+    4. selectTab(index)：
+       - navController.navigate(tabDestIds[index][0])  → 切换 Fragment
+       - 遍历 tabs 更新样式（选中：白色/15sp/粗体；未选中：#AAAAAA/13sp/正常）
+    5. navController.addOnDestinationChangedListener 监听：
+       - 当通过其他方式切换页面时，同步更新底部 tab 样式
+
+  为什么不用 BottomNavigationView？
+    - Material3 的 BottomNavigationView 必须有图标才能显示文字
+    - 尝试了 state_selected、代码设 ColorStateList、透明度等均无效
+    - 抖音风格就是纯文字无图标，自定义方案更灵活可控
+
+4.3 视频播放核心（VideoViewHolder / VideoPageFragment）
+
+  这是整个 App 最核心的组件，负责单个视频的完整播放体验。
+
+  使用技术：
+    - Media3 ExoPlayer（Google 官方视频播放器）
+    - PlayerView（包含播放器控件）
+
+  视频播放流程：
+    1. 创建 ExoPlayer 实例
+    2. 设置 MediaItem（视频 URL）
+    3. player.prepare() → player.play()
+    4. 页面不可见时 player.pause()
+    5. Activity 销毁时 player.release()
+
+  ViewHolder 生命周期管理：
+    - onPageSelected(position) → 播放当前页，暂停其他页
+    - onPause() → 停止所有播放器
+    - onDestroy() → 释放所有播放器资源
+
+  视频界面包含的 UI 元素（fragment_video_page.xml）：
+    ├── PlayerView          → 视频播放器
+    ├── ImageView（封面）   → 加载时显示封面，播放后隐藏
+    ├── SeekBar + 时间显示  → 进度条可拖动
+    ├── 播放/暂停指示器     → 点击切换
+    ├── 右侧操作按钮列：
+    │   ├── 头像（圆形）    → 点击进入作者主页
+    │   ├── 点赞按钮        → 红色高亮切换
+    │   ├── 评论按钮        → 打开评论 BottomSheet
+    │   ├── 收藏按钮        → 黄色高亮切换
+    │   └── 关注按钮        → 关注/已关注切换
+    ├── 底部信息：
+    │   ├── 用户名
+    │   ├── 视频标题
+    │   └── 商品卡片列表    → 横向排列，点击打开商品详情
+    └── 弹幕层（VideoDanmakuView）→ 自定义 View
+
+  播放控制逻辑：
+    - 点击视频区域切换播放/暂停
+    - 播放时显示 2 秒播放图标动画后隐藏
+    - 暂停时显示半透明暂停图标
+
+4.4 商品卡片展示（VideoViewHolder 中的产品卡片）
+
+  每个视频可以绑定多个商品，在视频中显示为横向卡片：
+    - 卡片包含：商品缩略图、标题、现价、原价（划线）、折扣率
+    - 点击卡片 → 弹出 ProductDetailBottomSheetFragment
+    - 弹窗中有三个按钮：立即购买 / 加入购物车 / 收藏
+
+4.5 ViewPager2 垂直滑动（FeedFragment）
+
+  仿抖音的上下滑动切换视频：
+
+    ViewPager2 配置：
+      - android:orientation="vertical"    ← 关键：垂直滑动
+      - adapter: FeedPagerAdapter
+      - offscreenPageLimit: 1             ← 预加载 1 页
+
+    FeedPagerAdapter：
+      - 继承 RecyclerView.Adapter
+      - inflate fragment_video_page.xml 作为每个 item
+      - 创建 VideoViewHolder 管理播放器
+      - addVideos() 方法支持动态加载更多
+
+    FeedFragment 加载逻辑：
+      1. 进入时 FeedViewModel.loadVideos(page=1)
+      2. 滑动到最后 2 个时触发 loadMore（page++）
+      3. VideoRepository 缓存已加载的视频，避免重复请求
+
+4.6 弹幕实现（VideoDanmakuView / DanmakuView）
+
+  自定义 View，从右到左滚动显示文字弹幕。
+
+  原理：
+    - 维护一个 List<DanmakuItem>，每个 item 有：
+      text（文字）、x/y（位置）、color（颜色）、
+      speed（速度）、width（文本宽度）
+    - 通过 Handler.postDelayed() 每 16ms（≈60fps）触发重绘
+    - 每帧：所有 item 的 x 坐标减 speed → invalidate() 触发 onDraw()
+    - onDraw() 中逐个绘制带描边的文字（黑色描边 + 白色文字，保证可见）
+
+  弹幕来源：
+    1. 历史弹幕：从 API 加载（GET /api/danmaku?videoId=xxx）
+       按 timestampMs 在对应播放位置释放
+    2. 实时弹幕：通过 WebSocket 接收（直播间和视频均支持）
+
+  限制：
+    - 同屏最多 20 条弹幕
+    - 随机 Y 坐标行（4 行）
+    - 视频弹幕支持暂停/继续/跳到指定位置
+
+4.7 直播系统（LiveFragment + LiveRoomActivity）
+
+  LiveFragment（直播列表）：
+    - RecyclerView 2 列网格
+    - 每个卡片：封面图、标题、主播名、直播中标签、在线人数
+    - 只有 status="live" 的房间可点击进入
+
+  LiveRoomActivity（直播间）：
+    - 循环播放示例视频（ExoPlayer）
+    - WebSocket 连接实时接收：
+      ├── 在线人数变化
+      ├── 热度值（每秒衰减 15%，30 秒更新一次）
+      ├── 评论/弹幕推送
+      ├── 点赞更新
+      ├── 商品变更（上架/下架/正在讲解）
+      └── 优惠券推送
+    - 底部横向商品列表 → 点击查看详情
+    - 输入框：
+      - 短文本 → 发弹幕
+      - 长文本 → 发评论（聊天消息）
+    - 优惠券横幅：弹出 10 秒自动消失，可点击领取
+
+4.8 购物车与订单
+
+  CartFragment（购物车）：
+    - 列表显示：复选框 + 图片 + 标题 + 价格 + 数量控件
+    - 管理模式："管理"按钮切换为删除模式
+    - 底部栏：全选 + 总价 + 去结算
+    - 选择商品 → 结算 → OrderConfirmActivity
+
+  OrderConfirmActivity（确认订单）：
+    - 显示订单商品列表
+    - 输入收货地址
+    - 显示小计/折扣/总计/实付金额
+    - 提交 → PaymentActivity
+
+  PaymentActivity（支付）：
+    - 模拟支付进度（展示 1.5 秒）
+    - 调用 API 支付（80% 成功率）
+    - 成功显示绿色✔ / 失败显示红色✘
+    - 跳转 OrderListActivity
+
+  OrderListActivity（订单列表）：
+    - 四个标签筛选：全部/待付款/已支付/已完成
+    - 待付款订单可取消/去支付
+    - 点击订单→ OrderDetailActivity
+
+4.9 登录注册
+
+  LoginActivity：
+    - ViewPager2 承载登录和注册两个 Fragment
+    - TabLayout 显示"登录"/"注册"标签
+
+  注册验证规则（RegisterFragment）：
+    - 账号 → 11 位及以上数字
+    - 密码 → 必须同时包含英文和数字，至少 6 位
+    - 确认密码 → 必须与密码一致
+    - 失败显示红色错误提示
+
+  登录验证（LoginFragment）：
+    - 账号和密码不能为空
+
+  API 调用：
+    - 注册：POST /api/auth/register → 成功则自动登录
+    - 登录：POST /api/auth/login → 获取 token 存入 ApiClient
+
+4.10 个人中心
+
+  ProfileFragment：
+    - 自己的头像/用户名/统计（获赞数/关注数/粉丝数）
+    - 操作入口：订单 ｜ 我的点赞 ｜ 我的视频 ｜ 收藏
+    - "我的视频"列表（2 列网格）
+    - 注销按钮
+    - 头像点击 → 系统图片选择 → 裁剪（CropImageContract）→ 上传
+
+  AuthorProfileActivity（他人主页）：
+    - 头像/用户名/统计
+    - 关注按钮（红色"关注"/灰色"已关注"）
+    - 视频网格 → 点击进入 AuthorVideoFeedActivity 全屏播放
+
+================================================================================
+五、WebSocket 实时通信
+================================================================================
+
+5.1 服务端（backend/src/websocket/wsServer.ts）
+  结构：
+    - rooms: Map<roomId, Map<WebSocket, memberInfo>>
+    - 每个房间维护一个成员列表
+
+  核心方法：
+    - joinRoom(ws, member)        → 加入房间
+    - leaveRoom(ws)               → 离开房间
+    - broadcast(roomId, message)  → 向房间广播消息
+    - getOnlineCount(roomId)      → 获取在线人数
+    - pushProductChanged(...)     → 推送商品变更
+    - pushCoupon(roomId, coupon)  → 推送优惠券
+    - pushDanmaku(videoId, dm)    → 推送弹幕
+    - pushLiveStarted(room)       → 全局广播开播
+
+  热度值机制：
+    - room.hotValue 初始值
+    - 每 30 秒衰减 15%（每 2 秒减 1.5%）
+    - 每次点赞/评论/弹幕增加热度
+
+5.2 客户端（LiveWebSocketClient.java）
+  连接：ws://10.17.24.7:3000/ws
+
+  发送消息类型：
+    JOIN_ROOM      → { type, roomId, userId, username }
+    LEAVE_ROOM     → { type, roomId }
+    SEND_COMMENT   → { type, roomId, userId, username, content }
+    SEND_DANMAKU   → { type, videoId, userId, username, content, color }
+    LIKE           → { type, roomId, userId }
+    CLAIM_COUPON   → { type, userId, couponId }
+    PING           → 保活心跳
+
+  重连机制：
+    - 断线自动重连，指数退避延迟
+    - 最多重试 10 次，最大延迟 30 秒
+
+5.3 弹幕 WebSocket（视频中）
+  视频播放时，通过 WebSocket 连接房间 "video_" + videoId
+  实时弹幕流程：
+    用户发送 → WebSocket → 服务端存储 + 广播 → VideoDanmakuView 实时渲染
+
+================================================================================
+六、数据流转全链路
+================================================================================
+
+以"用户刷视频并购买商品"为例：
+
+1. 用户打开 App → FeedFragment 加载
+2. FeedViewModel.loadVideos() → VideoRepository.loadVideos()
+3. VideoRepository 调用 ApiService.getVideos(page, limit)
+4. ApiService 用 OkHttp 发 GET /api/videos?page=1&limit=10
+5. 后端 video.ts 路由 → StorageService 读 videos.json
+6. 后端填充 author + products（数据丰富）
+7. 返回 JSON → Gson 解析为 List<Video>
+8. FeedPagerAdapter 创建 VideoViewHolder → ExoPlayer 播放视频
+9. 用户看到商品卡片 → 点击 → ProductDetailBottomSheetFragment
+10. 用户点"加入购物车" → ApiService.addToCart()
+11. POST /api/cart → 后端写 carts.json → 返回成功
+12. 用户去购物车 → CartFragment → 选择商品 → 结算
+13. OrderConfirmActivity → createOrder()
+14. POST /api/orders → 后端创建订单 + 扣减库存
+15. PaymentActivity → payOrder()
+16. POST /api/orders/:id/pay → 80% 概率支付成功
+
+================================================================================
+七、页面导航地图
+================================================================================
+
+MainActivity
+│
+├── [首页] FeedFragment
+│   └── VideoViewHolder（ViewPager2 滑动）
+│       ├── 点击头像 → AuthorProfileActivity
+│       ├── 点击评论 → CommentBottomSheetFragment
+│       ├── 点击商品卡 → ProductDetailBottomSheetFragment
+│       │   ├── 立即购买 → OrderConfirmActivity → PaymentActivity → OrderListActivity
+│       │   └── 加入购物车（API 调用）
+│       └── 点赞/收藏/关注（API 调用）
+│
+├── [直播] LiveFragment
+│   └── LiveRoomActivity（WebSocket 实时通信）
+│
+├── [购物车] CartFragment
+│   └── 结算 → OrderConfirmActivity → PaymentActivity → OrderListActivity
+│       └── 点击订单 → OrderDetailActivity
+│
+└── [我的] ProfileFragment
+    ├── 登录 → LoginActivity（ViewPager2: LoginFragment / RegisterFragment）
+    ├── 订单 → OrderListActivity → OrderDetailActivity
+    ├── 点赞 → LikedVideosActivity → LikedVideoFeedActivity
+    ├── 我的视频 → MyVideosActivity → VideoEditActivity（新建/编辑）
+    ├── 收藏 → CollectionsActivity
+    │   ├── 视频 → CollectionVideosFragment → LikedVideoFeedActivity
+    │   └── 商品 → CollectionProductsFragment → ProductDetailBottomSheetFragment
+    ├── 关注/粉丝 → FollowListActivity → AuthorProfileActivity
+    │   └── AuthorVideoFeedActivity（ViewPager2 全屏播放）
+    └── 头像 → CropImage → 上传 API
+
+================================================================================
+八、关键代码模式讲解
+================================================================================
+
+8.1 OkHttp 同步请求模式
+  本项目的 ApiService 所有方法都在子线程中同步调用：
+
+    new Thread(() -> {
+        try {
+            Response response = ApiClient.getInstance().newCall(request).execute();
+            // 解析 JSON
+            runOnUiThread(() -> {
+                // 更新 UI
+            });
+        } catch (IOException e) {
+            // 处理错误
+        }
+    }).start();
+
+  为什么不用 Retrofit？
+    - 教学目的，理解底层 HTTP 请求原理
+    - Retrofit 本质也是封装 OkHttp
+
+8.2 AuthInterceptor 认证拦截器
+  ApiClient 内部有一个 OkHttp Interceptor：
+    - 自动在所有请求头中添加 "Authorization: Bearer <token>"
+    - 如果 token 为 null 则跳过
+    - 比在每个方法中手动设置更安全
+
+8.3 重试拦截器
+  当后端返回 5xx 错误时，自动重试最多 2 次，指数退避延迟：
+    第 1 次重试等 1 秒，第 2 次等 2 秒
+
+8.4 Gson 序列化反序列化
+  Gson 自动将 JSON 和 Java 对象互相转换：
+    JSON → Java：gson.fromJson(jsonStr, Video.class)
+    Java → JSON：gson.toJson(video)
+
+8.5 ViewBinding
+  使用 Android 的 ViewBinding 代替 findViewById：
+    binding = ActivityMainBinding.inflate(getLayoutInflater())
+    setContentView(binding.getRoot())
+    binding.navFeed.setOnClickListener(...)
+
+8.6 ViewModel + LiveData
+  用于数据与 UI 解耦：
+    - ViewModel 在 Activity 重建时不销毁（屏幕旋转等）
+    - LiveData 在数据变化时自动通知 UI 更新
+    - 使用 postValue() 在子线程中安全更新
+
+8.7 ExoPlayer 生命周期管理
+  必须在正确的时机调用：
+    - onCreate → 初始化 ExoPlayer
+    - onResume/onPageSelected → player.play()
+    - onPause → player.pause()
+    - onDestroy → player.release()
+  不释放会导致内存泄漏和后台播放。
+
+8.8 ViewPager2 + FragmentStateAdapter
+  FeedFragment 使用 ViewPager2 垂直滑动：
+    - FragmentStateAdapter 为每个页面创建 Fragment
+    - offscreenPageLimit=1 控制预加载数量
+    - registerOnPageChangeCallback 监听页面切换触发播放
+
+8.9 底部导航重建的原因
+  为什么放弃系统的 BottomNavigationView？
+    - 问题：Material3 的 BottomNavigationView 无图标时文字不显示
+    - 尝试：state_selected ColorStateList、代码设 textColor、
+            NavigationUI.setupWithNavController 均无效
+    - 根因：Material 设计规范要求必须有图标
+    - 解决：自定义 LinearLayout + TextView + NavController.navigate()
+    - 好处：完全控制样式，选中/未选中的文字大小、颜色、粗细可任意定义
+
+================================================================================
+九、所有 API 接口速查表
+================================================================================
+
+【认证】 /api/auth
+  POST /register          — 注册
+  POST /login             — 登录
+  GET  /me                — 获取当前用户信息（需认证）
+  PATCH /me               — 修改个人信息（需认证）
+
+【视频】 /api/videos
+  GET    /                — 视频列表（分页，可选 authorId 筛选）
+  GET    /:id             — 视频详情（含作者 + 商品）
+  POST   /                — 创建视频（需认证）
+  PATCH  /:id             — 修改视频（需认证，仅作者或管理员）
+  DELETE /:id             — 删除视频（需认证，仅作者或管理员）
+  POST   /:id/view        — 增加播放量
+
+【商品】 /api/products
+  GET    /                — 商品列表（分页，可选分类/搜索）
+  GET    /:id             — 商品详情
+  POST   /                — 创建商品（需认证）
+  PATCH  /:id             — 修改商品
+  DELETE /:id             — 删除商品
+  POST   /:id/bind-video  — 绑定商品到视频（需认证）
+
+【购物车】 /api/cart（全部需认证）
+  GET    /                — 购物车列表
+  POST   /                — 添加到购物车
+  PATCH  /:id             — 修改数量/选中状态
+  DELETE /:id             — 删除单个
+  DELETE /                — 清空已选
+
+【订单】 /api/orders（全部需认证）
+  GET    /                — 订单列表（分页 + 状态筛选）
+  GET    /:id             — 订单详情
+  POST   /                — 创建订单（从购物车或直接购买）
+  POST   /:id/pay         — 模拟支付（80% 成功率）
+  PATCH  /:id/cancel      — 取消订单（仅待支付状态）
+
+【互动】 /api/interactions
+  POST  /likes            — 点赞/取消点赞（需认证）
+  GET   /likes            — 我的点赞列表（需认证）
+  GET   /likes/status     — 检查是否已点赞
+  GET   /likes/count      — 获取点赞数
+  POST  /collections      — 收藏/取消收藏（需认证）
+  GET   /collections      — 我的收藏列表（需认证）
+  GET   /collections/status — 检查是否已收藏
+  POST  /follow/:id       — 关注/取消关注（需认证）
+  GET   /follow/:id/status  — 检查关注状态（需认证）
+  GET   /followers        — 粉丝列表（需认证）
+  GET   /following        — 关注列表（需认证）
+
+【直播】 /api/live
+  GET  /rooms             — 直播间列表
+  GET  /rooms/:id         — 直播间详情
+  POST /rooms             — 创建直播间（需认证）
+  PATCH /rooms/:id        — 修改直播间（需认证）
+  POST /rooms/:id/start   — 开播（需认证）
+  POST /rooms/:id/end     — 下播（需认证）
+  POST /rooms/:id/product/:productId/explain — 设置讲解商品
+
+【评论】 /api/comments
+  GET    /                — 评论列表（按 targetType + targetId）
+  POST   /                — 发表评论（需认证）
+  DELETE /:id             — 删除评论（需认证）
+
+【弹幕】 /api/danmaku
+  GET  /                  — 获取视频弹幕列表
+  POST /                  — 发送弹幕（需认证）
+
+【优惠券】 /api/coupons
+  GET  /                  — 可领取的优惠券
+  GET  /my                — 我已领取的（需认证）
+  POST /:id/claim         — 领取优惠券（需认证）
+
+【上传】 /api/upload
+  POST /                  — 上传文件（需认证，最大 200MB）
+
+【推荐】 /api/recommendations
+  GET  /                  — 个性化商品推荐
+
+【秒杀】 /api/flash-sales
+  GET  /                  — 秒杀活动列表
+  POST /:id/buy           — 抢购（需认证）
+
+【统计】 /api/stats
+  GET  /dashboard         — 仪表盘数据
+
+【用户】 /api/users
+  GET  /:id               — 用户公开信息
+
+================================================================================
+十、答辩常见问题准备
+================================================================================
+
+Q1: 为什么选择这个项目？
+  答：短视频+直播电商是当前最热门的商业模式（抖音/快手/TikTok）。
+      本项目实现了这种模式的完整前端+后端+管理后台，技术栈全面，
+      涵盖了 Android、Node.js、WebSocket、REST API 等多种技术。
+
+Q2: 为什么后端用 JSON 文件而不用数据库？
+  答：本项目是教学项目，JSON 文件存储有三大优势：
+      1. 零配置——不需要安装 MySQL/MongoDB
+      2. 可读性强——直接打开 JSON 文件查看数据
+      3. 调试方便——出问题时直接编辑 JSON 修复
+      生产环境会替换为 PostgreSQL 或 MySQL。
+
+Q3: 安全性怎么考虑的？
+  答：1. 密码用 bcrypt 哈希存储（不是明文）
+      2. JWT token 认证所有写操作
+      3. Android 端不存储明文密码
+      4. 每个 API 操作验证用户权限（只能修改自己的资源）
+
+Q4: 视频播放怎么优化的？
+  答：1. ViewPager2 offscreenPageLimit=1，只预加载 1 个视频
+      2. 不可见时暂停播放（onPageSelected 触发）
+      3. 退出时释放 ExoPlayer（防止内存泄漏）
+      4. Glide 加载封面后再播放视频
+
+Q5: WebSocket 重连怎么处理的？
+  答：LiveWebSocketClient 在 onFailure/onClosed 时自动重连，
+      使用指数退避算法，最多 10 次，最大间隔 30 秒。
+
+Q6: 架构用了什么设计模式？
+  答：1. MVC 变体（View=XML + Activity/Fragment，数据=ViewModel + Repository）
+      2. 单例模式（ApiClient）
+      3. 观察者模式（LiveData + WebSocket 回调）
+      4. Repository 模式（VideoRepository 封装数据源）
+
+Q7: 项目最大的技术难点？
+  答：底部导航栏改造——Material3 的 BottomNavigationView 必须有图标
+      才能显示文字，而抖音风格是纯文字导航。经过多次尝试（ColorStateList、
+      透明度、代码设置）均无效后，最终用自定义 LinearLayout + 4 个
+      TextView 自己实现，配合 NavController 完成 Fragment 切换。
+
+Q8: 弹幕是怎么实现的？
+  答：自定义 View 继承 View，用 Canvas 绘制文字。每 16ms 通过 Handler
+      触发重绘（60fps），每条弹幕的 x 坐标不断减小，模拟从右到左的
+      滚动效果。文字带黑色描边保证在任何背景下都清晰可见。
+
+Q9: 即时通讯怎么实现？
+  答：直播间使用 WebSocket 实现全双工实时通信。
+      客户端连接 ws://服务器地址:3000/ws，发送加入房间消息，
+      服务端维护每个房间的成员列表，收到消息后向房间所有人广播。
+      支持的消息类型：弹幕、评论、点赞、商品切换、优惠券推送。
+
+Q10: 管理后台用的什么技术？
+   答：React 19 + TypeScript + Vite + React Router，
+       调用和 Android 相同的 REST API。
+
+================================================================================
+                          — 全文完 —
+================================================================================
