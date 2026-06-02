@@ -265,6 +265,15 @@
                 android:textSize="11sp"
                 android:text="收藏" />
         </LinearLayout>
+
+        <!-- Playback Mode Toggle (small, music-player style) -->
+        <ImageButton
+            android:id="@+id/video_playmode_btn"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/ic_playmode_sequential"
+            android:scaleType="fitCenter" />
     </LinearLayout>
 
     <!-- Product cards floating from left, above text area -->

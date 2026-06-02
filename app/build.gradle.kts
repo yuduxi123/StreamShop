@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
 
+    // Charts
+    implementation(libs.mpandroidchart)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

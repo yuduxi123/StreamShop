@@ -30,13 +30,13 @@ public class MainActivity extends AppCompatActivity {
 
         tabs = new TextView[] {
                 findViewById(R.id.nav_feed),
-                findViewById(R.id.nav_live),
+                findViewById(R.id.nav_messages),
                 findViewById(R.id.nav_cart),
                 findViewById(R.id.nav_profile)
         };
         tabDestIds = new int[][] {
                 new int[] { R.id.navigation_feed },
-                new int[] { R.id.navigation_live },
+                new int[] { R.id.navigation_messages },
                 new int[] { R.id.navigation_cart },
                 new int[] { R.id.navigation_profile }
         };

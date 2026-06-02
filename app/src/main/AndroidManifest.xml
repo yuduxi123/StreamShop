@@ -33,6 +33,8 @@
         <activity android:name=".ui.order.OrderListActivity" android:exported="false" />
         <activity android:name=".ui.order.OrderDetailActivity" android:exported="false" />
         <activity android:name=".ui.live.LiveRoomActivity" android:exported="false" />
+        <activity android:name=".ui.messages.ChatActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.login.LoginActivity" android:exported="false" />
         <activity android:name=".ui.profile.AuthorProfileActivity" android:exported="false" />
         <activity android:name=".ui.profile.LikedVideosActivity" android:exported="false" />
@@ -42,6 +44,7 @@
         <activity android:name=".ui.profile.VideoEditActivity" android:exported="false" />
         <activity android:name=".ui.profile.FollowListActivity" android:exported="false" />
         <activity android:name=".ui.profile.AuthorVideoFeedActivity" android:exported="false" />
+        <activity android:name=".ui.analytics.AnalyticsDashboardActivity" android:exported="false" />
         <activity
             android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Theme.StreamShop.Crop"

@@ -627,6 +627,69 @@ public class ApiService {
         }
     }
 
+    // ---- Stats ----
+
+    public Map<String, Object> getDashboardStats() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "stats/dashboard")
+                .get()
+                .build();
+        return executeGetMap(request);
+    }
+
+    // ---- Messages ----
+
+    public List<Map<String, Object>> getConversations() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages/conversations")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Get conversations failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
+        }
+    }
+
+    public ApiResponse<Map<String, Object>> getMessages(String conversationId, int page, int limit) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages/conversations/" + conversationId
+                        + "?page=" + page + "&limit=" + limit)
+                .get()
+                .build();
+        return executePaginatedMap(request);
+    }
+
+    public Map<String, Object> sendMessage(String receiverId, String content) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("receiverId", receiverId);
+        body.put("content", content);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Send message failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public int getUnreadMessageCount() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages/unread-count")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Get unread count failed: " + resp.code());
+            Map<String, Object> result = client.getGson().fromJson(respBody, Map.class);
+            Object val = result.get("count");
+            return val instanceof Number ? ((Number) val).intValue() : 0;
+        }
+    }
+
     // ---- Helpers ----
 
     private <T> ApiResponse<T> executePaginated(Request request, Class<T> clazz) throws IOException {

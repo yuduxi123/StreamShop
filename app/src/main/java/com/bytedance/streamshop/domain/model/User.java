@@ -10,6 +10,7 @@ public class User implements Serializable {
     private String createdAt;
     private int followers;
     private int following;
+    private int likesReceived;
 
     public User() {}
 
@@ -34,4 +35,6 @@ public class User implements Serializable {
     public void setFollowers(int followers) { this.followers = followers; }
     public int getFollowing() { return following; }
     public void setFollowing(int following) { this.following = following; }
+    public int getLikesReceived() { return likesReceived; }
+    public void setLikesReceived(int likesReceived) { this.likesReceived = likesReceived; }
 }

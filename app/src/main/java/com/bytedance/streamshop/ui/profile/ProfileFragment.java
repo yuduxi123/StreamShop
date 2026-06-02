@@ -28,6 +28,7 @@ import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.domain.model.User;
 import com.bytedance.streamshop.domain.model.Video;
+import com.bytedance.streamshop.ui.analytics.AnalyticsDashboardActivity;
 import com.bytedance.streamshop.ui.login.LoginActivity;
 import com.bytedance.streamshop.ui.order.OrderListActivity;
 import com.google.android.material.button.MaterialButton;
@@ -135,6 +136,14 @@ public class ProfileFragment extends Fragment {
         view.findViewById(R.id.profile_collections).setOnClickListener(v -> {
             if (ApiClient.getInstance().isAuthenticated()) {
                 startActivity(new Intent(getActivity(), CollectionsActivity.class));
+            } else {
+                Toast.makeText(getContext(), "请先登录", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        view.findViewById(R.id.profile_analytics).setOnClickListener(v -> {
+            if (ApiClient.getInstance().isAuthenticated()) {
+                startActivity(new Intent(getActivity(), AnalyticsDashboardActivity.class));
             } else {
                 Toast.makeText(getContext(), "请先登录", Toast.LENGTH_SHORT).show();
             }
@@ -252,7 +261,6 @@ public class ProfileFragment extends Fragment {
                 avatarView.setImageResource(R.drawable.ic_avatar_placeholder);
             }
 
-            loadStats();
             loadMyVideos();
         } else {
             usernameText.setText("未登录");
@@ -274,18 +282,12 @@ public class ProfileFragment extends Fragment {
                 String userId = ApiClient.getInstance().getCurrentUserId();
                 if (userId == null) return;
                 User user = new ApiService().getUserProfile(userId);
+                final int likesReceived = user.getLikesReceived();
                 final int following = user.getFollowing();
                 final int followers = user.getFollowers();
-                int likes = 0;
-                synchronized (myVideos) {
-                    for (Video v : myVideos) {
-                        likes += v.getLikeCount();
-                    }
-                }
-                final int totalLikes = likes;
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
-                        likesCountText.setText(formatCount(totalLikes));
+                        likesCountText.setText(formatCount(likesReceived));
                         followingCountText.setText(formatCount(following));
                         followersCountText.setText(formatCount(followers));
                     });
@@ -360,7 +362,13 @@ public class ProfileFragment extends Fragment {
             h.likes.setText(formatCount(v.getLikeCount()));
 
             h.itemView.setOnClickListener(view -> {
-                Toast.makeText(getContext(), v.getTitle(), Toast.LENGTH_SHORT).show();
+                String userId = ApiClient.getInstance().getCurrentUserId();
+                if (userId != null) {
+                    Intent intent = new Intent(getContext(), AuthorVideoFeedActivity.class);
+                    intent.putExtra("author_id", userId);
+                    intent.putExtra("start_position", pos);
+                    startActivity(intent);
+                }
             });
         }
 

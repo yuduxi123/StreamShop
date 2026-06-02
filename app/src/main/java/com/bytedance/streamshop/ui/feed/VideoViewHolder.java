@@ -42,6 +42,11 @@ import java.util.Map;
 import java.util.Random;
 
 public class VideoViewHolder extends RecyclerView.ViewHolder {
+
+    public interface OnVideoEndedListener {
+        void onVideoEnded();
+    }
+
     private final PlayerView playerView;
     private final ImageView coverView;
     private final ImageView playIndicator;
@@ -54,6 +59,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private final ImageButton likeButton;
     private final ImageButton commentButton;
     private final ImageButton collectButton;
+    private final ImageButton playModeButton;
     private final ViewGroup productContainer;
     private final SeekBar seekBar;
     private final TextView currentTimeText;
@@ -71,6 +77,8 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private boolean viewReported;
     private boolean fallbackTried;
     private boolean isUserSeeking;
+    private boolean loopMode;
+    private OnVideoEndedListener playbackModeListener;
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
     private Context context;
     private FragmentManager fragmentManager;
@@ -90,6 +98,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         likeButton = itemView.findViewById(R.id.video_like_btn);
         commentButton = itemView.findViewById(R.id.video_comment_btn);
         collectButton = itemView.findViewById(R.id.video_collect_btn);
+        playModeButton = itemView.findViewById(R.id.video_playmode_btn);
         productContainer = itemView.findViewById(R.id.product_card_container);
         seekBar = itemView.findViewById(R.id.video_seekbar);
         currentTimeText = itemView.findViewById(R.id.video_current_time);
@@ -107,6 +116,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         if (likeButton != null) likeButton.setOnClickListener(v -> toggleLike());
         if (commentButton != null) commentButton.setOnClickListener(v -> showComments());
         if (collectButton != null) collectButton.setOnClickListener(v -> toggleCollect());
+        if (playModeButton != null) playModeButton.setOnClickListener(v -> togglePlayMode());
         if (videoRoot != null) videoRoot.setOnClickListener(v -> togglePlayPause());
 
         if (seekBar != null) {
@@ -134,6 +144,10 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         }
     }
 
+    public void setOnPlaybackModeListener(OnVideoEndedListener listener) {
+        this.playbackModeListener = listener;
+    }
+
     public void bind(Video video, Context context, FragmentManager fragmentManager) {
         releasePlayer();
         if (wsClient != null) wsClient.disconnect();
@@ -145,6 +159,8 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         this.viewReported = false;
         this.fallbackTried = false;
         this.isUserSeeking = false;
+        this.loopMode = false;
+        updatePlayModeButton();
 
         bindVideo();
         setupProductCards();
@@ -260,6 +276,22 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                         player.play();
                     }
                     startProgressUpdates();
+                }
+                if (playbackState == Player.STATE_ENDED) {
+                    if (loopMode) {
+                        if (player != null) {
+                            player.seekTo(0);
+                            player.play();
+                            if (danmakuView != null) {
+                                danmakuView.setPlaybackPosition(0);
+                                danmakuView.play();
+                            }
+                        }
+                    } else {
+                        if (playbackModeListener != null) {
+                            playbackModeListener.onVideoEnded();
+                        }
+                    }
                 }
             }
 
@@ -413,6 +445,20 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 itemView.post(() -> { if (collectButton != null) collectButton.setEnabled(true); });
             }
         }).start();
+    }
+
+    private void togglePlayMode() {
+        loopMode = !loopMode;
+        updatePlayModeButton();
+    }
+
+    private void updatePlayModeButton() {
+        if (playModeButton == null) return;
+        if (loopMode) {
+            playModeButton.setBackgroundResource(R.drawable.ic_playmode_loop);
+        } else {
+            playModeButton.setBackgroundResource(R.drawable.ic_playmode_sequential);
+        }
     }
 
     private void showComments() {

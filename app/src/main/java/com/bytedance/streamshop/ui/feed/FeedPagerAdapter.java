@@ -17,9 +17,14 @@ public class FeedPagerAdapter extends RecyclerView.Adapter<VideoViewHolder> {
 
     private List<Video> videos = new ArrayList<>();
     private FragmentManager fragmentManager;
+    private VideoViewHolder.OnVideoEndedListener playbackModeListener;
 
     public void setFragmentManager(FragmentManager fragmentManager) {
         this.fragmentManager = fragmentManager;
+    }
+
+    public void setPlaybackModeListener(VideoViewHolder.OnVideoEndedListener listener) {
+        this.playbackModeListener = listener;
     }
 
     public void setVideos(List<Video> videos) {
@@ -56,6 +61,7 @@ public class FeedPagerAdapter extends RecyclerView.Adapter<VideoViewHolder> {
     public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
         Video video = videos.get(position);
         holder.bind(video, holder.itemView.getContext(), fragmentManager);
+        holder.setOnPlaybackModeListener(playbackModeListener);
     }
 
     @Override

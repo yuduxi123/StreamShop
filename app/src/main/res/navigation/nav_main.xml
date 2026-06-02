@@ -7,15 +7,15 @@
 
     <fragment
         android:id="@+id/navigation_feed"
-        android:name="com.bytedance.streamshop.ui.feed.FeedFragment"
+        android:name="com.bytedance.streamshop.ui.feed.HomeContainerFragment"
         android:label="首页"
-        tools:layout="@layout/fragment_feed" />
+        tools:layout="@layout/fragment_home_container" />
 
     <fragment
-        android:id="@+id/navigation_live"
-        android:name="com.bytedance.streamshop.ui.live.LiveFragment"
-        android:label="直播"
-        tools:layout="@layout/fragment_live" />
+        android:id="@+id/navigation_messages"
+        android:name="com.bytedance.streamshop.ui.messages.MessagesFragment"
+        android:label="消息"
+        tools:layout="@layout/fragment_messages" />
 
     <fragment
         android:id="@+id/navigation_cart"

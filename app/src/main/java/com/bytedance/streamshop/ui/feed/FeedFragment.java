@@ -92,6 +92,12 @@ public class FeedFragment extends Fragment {
                 videos = videoList;
                 adapter = new FeedPagerAdapter();
                 adapter.setFragmentManager(getChildFragmentManager());
+                adapter.setPlaybackModeListener(() -> {
+                    int nextPos = currentPosition + 1;
+                    if (nextPos < videos.size()) {
+                        viewPager.setCurrentItem(nextPos, true);
+                    }
+                });
                 viewPager.setAdapter(adapter);
                 adapter.setVideos(videos);
             } else if (videoList.size() > videos.size()) {

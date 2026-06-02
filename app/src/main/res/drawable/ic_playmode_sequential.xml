@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@android:color/white">
+    <!-- Downward "skip next" style: triangle pointing down + bar -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M6,6h12L12,14z M6,16h12v2H6z" />
+</vector>

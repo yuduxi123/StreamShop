@@ -128,6 +128,12 @@ public class AuthorVideoFeedActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
             holder.bind(videos.get(position), AuthorVideoFeedActivity.this, getSupportFragmentManager());
+            holder.setOnPlaybackModeListener(() -> {
+                int nextPos = currentPosition + 1;
+                if (nextPos < videos.size()) {
+                    viewPager.setCurrentItem(nextPos, true);
+                }
+            });
         }
 
         @Override

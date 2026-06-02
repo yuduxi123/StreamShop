@@ -10,6 +10,7 @@ interface RoomMember {
 
 const rooms = new Map<string, Map<WebSocket, RoomMember>>();
 const hotValues = new Map<string, number>();
+const userSockets = new Map<string, WebSocket>();
 
 export class WebSocketServer {
   private wss: WSS;
@@ -68,6 +69,9 @@ export class WebSocketServer {
         break;
       case 'PING':
         this.send(ws, { type: 'PONG' });
+        break;
+      case 'AUTHENTICATE':
+        this.handleAuthenticate(ws, msg.userId);
         break;
     }
   }
@@ -148,6 +152,13 @@ export class WebSocketServer {
     });
   }
 
+  pushMessage(targetUserId: string, message: any): void {
+    const ws = userSockets.get(targetUserId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      this.send(ws, message);
+    }
+  }
+
   // --- Internal ---
 
   private joinRoom(ws: WebSocket, roomId: string, userId: string, username: string): void {
@@ -175,7 +186,14 @@ export class WebSocketServer {
     }
   }
 
+  private handleAuthenticate(ws: WebSocket, userId: string): void {
+    if (!userId) return;
+    userSockets.set(userId, ws);
+    this.send(ws, { type: 'AUTHENTICATED', userId });
+  }
+
   private handleDisconnect(ws: WebSocket): void {
+    // Clean up room membership
     for (const [roomId, room] of rooms.entries()) {
       if (room.has(ws)) {
         room.delete(ws);
@@ -185,6 +203,13 @@ export class WebSocketServer {
         } else {
           this.broadcastToRoom(roomId, { type: 'ONLINE_COUNT_UPDATE', roomId, count: room.size }, ws);
         }
+      }
+    }
+    // Clean up user socket
+    for (const [userId, socket] of userSockets.entries()) {
+      if (socket === ws) {
+        userSockets.delete(userId);
+        break;
       }
     }
   }

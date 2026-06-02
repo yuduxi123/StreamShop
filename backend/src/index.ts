@@ -19,6 +19,7 @@ import flashsaleRoutes from './routes/flashsale';
 import userRoutes from './routes/user';
 import danmakuRoutes from './routes/danmaku';
 import uploadRoutes from './routes/upload';
+import messageRoutes from './routes/message';
 import path from 'path';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/flash-sales', flashsaleRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/danmaku', danmakuRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

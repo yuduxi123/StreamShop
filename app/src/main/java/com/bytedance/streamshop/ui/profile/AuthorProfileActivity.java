@@ -16,9 +16,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.bytedance.streamshop.R;
+import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.domain.model.User;
 import com.bytedance.streamshop.domain.model.Video;
+import com.bytedance.streamshop.ui.messages.ChatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 
@@ -72,6 +74,9 @@ public class AuthorProfileActivity extends AppCompatActivity {
 
         findViewById(R.id.author_back).setOnClickListener(v -> finish());
         followBtn.setOnClickListener(v -> toggleFollow());
+
+        MaterialButton messageBtn = findViewById(R.id.author_message_btn);
+        messageBtn.setOnClickListener(v -> openChat());
 
         gridAdapter = new VideoGridAdapter();
         videoGrid.setLayoutManager(new GridLayoutManager(this, 2));
@@ -136,6 +141,21 @@ public class AuthorProfileActivity extends AppCompatActivity {
                 });
             }
         }).start();
+    }
+
+    private void openChat() {
+        if (currentUser == null) return;
+        String myId = ApiClient.getInstance().getCurrentUserId();
+        if (myId == null) return;
+        String convId = myId.compareTo(currentUser.getId()) < 0
+                ? myId + "_" + currentUser.getId()
+                : currentUser.getId() + "_" + myId;
+        Intent intent = new Intent(this, ChatActivity.class);
+        intent.putExtra("conversation_id", convId);
+        intent.putExtra("other_user_id", currentUser.getId());
+        intent.putExtra("other_username", currentUser.getUsername());
+        intent.putExtra("other_avatar_url", currentUser.getAvatarUrl());
+        startActivity(intent);
     }
 
     private void toggleFollow() {
