@@ -4,25 +4,22 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.bytedance.streamshop.data.remote.ApiService;
-import com.bytedance.streamshop.data.repository.VideoRepository;
-import com.bytedance.streamshop.domain.model.Video;
+import com.bytedance.streamshop.data.repository.FeedRepository;
+import com.bytedance.streamshop.domain.model.FeedItem;
 
 import java.util.List;
 
 public class FeedViewModel extends ViewModel {
-    private final MutableLiveData<List<Video>> videos = new MutableLiveData<>();
+    private final MutableLiveData<List<FeedItem>> feedItems = new MutableLiveData<>();
     private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>(null);
-    private final VideoRepository repository;
-    private final ApiService apiService;
+    private final FeedRepository repository;
 
     public FeedViewModel() {
-        this.repository = new VideoRepository();
-        this.apiService = new ApiService();
+        this.repository = new FeedRepository();
     }
 
-    public LiveData<List<Video>> getVideos() { return videos; }
+    public LiveData<List<FeedItem>> getFeedItems() { return feedItems; }
     public LiveData<Boolean> getLoading() { return loading; }
     public LiveData<String> getError() { return error; }
 
@@ -30,11 +27,11 @@ public class FeedViewModel extends ViewModel {
         if (Boolean.TRUE.equals(loading.getValue())) return;
         loading.setValue(true);
         error.setValue(null);
-        repository.refresh(new VideoRepository.Callback<List<Video>>() {
+        repository.refresh(new FeedRepository.Callback<List<FeedItem>>() {
             @Override
-            public void onSuccess(List<Video> data) {
+            public void onSuccess(List<FeedItem> data) {
                 loading.postValue(false);
-                videos.postValue(repository.getVideoCache());
+                feedItems.postValue(repository.getItemCache());
             }
 
             @Override
@@ -48,11 +45,11 @@ public class FeedViewModel extends ViewModel {
     public void loadMore() {
         if (Boolean.TRUE.equals(loading.getValue()) || !repository.hasMore()) return;
         loading.setValue(true);
-        repository.loadMore(new VideoRepository.Callback<List<Video>>() {
+        repository.loadMore(new FeedRepository.Callback<List<FeedItem>>() {
             @Override
-            public void onSuccess(List<Video> data) {
+            public void onSuccess(List<FeedItem> data) {
                 loading.postValue(false);
-                videos.postValue(repository.getVideoCache());
+                feedItems.postValue(repository.getItemCache());
             }
 
             @Override

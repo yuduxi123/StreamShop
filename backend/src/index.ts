@@ -20,6 +20,7 @@ import userRoutes from './routes/user';
 import danmakuRoutes from './routes/danmaku';
 import uploadRoutes from './routes/upload';
 import messageRoutes from './routes/message';
+import feedRoutes from './routes/feed';
 import path from 'path';
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/danmaku', danmakuRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/feed', feedRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

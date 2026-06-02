@@ -2,19 +2,18 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1A1A">
+    android:background="@android:color/black">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/live_room_list"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/live_viewpager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="6dp"
-        android:clipToPadding="false" />
+        android:layout_height="match_parent" />
 
     <TextView
         android:id="@+id/live_list_empty"
         android:layout_width="match_parent"
         android:layout_height="200dp"
+        android:layout_gravity="center"
         android:gravity="center"
         android:text="暂无直播"
         android:textColor="#999999"

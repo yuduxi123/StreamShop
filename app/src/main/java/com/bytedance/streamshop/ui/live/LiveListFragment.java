@@ -5,31 +5,29 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiService;
-import com.bumptech.glide.Glide;
+import com.bytedance.streamshop.ui.feed.LiveFeedCardViewHolder;
 
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class LiveListFragment extends Fragment {
-    private RecyclerView roomList;
+    private ViewPager2 viewPager;
     private TextView emptyView;
-    private RoomAdapter adapter;
+    private LiveRoomPagerAdapter adapter;
     private ApiService apiService;
     private final List<Map<String, Object>> rooms = new ArrayList<>();
+    private int currentPosition = 0;
 
     @Nullable
     @Override
@@ -41,13 +39,25 @@ public class LiveListFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        roomList = view.findViewById(R.id.live_room_list);
+        viewPager = view.findViewById(R.id.live_viewpager);
         emptyView = view.findViewById(R.id.live_list_empty);
         apiService = new ApiService();
 
-        roomList.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        adapter = new RoomAdapter();
-        roomList.setAdapter(adapter);
+        viewPager.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
+        viewPager.setOffscreenPageLimit(1);
+        adapter = new LiveRoomPagerAdapter();
+        viewPager.setAdapter(adapter);
+
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                currentPosition = position;
+                if (position >= rooms.size() - 2) {
+                    loadRooms();
+                }
+            }
+        });
 
         loadRooms();
     }
@@ -55,95 +65,83 @@ public class LiveListFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        loadRooms();
+        if (rooms.isEmpty()) {
+            loadRooms();
+        }
     }
 
     private void loadRooms() {
         new Thread(() -> {
             try {
                 var response = apiService.getRooms(1, 50);
+                List<Map<String, Object>> data = response.getData();
+                if (data == null || data.isEmpty()) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            emptyView.setVisibility(View.VISIBLE);
+                            viewPager.setVisibility(View.GONE);
+                        });
+                    }
+                    return;
+                }
+
+                // Only show live rooms
+                List<Map<String, Object>> liveRooms = new ArrayList<>();
+                for (Map<String, Object> room : data) {
+                    if ("live".equals(room.get("status"))) {
+                        liveRooms.add(room);
+                    }
+                }
+
                 rooms.clear();
-                rooms.addAll(response.getData());
+                rooms.addAll(liveRooms);
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         adapter.notifyDataSetChanged();
-                        emptyView.setVisibility(rooms.isEmpty() ? View.VISIBLE : View.GONE);
-                        roomList.setVisibility(rooms.isEmpty() ? View.GONE : View.VISIBLE);
+                        boolean empty = rooms.isEmpty();
+                        emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+                        viewPager.setVisibility(empty ? View.GONE : View.VISIBLE);
+                        currentPosition = Math.min(currentPosition, rooms.size() - 1);
+                        viewPager.setCurrentItem(currentPosition, false);
                     });
                 }
             } catch (Exception ignored) {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         emptyView.setVisibility(View.VISIBLE);
-                        roomList.setVisibility(View.GONE);
+                        viewPager.setVisibility(View.GONE);
                     });
                 }
             }
         }).start();
     }
 
-    private class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
-        private final NumberFormat nf = NumberFormat.getNumberInstance(Locale.CHINA);
-
-        @NonNull @Override
-        public VH onCreateViewHolder(@NonNull ViewGroup parent, int type) {
-            return new VH(LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_live_room, parent, false));
+    private class LiveRoomPagerAdapter extends RecyclerView.Adapter<LiveFeedCardViewHolder> {
+        @NonNull
+        @Override
+        public LiveFeedCardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new LiveFeedCardViewHolder(
+                    LayoutInflater.from(parent.getContext())
+                            .inflate(R.layout.item_feed_live_card, parent, false)
+            );
         }
 
         @Override
-        public void onBindViewHolder(@NonNull VH h, int pos) {
-            Map<String, Object> room = rooms.get(pos);
-            String title = (String) room.get("title");
-            String cover = (String) room.get("coverUrl");
-            String status = (String) room.get("status");
-
-            h.title.setText(title != null ? title : "直播间");
-            Glide.with(h.itemView).load(cover).into(h.cover);
-
-            Map<String, Object> anchor = (Map<String, Object>) room.get("anchor");
-            h.anchorName.setText(anchor != null ? (String) anchor.get("username") : "主播");
-
-            boolean isLive = "live".equals(status);
-            h.liveBadge.setVisibility(isLive ? View.VISIBLE : View.GONE);
-
-            if (isLive) {
-                int online = room.get("onlineCount") instanceof Number
-                        ? ((Number) room.get("onlineCount")).intValue() : 0;
-                String onlineStr = online > 1000
-                        ? nf.format(online / 1000.0) + "k"
-                        : String.valueOf(online);
-                h.statusText.setText(onlineStr + "人在看");
-                h.statusText.setTextColor(0xCCFFFFFF);
-                h.statusText.setVisibility(View.VISIBLE);
-            } else {
-                h.statusText.setText("未开播");
-                h.statusText.setTextColor(0xCCFFFFFF);
-                h.statusText.setVisibility(View.VISIBLE);
-            }
-
-            h.itemView.setOnClickListener(v -> {
-                if (isLive && getActivity() != null) {
+        public void onBindViewHolder(@NonNull LiveFeedCardViewHolder holder, int position) {
+            Map<String, Object> room = rooms.get(position);
+            holder.bind(room, r -> {
+                String roomId = r.get("id") != null ? String.valueOf(r.get("id")) : "";
+                if (!roomId.isEmpty() && getActivity() != null) {
                     Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
-                    intent.putExtra("room_id", (String) room.get("id"));
+                    intent.putExtra("room_id", roomId);
                     startActivity(intent);
                 }
             });
         }
 
-        @Override public int getItemCount() { return rooms.size(); }
-
-        class VH extends RecyclerView.ViewHolder {
-            ImageView cover;
-            TextView title, anchorName, statusText, liveBadge;
-            VH(View v) {
-                super(v);
-                cover = v.findViewById(R.id.room_cover);
-                title = v.findViewById(R.id.room_title);
-                anchorName = v.findViewById(R.id.room_anchor);
-                statusText = v.findViewById(R.id.room_status);
-                liveBadge = v.findViewById(R.id.room_live_badge);
-            }
+        @Override
+        public int getItemCount() {
+            return rooms.size();
         }
     }
 }

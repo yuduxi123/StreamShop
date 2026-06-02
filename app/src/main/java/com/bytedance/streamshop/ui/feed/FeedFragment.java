@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.bytedance.streamshop.R;
-import com.bytedance.streamshop.domain.model.Video;
+import com.bytedance.streamshop.domain.model.FeedItem;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import java.util.ArrayList;
@@ -27,9 +27,14 @@ public class FeedFragment extends Fragment {
     private TextView errorView;
     private FeedViewModel viewModel;
     private FeedPagerAdapter adapter;
-    private List<Video> videos = new ArrayList<>();
+    private List<FeedItem> feedItems = new ArrayList<>();
     private int currentPosition = 0;
     private int lastPlayingPosition = -1;
+    private LiveTabSwitchListener liveTabSwitchListener;
+
+    public void setLiveTabSwitchListener(LiveTabSwitchListener listener) {
+        this.liveTabSwitchListener = listener;
+    }
 
     @Nullable
     @Override
@@ -49,8 +54,8 @@ public class FeedFragment extends Fragment {
     public void onDestroyView() {
         if (adapter != null) {
             for (int i = 0; i < adapter.getItemCount(); i++) {
-                VideoViewHolder holder = adapter.getViewHolderAt(recyclerView, i);
-                if (holder != null) holder.release();
+                RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, i);
+                releaseHolder(holder);
             }
         }
         if (viewPager != null) {
@@ -86,46 +91,50 @@ public class FeedFragment extends Fragment {
 
     private void setupViewModel() {
         viewModel = new ViewModelProvider(this).get(FeedViewModel.class);
-        viewModel.getVideos().observe(getViewLifecycleOwner(), videoList -> {
-            if (videoList == null || videoList.isEmpty()) return;
+        viewModel.getFeedItems().observe(getViewLifecycleOwner(), itemList -> {
+            if (itemList == null || itemList.isEmpty()) return;
             if (adapter == null) {
-                videos = videoList;
+                feedItems = itemList;
                 adapter = new FeedPagerAdapter();
                 adapter.setFragmentManager(getChildFragmentManager());
                 adapter.setPlaybackModeListener(() -> {
                     int nextPos = currentPosition + 1;
-                    if (nextPos < videos.size()) {
+                    if (nextPos < feedItems.size()) {
                         viewPager.setCurrentItem(nextPos, true);
                     }
                 });
+                adapter.setLiveCardClickListener(room -> {
+                    if (liveTabSwitchListener != null) {
+                        liveTabSwitchListener.onSwitchToLiveTab();
+                    }
+                });
                 viewPager.setAdapter(adapter);
-                adapter.setVideos(videos);
-            } else if (videoList.size() > videos.size()) {
-                List<Video> newVideos = videoList.subList(videos.size(), videoList.size());
-                videos = videoList;
-                adapter.addVideos(newVideos);
+                adapter.setItems(feedItems);
+            } else if (itemList.size() > feedItems.size()) {
+                List<FeedItem> newItems = itemList.subList(feedItems.size(), itemList.size());
+                feedItems = itemList;
+                adapter.addItems(newItems);
                 return;
             } else {
-                videos = videoList;
-                adapter.setVideos(videos);
+                feedItems = itemList;
+                adapter.setItems(feedItems);
             }
 
-            currentPosition = Math.min(currentPosition, videos.size() - 1);
+            currentPosition = Math.min(currentPosition, feedItems.size() - 1);
             viewPager.setCurrentItem(currentPosition, false);
 
             loadingView.setVisibility(View.GONE);
             errorView.setVisibility(View.GONE);
 
             viewPager.post(() -> {
-                VideoViewHolder holder = adapter.getViewHolderAt(recyclerView, currentPosition);
-                if (holder != null) holder.play();
+                playHolderAt(currentPosition);
                 lastPlayingPosition = currentPosition;
             });
         });
 
         viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
             if (loadingView == null) return;
-            if (loading != null && loading && videos.isEmpty()) {
+            if (loading != null && loading && feedItems.isEmpty()) {
                 loadingView.setVisibility(View.VISIBLE);
             } else {
                 loadingView.setVisibility(View.GONE);
@@ -135,7 +144,7 @@ public class FeedFragment extends Fragment {
         viewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (loadingView != null) loadingView.setVisibility(View.GONE);
             if (errorView == null) return;
-            if (error != null && videos.isEmpty()) {
+            if (error != null && feedItems.isEmpty()) {
                 errorView.setVisibility(View.VISIBLE);
                 errorView.setText("Load failed, tap to retry");
             } else {
@@ -147,38 +156,55 @@ public class FeedFragment extends Fragment {
     }
 
     private void onFeedPageSelected(int position) {
-        // Pause previous video
+        if (adapter == null) return;
         if (lastPlayingPosition >= 0 && lastPlayingPosition != position) {
-            VideoViewHolder prev = adapter.getViewHolderAt(recyclerView, lastPlayingPosition);
-            if (prev != null) prev.pause();
+            pauseHolderAt(lastPlayingPosition);
         }
-        // Play current video
-        VideoViewHolder current = adapter.getViewHolderAt(recyclerView, position);
-        if (current != null) current.play();
+        playHolderAt(position);
         lastPlayingPosition = position;
         currentPosition = position;
 
-        if (position >= videos.size() - 2) {
+        if (position >= feedItems.size() - 2) {
             viewModel.loadMore();
         }
     }
 
     private void pauseCurrentVideo() {
         if (adapter == null || recyclerView == null) return;
-        VideoViewHolder holder = adapter.getViewHolderAt(recyclerView, currentPosition);
-        if (holder != null) holder.pause();
+        pauseHolderAt(currentPosition);
     }
 
     private void resumeCurrentVideo() {
         if (adapter == null || recyclerView == null) return;
-        VideoViewHolder holder = adapter.getViewHolderAt(recyclerView, currentPosition);
-        if (holder != null) holder.play();
+        playHolderAt(currentPosition);
+    }
+
+    private void playHolderAt(int position) {
+        if (adapter == null || recyclerView == null) return;
+        RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, position);
+        if (holder instanceof VideoViewHolder) {
+            ((VideoViewHolder) holder).play();
+        }
+    }
+
+    private void pauseHolderAt(int position) {
+        if (adapter == null || recyclerView == null) return;
+        RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, position);
+        if (holder instanceof VideoViewHolder) {
+            ((VideoViewHolder) holder).pause();
+        }
+    }
+
+    private void releaseHolder(RecyclerView.ViewHolder holder) {
+        if (holder instanceof VideoViewHolder) {
+            ((VideoViewHolder) holder).release();
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (videos.isEmpty()) {
+        if (feedItems.isEmpty()) {
             viewModel.loadVideos();
         } else {
             resumeCurrentVideo();

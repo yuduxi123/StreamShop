@@ -2,6 +2,7 @@ package com.bytedance.streamshop.data.remote;
 
 import com.bytedance.streamshop.domain.model.Comment;
 import com.bytedance.streamshop.domain.model.Danmaku;
+import com.bytedance.streamshop.domain.model.FeedItem;
 import com.bytedance.streamshop.domain.model.Product;
 import com.bytedance.streamshop.domain.model.User;
 import com.bytedance.streamshop.domain.model.Video;
@@ -85,6 +86,14 @@ public class ApiService {
     }
 
     // ---- Videos ----
+
+    public ApiResponse<FeedItem> getFeed(int page, int limit) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "feed?page=" + page + "&limit=" + limit)
+                .get()
+                .build();
+        return executePaginated(request, FeedItem.class);
+    }
 
     public ApiResponse<Video> getVideos(int page, int limit) throws IOException {
         Request request = new Request.Builder()

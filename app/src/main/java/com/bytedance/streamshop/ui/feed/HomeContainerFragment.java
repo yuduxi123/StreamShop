@@ -43,7 +43,13 @@ public class HomeContainerFragment extends Fragment {
         }).attach();
     }
 
-    private static class HomeTabAdapter extends FragmentStateAdapter {
+    public void switchToLiveTab() {
+        if (viewPager != null) {
+            viewPager.setCurrentItem(1, true);
+        }
+    }
+
+    private class HomeTabAdapter extends FragmentStateAdapter {
         HomeTabAdapter(@NonNull Fragment fragment) {
             super(fragment);
         }
@@ -51,7 +57,11 @@ public class HomeContainerFragment extends Fragment {
         @NonNull
         @Override
         public Fragment createFragment(int position) {
-            if (position == 0) return new FeedFragment();
+            if (position == 0) {
+                FeedFragment feedFragment = new FeedFragment();
+                feedFragment.setLiveTabSwitchListener(() -> switchToLiveTab());
+                return feedFragment;
+            }
             return new LiveListFragment();
         }
 
