@@ -10,16 +10,19 @@
     1. 按顺序读，不要跳。每一层的知识是下一层的基础。
     2. 读到不懂的词，先记住，后面会解释。
     3. 读完一章，用自己的话复述一遍，看能不能讲清楚。
-    4. 最后用 Part 4 的 15 个问题模拟答辩。
+    4. 最后用 Part 4 的 21 个问题模拟答辩。
 
   时间分配建议：
     第 1 天上午：Part 1（底层概念，2-3 小时）
-    第 1 天下午：Part 2 前半（Java + Android 核心，4 小时）
-    第 2 天上午：Part 2 后半（网络 + 视频 + UI + 后端，4 小时）
-    第 2 天下午：Part 3 + Part 4（架构 + 模拟答辩，3 小时）
+    第 1 天下午：Part 2 前半（Java + Android 核心 + 直播基础，4 小时）
+    第 2 天上午：Part 2 后半（网络 + 视频 + 直播推流 + UI + 后端，4 小时）
+    第 2 天下午：Part 3 + Part 4（架构 + 21 个模拟答辩题，3 小时）
 
-  另外准备一份 `StreamShop答辩知识点全解.txt` 放旁边，
-  这份用来深入查细节，学习路线用来帮你理清思路。
+  重点新增内容（第 6 迭代后更新）：
+    2.5b 直播推流技术 —— Camera1/RTMP/pedroSG94/node-media-server 全链路
+    Q7-Q8b —— 直播推流+实时通信+技术坑 详细问答
+    Q16-Q20 —— 运营分析、Fragment 生命周期、摄像头权限、数据准确性问题
+    3.3 模块速览 —— 新增直播推流细节、运营分析、即时通讯
 
 
 ================================================================================
@@ -386,6 +389,178 @@ Part 2：每个技术的"是什么-为什么-怎么用"
 
   好处：不会因为写错 id 而崩溃（编译时就检查了）
 
+
+----------------------------------------------------------------------------
+2.5b 直播推流技术（答辩重点！）
+----------------------------------------------------------------------------
+
+【直播的完整链路】
+
+  主播端（推流）：
+    手机摄像头 → 采集画面 → H.264 编码 → AAC 音频编码
+    → RTMP 协议 → 推送到服务器 → 服务器转码/转发
+
+  观众端（拉流）：
+    服务器 → HTTP-FLV / HLS 协议 → 手机播放器解码 → 显示画面
+
+  大白话：主播的手机像一台"电视台"，把画面压缩后通过网络传到
+  服务器（中转站），服务器再把画面分发给所有观众。
+
+【Camera1 — 摄像头画面采集】
+
+  是什么：Android 最早的摄像头 API（android.hardware.Camera）。
+  为什么用 Camera1 而不是 Camera2：
+    Camera2 功能更强（手动对焦、RAW 格式、高速连拍），但在模拟器上
+    有严重的兼容性问题——直接闪退。Camera1 虽然老旧，但模拟器和真机
+    都能稳定运行。学习项目优先保证能跑起来。
+
+  在本项目中的用法（通过 pedroSG94 库封装）：
+    RtmpCamera1 rtmpCamera1 = new RtmpCamera1(cameraPreview, this);
+    rtmpCamera1.prepareVideo(1280, 720, 30, 1200 * 1024, 270);
+    //                        宽度  高度 帧率 码率(1.2Mbps) 旋转角度
+    rtmpCamera1.prepareAudio();  // 配置音频
+    rtmpCamera1.startStream("rtmp://10.0.2.2:1935/live/房间ID");
+
+  参数解释：
+    1280x720  → 分辨率（720p 高清，兼顾清晰度和流畅度）
+    30        → 帧率（每秒 30 张画面，人眼看着就流畅了）
+    1200*1024 → 视频码率 1.2Mbps（码率越高画面越清晰，但也越占带宽）
+    270       → 旋转角度（摄像头传感器是横的，竖屏需要转 270度）
+
+  旋转为什么是 270？
+    手机摄像头传感器的物理方向是横着的（landscape），但你竖着拿手机。
+    如果不旋转，画面会横着显示。270 = 顺时针旋转 270 度 = 逆时针 90 度，
+    这样画面就正了。如果是前置摄像头还需要额外做镜像翻转。
+
+【RTMP 协议 — 实时消息传输协议】
+
+  是什么：Adobe 发明的协议，专门用于实时传输音视频流。
+  为什么用它：延迟低（1-3 秒），直播行业的实际标准。
+
+  特点：
+    - 基于 TCP，保证数据不丢
+    - 持续的长连接（不像 HTTP 请求-响应就断开）
+    - 把视频切成小块（chunk），边产生边发送
+
+  地址格式：rtmp://服务器IP:1935/live/流名称
+    1935 是 RTMP 的默认端口（就像 HTTP 用 80，HTTPS 用 443）
+
+  对比 HTTP：HTTP 是"你问我才答"（请求-响应），RTMP 是"我一直说话你一直听"
+  （持续单向推流）。直播间几百人看，如果用 HTTP，服务器要给每个人复制一份数据，
+  用 RTMP 服务器只收一份，然后广播出去。
+
+【node-media-server — RTMP 服务器】
+
+  是什么：Node.js 的 RTMP/HLS/HTTP-FLV 流媒体服务器。
+  在本项目中：接收主播的推流，转成 FLV 格式供观众观看。
+
+  配置（在 mediaServer.ts 中）：
+    rtmp: { port: 1935, chunk_size: 60000, ping: 30, ping_timeout: 60 }
+    http: { port: 8000, mediaroot: './media' }
+    // 观众通过 http://xxx:8000/live/房间ID.flv 观看
+
+  关键事件处理：
+    prePublish → 推流前的校验（检查 stream key 是否为空，防止崩溃）
+      if (!streamName) { session.reject(); return; }
+      // 这行很关键——之前没检查导致 crash（Cannot read properties of undefined）
+
+    donePublish → 推流结束，更新房间状态
+
+【pedroSG94 库 — Android RTMP 推流库】
+
+  是什么：一个开源 Android 库，封装了 Camera + 编码 + RTMP 推流。
+  为什么用它：自己写 RTMP 推流极其复杂——需要懂 H.264 编码、FLV 封装、
+  RTMP 握手协议……这个库把这些全部封装好了，几行代码就能推流。
+
+  核心类：
+    RtmpCamera1 → Camera1 + RTMP 推流（本项目使用，稳定兼容）
+    RtmpCamera2 → Camera2 + OpenGL + RTMP 推流（功能更强但模拟器不支持）
+
+  关键回调及其作用：
+    onConnectionSuccessRtmp() → 推流连接成功
+      → 修改房间状态为"直播中"，更新 UI
+    onConnectionFailedRtmp(reason) → 连接失败
+      → 3 秒后自动重试（用 Handler.postDelayed 延迟重试）
+    onDisconnectRtmp() → 推流断开（网络波动或主动结束）
+    onAuthErrorRtmp() → 认证错误（stream key 不对）
+
+【直播权限管理——实战坑】
+
+  问题：进入直播间时系统连续弹出 3-4 次摄像头权限请求。
+
+  原因链条：
+    Activity.onCreate → 检查权限 → 第 1 次弹窗
+    SurfaceView.surfaceCreated（第 1 次触发）→ startStream → 检查权限 → 第 2 次
+    SurfaceView.surfaceCreated（第 2 次触发，SurfaceView 会多次回调）→ 第 3 次
+    CameraX/Camera1 内部初始化 → 又检查 → 第 4 次
+
+  根本原因：isStreaming 标志只在 onConnectionSuccessRtmp() 中设为 true，
+  而 onConnectionSuccessRtmp 是异步回调（推流成功后才调用）。
+  surfaceCreated 多次触发时，isStreaming 还是 false，所以防不住重复进入。
+
+  解决方案——引入独立的 startAttempted 标志：
+    private boolean startAttempted = false;  // 是否已尝试启动
+    private boolean surfaceReady = false;    // SurfaceView 是否就绪
+    private boolean permissionsReady = false; // 权限是否已授予
+
+    private void tryStartStreaming() {
+        // 三个条件都满足 + 还没有尝试过 → 才启动
+        if (surfaceReady && permissionsReady && !startAttempted) {
+            startAttempted = true;  // 立即标记，防止重入
+            startStreaming();
+        }
+    }
+
+    // 连接失败时重置标志，允许重试：
+    onConnectionFailedRtmp(reason) {
+        handler.postDelayed(() -> {
+            if (!isDestroyed() && !isStreaming) {
+                startAttempted = false;  // 恢复，允许重试
+                tryStartStreaming();
+            }
+        }, 3000);
+    }
+
+  关键理解：startAttempted != isStreaming
+    startAttempted = "我已经按过启动按钮了"（不管成功没）
+    isStreaming    = "推流正在跑"（已经成功连接上）
+    如果只用 isStreaming 一个标志，surfaceCreated 多次触发时
+    isStreaming 还没变成 true，就防不住。
+
+【Camera2 + OpenGL 闪退事件——技术选型的教训】
+
+  问题：SurfaceView 预览不能填满屏幕（上下有黑边/绿条）。
+  尝试方案：切换到 RtmpCamera2 + OpenGlView（OpenGL 可以 centerCrop 裁剪）
+  结果：App 进入直播间直接闪退崩盘。
+  最终方案：回退到 RtmpCamera1 + SurfaceView。
+
+  为什么会闪退？
+    1. OpenGlView 需要 GPU 的 EGL 上下文（渲染环境），模拟器的 GPU 支持有限
+    2. pedroSG94 的 RtmpCamera2 在部分设备上 OpenGL 线程初始化失败
+    3. Camera2 API 在模拟器上的兼容性本身就不如 Camera1
+
+  教训：
+    - 新技术（Camera2）功能更强但对运行环境要求更高
+    - 老技术（Camera1）功能有限但兼容性好、稳定可靠
+    - 学习阶段优先保证能跑起来，功能可以后续迭代
+    - 做技术选型时，兼容性 > 功能完整性
+
+【直播相关文件速查】
+
+  Android 端:
+    AnchorLiveActivity.java    → 主播开播页面（Camera1 + RTMP 推流核心）
+    LiveRoomActivity.java       → 观众看播页面（拉流 + 弹幕 + 商品）
+    LiveRoomEditActivity.java   → 创建/编辑直播间（标题、封面、开播时间）
+    MyLiveRoomsActivity.java    → "我的直播"列表（进行中/已结束分 Tab）
+    LiveListFragment.java        → 首页直播 Tab（全屏直播列表）
+    LiveWebSocketClient.java    → 直播间 WebSocket 客户端（弹幕/评论/点赞）
+
+  后端:
+    backend/src/routes/live.ts        → 直播间 CRUD API
+    backend/src/mediaServer.ts        → RTMP 服务器（node-media-server）
+    backend/src/services/ws.ts        → WebSocket 服务（房间管理 + 消息广播）
+    backend/src/data/live_rooms.json  → 直播间数据
+
 【自定义 View — 弹幕实现】
 
   是什么：继承 View 类，自己用 Canvas（画布）画内容。
@@ -557,36 +732,50 @@ Part 3：项目架构一遍通
 
 3.3 所有模块功能一页速览
 
-  ┌─────────────┬────────────────────────────────────┐
-  │    模块      │               做什么                │
-  ├─────────────┼────────────────────────────────────┤
-  │ 首页/视频流  │ ViewPager2 上下滑看视频，商品卡片    │
-  │             │ 点赞/评论/收藏/关注，弹幕             │
-  ├─────────────┼────────────────────────────────────┤
-  │ 直播        │ 直播间列表 → 进入直播                │
-  │             │ 实时弹幕/评论/商品讲解/优惠券          │
-  ├─────────────┼────────────────────────────────────┤
-  │ 购物车      │ 商品列表，选规格/数量，全选/单选      │
-  │             │ 管理/编辑模式，去结算                 │
-  ├─────────────┼────────────────────────────────────┤
-  │ 订单        │ 确认订单（地址）→ 模拟支付            │
-  │             │ 订单列表（按状态筛选）→ 订单详情       │
-  ├─────────────┼────────────────────────────────────┤
-  │ 登录/注册   │ 账号密码注册，密码校验规则             │
-  │             │ JWT token 认证                      │
-  ├─────────────┼────────────────────────────────────┤
-  │ 个人中心    │ 个人资料/统计/视频管理                 │
-  │             │ 点赞列表/收藏列表/关注列表             │
-  ├─────────────┼────────────────────────────────────┤
-  │ 作者主页    │ 他人资料/关注按钮/视频网格             │
-  │             │ 全屏视频播放（AuthorVideoFeed）        │
-  ├─────────────┼────────────────────────────────────┤
-  │ 视频编辑    │ 上传视频/封面，绑定商品               │
-  │             │ 编辑/删除视频                        │
-  ├─────────────┼────────────────────────────────────┤
-  │ 后端        │ 15 个路由文件，30+ REST API            │
-  │             │ WebSocket 实时推送，JWT 认证          │
-  └─────────────┴────────────────────────────────────┘
+  ┌──────────────┬────────────────────────────────────┐
+  │    模块       │               做什么                │
+  ├──────────────┼────────────────────────────────────┤
+  │ 首页/视频流   │ ViewPager2 上下滑看视频，商品卡片    │
+  │              │ 点赞/评论/收藏/关注，弹幕             │
+  │              │ 视频+直播混合Feed，自动播放下一个       │
+  ├──────────────┼────────────────────────────────────┤
+  │ 直播（重点）   │ 主播端：Camera1 采集 + RTMP 推流     │
+  │              │   └─ RtmpCamera1(pedroSG94)         │
+  │              │   └─ H.264/AAC 编码 → node-media-server│
+  │              │ 观众端：HTTP-FLV 拉流 + WebSocket     │
+  │              │   └─ 弹幕/评论/点赞/商品推送/优惠券    │
+  │              │ 直播间管理：创建/编辑/列表/状态过滤    │
+  ├──────────────┼────────────────────────────────────┤
+  │ 运营分析      │ KPI 卡片（播放/点赞/评论，按用户过滤） │
+  │              │ 视频表现横条图（MPAndroidChart）       │
+  │              │ 转化漏斗（曝光→挂载视频→关联商品→商品总数）│
+  │              │ GMV 排行/热门商品（全平台排名）         │
+  ├──────────────┼────────────────────────────────────┤
+  │ 购物车       │ 商品列表，选规格/数量，全选/单选      │
+  │              │ 管理/编辑模式，去结算                 │
+  ├──────────────┼────────────────────────────────────┤
+  │ 订单         │ 确认订单（地址）→ 模拟支付            │
+  │              │ 订单列表（按状态筛选）→ 订单详情       │
+  ├──────────────┼────────────────────────────────────┤
+  │ 登录/注册    │ 账号密码注册，密码校验规则             │
+  │              │ JWT token 认证                      │
+  ├──────────────┼────────────────────────────────────┤
+  │ 个人中心     │ 个人资料/统计/视频管理                 │
+  │              │ 点赞列表/收藏列表/关注列表             │
+  ├──────────────┼────────────────────────────────────┤
+  │ 作者主页     │ 他人资料/关注按钮/视频网格             │
+  │              │ 全屏视频播放（AuthorVideoFeed）        │
+  ├──────────────┼────────────────────────────────────┤
+  │ 视频编辑     │ 上传视频/封面，绑定多个商品            │
+  │              │ 编辑/删除视频                        │
+  ├──────────────┼────────────────────────────────────┤
+  │ 即时通讯     │ WebSocket 实时私信                   │
+  │              │ 会话列表/聊天界面                     │
+  ├──────────────┼────────────────────────────────────┤
+  │ 后端         │ 15 个路由文件，30+ REST API            │
+  │              │ MediaServer(RTMP) + WebSocket 实时推送│
+  │              │ JWT 认证 + JSON 文件存储              │
+  └──────────────┴────────────────────────────────────┘
 
 
 ================================================================================
@@ -669,23 +858,64 @@ Q6: 弹幕是怎么做的？
 
 ---
 
-Q7: 直播间的实时通信怎么做的？
+Q7: 直播功能是怎么实现的？从开播到观众看到画面的完整流程是什么？
 
-  话术：后端用 ws 库在同一个 HTTP 服务器上加了 WebSocket 支持。
-  客户端（OkHttp WebSocket）连接 ws://地址:3000/ws，
-  发送 JOIN_ROOM 加入房间。服务端维护 rooms Map，记录每个房间有哪些人。
-  消息到达后向房间所有人广播。支持的消息类型包括：弹幕、评论、点赞、
-  商品切换提醒、优惠券推送、在线人数更新。App 端用回调接口接收事件，
-  分别处理不同的消息类型。
+  话术：直播分两端——主播端推流，观众端拉流。
+
+  主播端（AnchorLiveActivity）：
+    1. 摄像头用 Camera1 API 采集画面，通过 pedroSG94 库的 RtmpCamera1 封装
+    2. prepareVideo(1280, 720, 30, 1200*1024, 270) 配置编码参数
+       —— 720p 分辨率、30fps 帧率、1.2Mbps 码率、270度旋转（竖屏）
+    3. prepareAudio() 配置麦克风音频编码为 AAC
+    4. startStream("rtmp://IP:1935/live/房间ID") 开始推流
+    5. RTMP 协议把 H.264 视频 + AAC 音频打包，持续推送到服务器
+
+  服务器端（node-media-server）：
+    1. 监听 1935 端口，接收 RTMP 推流
+    2. prePublish 事件校验 stream key（防止空 key 导致崩溃）
+    3. 把 RTMP 流转成 HTTP-FLV 格式，通过 8000 端口分发
+    4. donePublish 事件更新房间状态为"已结束"
+
+  观众端（LiveRoomActivity）：
+    1. 通过 http://IP:8000/live/房间ID.flv 拉流播放
+    2. 同时建立 WebSocket 连接，加入房间（JOIN_ROOM 消息）
+    3. WebSocket 实时接收弹幕、评论、点赞、商品推送、在线人数
+
+  整个链路的延迟大约 1-3 秒。
 
 ---
 
-Q8: 如果 WebSocket 断线了怎么办？
+Q8: 直播间的实时通信和断线重连怎么做的？
 
-  话术：LiveWebSocketClient 在 onFailure 和 onClosed 回调中
-  自动触发重连。用了指数退避策略：第一次重连等 1 秒，第二次等 2 秒，
-  最多重试 10 次，最大间隔不超过 30 秒。这样既能快速恢复连接，
-  又不会因为频繁重试给服务器造成压力。
+  话术：WebSocket 负责直播间所有实时消息——弹幕、评论、点赞、商品推送、
+  优惠券、在线人数更新。
+
+  后端 ws.ts 维护一个 rooms Map（房间ID → 用户集合），收到消息后
+  向房间所有人广播（包括发送者自己——弹幕需要去重，发送者本地直接渲染，
+  收到 WebSocket 回显时跳过自己）。
+
+  断线重连用指数退避：第 1 次等 1 秒，第 2 次等 2 秒，第 3 次等 4 秒……
+  最多重试 10 次，最大间隔 30 秒。这样断线后能快速恢复，又不会因为
+  频繁重连给服务器造成压力。
+
+  另外 RTMP 推流端也有重连——onConnectionFailedRtmp 回调中 3 秒后自动重试，
+  用 startAttempted = false 重置标志允许重新进入 startStreaming()。
+
+---
+
+Q8b: 直播开发中遇到过什么技术坑？
+
+  话术：三个主要的：
+
+  1. 摄像头权限重复弹窗——SurfaceView 的 surfaceCreated 多次触发导致
+     重复请求权限。用 startAttempted 标志位解决。
+
+  2. Camera2 + OpenGL 在模拟器上闪退——想用 OpenGL 实现画面填满屏幕，
+     但模拟器 GPU 不支持。回退到 Camera1，用稳定性换功能性。
+
+  3. RTMP 推流服务端崩溃——node-media-server 的 prePublish 事件中
+     对 streamName 调用了 .split()，但当 streamName 为 undefined 时
+     直接抛异常。加了空值检查解决。
 
 ---
 
@@ -767,12 +997,111 @@ Q15: 你觉得这个项目还有哪些可以改进的地方？
     6. CI/CD 自动化构建和部署
 
 
+Q16: 直播推流是什么原理？从摄像头到观众看到画面经历了什么？
+
+  话术：直播推流分两端——主播端推流，观众端拉流。
+
+  主播端：摄像头采集画面 → Camera1 API 获取原始帧
+  → pedroSG94 库的 RtmpCamera1 把画面编码成 H.264 格式
+  → 同时把麦克风音频编码成 AAC 格式
+  → 通过 RTMP 协议打包，持续推送到服务器（rtmp://IP:1935/live/房间ID）
+
+  观众端：服务器收到推流后转成 HTTP-FLV 格式
+  → 观众通过 http://IP:8000/live/房间ID.flv 拉流
+  → 播放器解码 H.264/AAC → 渲染到屏幕上
+
+  关键参数：分辨率 1280x720（720p），帧率 30fps，码率 1.2Mbps，
+  旋转角度 270度（摄像头是横的，转 270度才是竖屏）。
+
+  服务器用的是 node-media-server，它同时支持 RTMP（收流）和
+  HTTP-FLV/HLS（分发），是一个 Node.js 的流媒体中间件。
+
+---
+Q17: 你在直播功能开发中遇到过什么技术难题？
+
+  话术：最大的难题是摄像头权限被重复弹出 3-4 次。
+
+  原因是 SurfaceView 的 surfaceCreated() 回调会被多次触发——每次
+  系统创建/重建 Surface 都会调用。而我的启动方法 startStreaming()
+  被放在这个回调里，每次回调都检查权限、发现没授权、弹窗请求。
+
+  我试过用 isStreaming 标志来阻止，但发现 isStreaming 只在推流
+  成功连接后才设为 true，surfaceCreated 触发时它还是 false，防不住。
+
+  最终的方案是引入一个独立的 startAttempted 标志——在 tryStartStreaming()
+  中三个条件都满足（surface 就绪 + 权限 OK + 还没尝试过）才真正启动，
+  并且启动前立刻把 startAttempted 设为 true，后面再触发 surfaceCreated
+  就不会重复进入了。连接失败时重置这个标志来允许重试。
+
+  另外还尝试过用 Camera2 + OpenGL 来解决画面填充问题，但模拟器上直接
+  闪退。最后回退到 Camera1，牺牲了一点画面效果换来了稳定性。
+
+---
+Q18: 运营分析 Dashboard 的数据是怎么来的？数据准确吗？
+
+  话术：所有数据都是从后端 JSON 文件实时计算的，没有任何随机或伪造数据。
+
+  KPI（总播放/总点赞/总评论）按当前登录用户过滤——后端 stats.ts 用了
+  authMiddleware，拿到 req.user.id，然后只统计 authorId 等于当前用户
+  的视频数据。
+
+  视频表现图是一个横向柱状图（MPAndroidChart 的 HorizontalBarChart），
+  每条代表一个视频，按实际播放量降序排列。数据来自 videos.json 中每个
+  视频的 viewCount、likeCount、commentCount。
+
+  转化漏斗用的是真实关联数据——统计"挂载了商品的视频"的总曝光次数、
+  挂载商品视频数、被关联的商品数、商品总数。这些数据来自
+  video_products.json 的绑定关系。
+
+  热门商品和 GMV 排行是全平台范围的——不按用户过滤，展示的是整个系统
+  中所有商品的排名。热门商品按"被多少个视频关联"（bindCount）排序，
+  GMV 按"通过该视频产生的订单金额"排序。
+
+---
+Q19: 你遇到过最难的 Bug 是什么？怎么解决的？
+
+  话术：最头疼的是 Fragment 生命周期导致的崩溃问题。
+
+  一开始用 ViewPager2 + FragmentStateAdapter 做视频滑动。用户登录后
+  切回首页时 App 崩溃——报 "Design assumption violated"。
+
+  排查过程：发现是 FragmentStateAdapter 内部的 FragmentManager 中残留
+  了旧的 VideoPageFragment 实例。当 FeedFragment 被销毁重建时，新的
+  FragmentStateAdapter 尝试创建 Fragment，但旧 Fragment 的 tag 还残留在
+  FragmentManager 中，导致冲突。
+
+  尝试过"复用旧 adapter"的方案——又导致 "FragmentStateAdapter cannot be
+  attached to two RecyclerViews" 的错误。
+
+  最终解决方案：彻底放弃 FragmentStateAdapter，改用 RecyclerView.Adapter
+  + ViewHolder 模式。每个视频页面是一个 ViewHolder 而不是 Fragment，
+  由 RecyclerView 管理生命周期。在 onDestroyView 中手动清理所有子
+  Fragment（commitNowAllowingStateLoss），确保不残留。
+
+  这个 Bug 让我深刻理解了 Fragment 生命周期和 FragmentManager 的工作机制。
+
+---
+Q20: 新用户发布视频后主页看不到是怎么回事？
+
+  话术：这是一个数据流问题。用户发布视频时，Android 端默认选了"已发布"
+  状态发给后端，但后端 POST /api/videos 接口在创建视频时，status 字段
+  写死了 'draft'（草稿），忽略了客户端传过来的值。
+
+  而主页 Feed API（GET /api/videos）查询时只返回 status='published' 的
+  视频，草稿状态的永远不会出现。
+
+  修复很简单：后端读取 req.body.status，验证它在合法值范围内
+  （draft/published/taken_down），合法就用客户端传的，不合法才默认 draft。
+  同时 Android 端也把发布状态 Spinner 的默认选项从"草稿"改为"已发布"。
+
+  这个 Bug 说明前后端要对齐——不能只一端正确，另一端也要配合。
+
 ================================================================================
 Part 5：2天冲刺时间表
 ================================================================================
 
 ═══════════════════════════════════════════════════════
-  第 1 天（2026年6月1日）—— 打基础 + 学技术
+  第 1 天 —— 打基础 + 学技术
 ═══════════════════════════════════════════════════════
 
   上午（9:00-12:00）— Part 1：底层概念速成
@@ -793,33 +1122,40 @@ Part 5：2天冲刺时间表
     □ 晚上        复习今天学的内容，打开代码对照着看
 
 ═══════════════════════════════════════════════════════
-  第 2 天（2026年6月2日）—— 学架构 + 练答辩
+  第 2 天 —— 学架构 + 练答辩
 ═══════════════════════════════════════════════════════
 
   上午（9:00-12:00）— Part 2 后半 + Part 3
     □ 9:00-10:00  读 2.5（ViewPager2 + RecyclerView + Glide + ViewBinding + 自定义 View）
-    □ 10:00-10:40 读 2.6（Node.js + Express + JWT + JSON 存储）
-    □ 10:40-12:00 读 Part 3（架构 + 数据流 + 模块速览）
-                  打开 `StreamShop答辩知识点全解.txt` 看第七-八章加深理解
+    □ 10:00-10:30 读 2.5b（直播推流技术 —— 答辩重点！Camera1/RTMP/pedroSG94 全链路）
+    □ 10:30-11:10 读 2.6（Node.js + Express + JWT + JSON 存储）
+    □ 11:10-12:00 读 Part 3（架构 + 数据流 + 模块速览）
+                  重点看直播和运营分析的新模块
 
   下午（13:00-17:00）— Part 4：答辩模拟
-    □ 13:00-14:30 遮住答案，依次回答 15 个问题
+    □ 13:00-14:30 遮住答案，依次回答 21 个问题
                   答不出来的做标记，再看答案
     □ 14:30-15:00 重点复习标记过的问题
+                  直播相关（Q7-Q8b）和实战坑（Q17-Q20）是高频考题
     □ 15:00-16:00 模拟答辩：找一个人（或自己录音）提问，
                   你对着代码和架构图讲
-    □ 16:00-17:00 查漏补缺：打开 `StreamShop答辩知识点全解.txt`
-                  第九章 API 速查表快速过一遍，确认每个接口都知道用途
+    □ 16:00-17:00 查漏补缺：
+                  - 过一遍 API 速查表（确认每个接口的用途）
+                  - 打开关键文件看一眼：
+                    AnchorLiveActivity.java（直播推流核心）
+                    stats.ts（运营分析数据来源）
+                    AnalyticsDashboardActivity.java（图表展示）
 
 ═══════════════════════════════════════════════════════
   答辩当天早上
 ═══════════════════════════════════════════════════════
-    □ 快速过一遍 Part 4 的 15 个问题
+    □ 快速过一遍 Part 4 的 21 个问题（重点：Q7-Q8b 直播, Q17-Q19 实战坑）
     □ 打开项目代码看一眼关键位置：
-        - MainActivity.java（底部导航）
+        - AnchorLiveActivity.java（直播推流核心，tryStartStreaming 权限控制）
         - VideoViewHolder.java（视频播放核心）
         - ApiService.java（网络请求）
-        - backend/src/index.ts（后端入口）
+        - backend/src/routes/stats.ts（运营分析数据计算）
+        - backend/src/mediaServer.ts（RTMP 服务器）
     □ 深呼吸，自信去答辩
 
 
@@ -841,10 +1177,12 @@ Part 5：2天冲刺时间表
   1. 看代码比看文档更能理解——文档读到不懂的地方，直接打开对应的
      源代码文件看一下，立刻能明白"原来代码就是这样写的"。
      推荐对照阅读：
-       学习路线 Part 2.2（Activity） → 打开 MainActivity.java
-       学习路线 Part 2.3（OkHttp）    → 打开 ApiService.java
-       学习路线 Part 2.4（ExoPlayer） → 打开 VideoViewHolder.java
-       学习路线 Part 2.6（JWT）      → 打开 backend/src/middleware/auth.ts
+       学习路线 Part 2.2（Activity）        → 打开 MainActivity.java
+       学习路线 Part 2.3（OkHttp）           → 打开 ApiService.java
+       学习路线 Part 2.4（ExoPlayer）        → 打开 VideoViewHolder.java
+       学习路线 Part 2.5b（直播推流）         → 打开 AnchorLiveActivity.java
+       学习路线 Part 2.6（JWT）             → 打开 backend/src/middleware/auth.ts
+       学习路线 Q18（运营分析）              → 打开 backend/src/routes/stats.ts
 
   2. 用"给别人讲课"的方式复习——假装你在给一个完全不懂技术的同学
      讲这个项目，用最直白的话。如果你能讲清楚，说明你真懂了。
@@ -852,12 +1190,18 @@ Part 5：2天冲刺时间表
   3. 画图——架构图、数据流、页面跳转关系，用笔画在纸上。
      手写记忆效果远好于看文字。
 
-  4. 不懂的词别跳过——看到 HTTP、JWT、REST、WebSocket 这些词不懂，
-     立刻回头查 Part 1 或 Part 2 中的解释。这些都是答辩老师会问的。
+  4. 不懂的词别跳过——看到 HTTP、JWT、REST、WebSocket、RTMP、
+     H.264 这些词不懂，立刻回头查 Part 1 或 Part 2 中的解释。
+     这些都是答辩老师会问的。
 
-  5. 少就是多——不要贪多。Part 1 + Part 2 + Part 4 的 15 个问题
-     是最核心的。Part 3 是帮助你串联全文的。后台管理（React）部分
-     不是答辩重点，简单了解就行。
+  5. 少就是多——不要贪多。Part 1 + Part 2（尤其是 2.5b 直播推流）
+     + Part 4 的 21 个问题是核心。Part 3 是串联全文的桥梁。
+     后台管理（React）部分不是答辩重点，简单了解就行。
+
+  6. 配套文档：
+     - `答辩准备指南.txt` → 20 分钟速成版，适合临时抱佛脚
+     - `项目问题与解决方案汇总.txt` → 51 个 Bug 的详细记录，适合查具体问题
+     - 本文件 → 系统学习，适合答辩前 2 天开始看
 
 ================================================================================
                            — 全文完 —

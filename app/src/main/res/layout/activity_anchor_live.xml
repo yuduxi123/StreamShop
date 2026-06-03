@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:keepScreenOn="true">
+
+    <!-- Camera preview -->
+    <SurfaceView
+        android:id="@+id/anchor_camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Gradient overlays -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_live_top_gradient" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_live_bottom_gradient" />
+
+    <!-- Top info bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="24dp">
+
+        <ImageButton
+            android:id="@+id/anchor_back_btn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_back"
+            android:background="@drawable/bg_circle_overlay"
+            android:scaleType="center"
+            android:contentDescription="返回" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/anchor_room_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="直播中" />
+
+            <TextView
+                android:id="@+id/anchor_online_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#CCFFFFFF"
+                android:textSize="11sp"
+                android:text="0人在线" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/anchor_status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:background="@drawable/bg_live_feed_badge"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:text="直播中" />
+    </LinearLayout>
+
+    <!-- Danmaku overlay -->
+    <com.bytedance.streamshop.ui.live.DanmakuView
+        android:id="@+id/anchor_danmaku_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="80dp"
+        android:layout_marginBottom="160dp" />
+
+    <!-- Bottom controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="12dp">
+
+        <!-- Hot value -->
+        <TextView
+            android:id="@+id/anchor_hot_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textColor="#FF9500"
+            android:textSize="12sp"
+            android:text="热度: 0" />
+
+        <!-- Product explain row -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/anchor_product_list"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:orientation="horizontal"
+            android:clipToPadding="false" />
+
+        <!-- Action buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/anchor_switch_camera_btn"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                app:icon="@drawable/ic_switch_camera"
+                app:iconSize="22dp"
+                app:iconTint="#FFFFFF"
+                app:cornerRadius="22dp"
+                app:backgroundTint="#33FFFFFF"
+                app:iconGravity="textStart"
+                android:contentDescription="翻转摄像头" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/anchor_end_live_btn"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:text="结束直播"
+                android:textSize="15sp"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="22dp"
+                app:backgroundTint="#FF3B30"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Connecting indicator (transparent, camera preview visible behind) -->
+    <LinearLayout
+        android:id="@+id/anchor_connecting_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_connecting_toast"
+            android:padding="24dp">
+
+            <ProgressBar
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:indeterminateTint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/anchor_connecting_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:text="正在准备摄像头..." />
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>
+

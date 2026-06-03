@@ -542,12 +542,111 @@ public class ApiService {
         return executePaginatedMap(request);
     }
 
+    public ApiResponse<Map<String, Object>> getMyLiveRooms(int page, int limit) throws IOException {
+        String userId = client.getCurrentUserId();
+        String url = client.getBaseUrl() + "live/rooms?page=" + page + "&limit=" + limit;
+        if (userId != null) {
+            url += "&anchorId=" + userId;
+        }
+        Request request = new Request.Builder().url(url).get().build();
+        return executePaginatedMap(request);
+    }
+
     public Map<String, Object> getRoomDetail(String roomId) throws IOException {
         Request request = new Request.Builder()
                 .url(client.getBaseUrl() + "live/rooms/" + roomId)
                 .get()
                 .build();
         return executeGetMap(request);
+    }
+
+    public Map<String, Object> createLiveRoom(String title, String coverUrl) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("title", title);
+        body.put("coverUrl", coverUrl);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Create live room failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> updateLiveRoom(String roomId, String title, String coverUrl) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("title", title);
+        body.put("coverUrl", coverUrl);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId)
+                .patch(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Update live room failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> startLiveRoom(String roomId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/start")
+                .post(RequestBody.create("{}", JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Start live failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> endLiveRoom(String roomId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/end")
+                .post(RequestBody.create("{}", JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("End live failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public boolean deleteLiveRoom(String roomId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId)
+                .delete()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
+    public boolean bindProductToLiveRoom(String roomId, String productId) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("productId", productId);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/products")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
+    public boolean explainProduct(String roomId, String productId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/product/" + productId + "/explain")
+                .post(RequestBody.create("{}", JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
     }
 
     // ---- Coupons ----

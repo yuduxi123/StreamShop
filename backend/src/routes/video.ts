@@ -75,20 +75,22 @@ router.get('/:id', (req: Request, res: Response) => {
 
 // POST /api/videos
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
-  const { title, tags } = req.body;
+  const { title, tags, status: reqStatus } = req.body;
   const coverUrl = req.body.coverUrl ?? req.body.cover_url;
   const videoUrl = req.body.videoUrl ?? req.body.video_url;
   if (!title || !videoUrl) {
     res.status(400).json({ error: 'Title and videoUrl required' });
     return;
   }
+  const validStatuses = ['draft', 'published', 'taken_down'];
+  const status = validStatuses.includes(reqStatus) ? reqStatus : 'draft';
   const video: VideoData = {
     id: uuidv4(),
     title,
     coverUrl: coverUrl || '',
     videoUrl,
     authorId: req.user!.id,
-    status: 'draft',
+    status,
     viewCount: 0,
     likeCount: 0,
     commentCount: 0,

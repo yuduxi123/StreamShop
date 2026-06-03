@@ -21,7 +21,9 @@ import danmakuRoutes from './routes/danmaku';
 import uploadRoutes from './routes/upload';
 import messageRoutes from './routes/message';
 import feedRoutes from './routes/feed';
+import { createMediaServer } from './mediaServer';
 import path from 'path';
+import os from 'os';
 
 const app = express();
 const server = http.createServer(app);
@@ -61,8 +63,26 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Get local IP for media server URLs
+function getLocalIp(): string {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+const localIp = process.env.SERVER_IP || getLocalIp();
+const mediaServer = createMediaServer(localIp);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`StreamShop API running on http://localhost:${PORT}`);
   console.log(`WebSocket server ready`);
+  mediaServer.run();
+  console.log(`Media server: RTMP on rtmp://${localIp}:1935/live, HTTP-FLV on http://${localIp}:8000/live`);
 });

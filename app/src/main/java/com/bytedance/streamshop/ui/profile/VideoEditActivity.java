@@ -111,6 +111,7 @@ public class VideoEditActivity extends AppCompatActivity {
                 android.R.layout.simple_spinner_item, STATUS_LABELS);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         statusSpinner.setAdapter(adapter);
+        statusSpinner.setSelection(1); // default: published
 
         findViewById(R.id.video_edit_back).setOnClickListener(v -> finish());
         saveBtn.setOnClickListener(v -> save());

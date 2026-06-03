@@ -56,6 +56,8 @@ public class ProfileFragment extends Fragment {
     private TextView followingCountText;
     private TextView followersCountText;
 
+    private View liveRoomsIcon;
+
     private final List<Video> myVideos = new ArrayList<>();
     private VideoGridAdapter gridAdapter;
 
@@ -128,6 +130,15 @@ public class ProfileFragment extends Fragment {
         view.findViewById(R.id.profile_videos).setOnClickListener(v -> {
             if (ApiClient.getInstance().isAuthenticated()) {
                 startActivity(new Intent(getActivity(), MyVideosActivity.class));
+            } else {
+                Toast.makeText(getContext(), "请先登录", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        liveRoomsIcon = view.findViewById(R.id.profile_live_rooms_icon);
+        liveRoomsIcon.setOnClickListener(v -> {
+            if (ApiClient.getInstance().isAuthenticated()) {
+                startActivity(new Intent(getActivity(), com.bytedance.streamshop.ui.live.MyLiveRoomsActivity.class));
             } else {
                 Toast.makeText(getContext(), "请先登录", Toast.LENGTH_SHORT).show();
             }
@@ -253,6 +264,7 @@ public class ProfileFragment extends Fragment {
             logoutBtn.setVisibility(View.VISIBLE);
             statsRow.setVisibility(View.VISIBLE);
             actionsRow.setVisibility(View.VISIBLE);
+            liveRoomsIcon.setVisibility(View.VISIBLE);
 
             String avatarUrl = ApiClient.getInstance().getCurrentAvatarUrl();
             if (avatarUrl != null && !avatarUrl.isEmpty()) {
@@ -269,6 +281,7 @@ public class ProfileFragment extends Fragment {
             logoutBtn.setVisibility(View.GONE);
             statsRow.setVisibility(View.GONE);
             actionsRow.setVisibility(View.GONE);
+            liveRoomsIcon.setVisibility(View.GONE);
             avatarView.setImageResource(R.drawable.ic_avatar_placeholder);
             myVideos.clear();
             gridAdapter.notifyDataSetChanged();

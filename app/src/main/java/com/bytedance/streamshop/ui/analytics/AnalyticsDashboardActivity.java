@@ -17,18 +17,12 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.github.mikephil.charting.charts.HorizontalBarChart;
-import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -43,7 +37,7 @@ public class AnalyticsDashboardActivity extends AppCompatActivity {
     private TextView errorView;
     private View contentView;
     private TextView kpiViews, kpiOrders, kpiRevenue;
-    private LineChart trendChart;
+    private HorizontalBarChart trendChart;
     private LinearLayout funnelContainer;
     private HorizontalBarChart gmvChart;
     private HorizontalBarChart productsChart;
@@ -103,14 +97,14 @@ public class AnalyticsDashboardActivity extends AppCompatActivity {
         Map<String, Object> kpi = (Map<String, Object>) data.get("kpi");
         if (kpi != null) {
             kpiViews.setText(formatLargeNum(toDouble(kpi.get("totalViews"))));
-            kpiOrders.setText(formatLargeNum(toDouble(kpi.get("totalOrders"))));
-            kpiRevenue.setText("¥" + formatLargeNum(toDouble(kpi.get("totalRevenue"))));
+            kpiOrders.setText(formatLargeNum(toDouble(kpi.get("totalLikes"))));
+            kpiRevenue.setText(formatLargeNum(toDouble(kpi.get("totalComments"))));
         }
 
-        // Trend chart
-        List<Map<String, Object>> viewsTrend = (List<Map<String, Object>>) data.get("viewsTrend");
-        if (viewsTrend != null) {
-            setupTrendChart(viewsTrend);
+        // Video performance chart
+        List<Map<String, Object>> videoPerformance = (List<Map<String, Object>>) data.get("videoPerformance");
+        if (videoPerformance != null && !videoPerformance.isEmpty()) {
+            setupVideoChart(videoPerformance);
         }
 
         // Funnel
@@ -132,66 +126,37 @@ public class AnalyticsDashboardActivity extends AppCompatActivity {
         }
     }
 
-    private void setupTrendChart(List<Map<String, Object>> data) {
-        List<Entry> viewsEntries = new ArrayList<>();
-        List<Entry> likesEntries = new ArrayList<>();
-        List<Entry> commentsEntries = new ArrayList<>();
+    private void setupVideoChart(List<Map<String, Object>> data) {
+        List<BarEntry> entries = new ArrayList<>();
         List<String> labels = new ArrayList<>();
 
         for (int i = 0; i < data.size(); i++) {
             Map<String, Object> item = data.get(i);
-            String date = (String) item.get("date");
-            labels.add(date.substring(5)); // MM-DD
-
-            viewsEntries.add(new Entry(i, toFloat(item.get("views"))));
-            likesEntries.add(new Entry(i, toFloat(item.get("likes"))));
-            commentsEntries.add(new Entry(i, toFloat(item.get("comments"))));
+            String title = (String) item.get("title");
+            entries.add(new BarEntry(i, toFloat(item.get("views"))));
+            labels.add(truncate(title, 10));
         }
 
-        LineDataSet viewsSet = new LineDataSet(viewsEntries, "播放");
-        viewsSet.setColor(Color.parseColor("#2196F3"));
-        viewsSet.setCircleColor(Color.parseColor("#2196F3"));
-        viewsSet.setLineWidth(2f);
-        viewsSet.setCircleRadius(3f);
-        viewsSet.setDrawValues(false);
+        BarDataSet dataSet = new BarDataSet(entries, "播放量");
+        dataSet.setColor(Color.parseColor("#2196F3"));
+        dataSet.setValueTextSize(10f);
+        dataSet.setValueFormatter(new LargeValueFormatter());
 
-        LineDataSet likesSet = new LineDataSet(likesEntries, "点赞");
-        likesSet.setColor(Color.parseColor("#FF3B30"));
-        likesSet.setCircleColor(Color.parseColor("#FF3B30"));
-        likesSet.setLineWidth(2f);
-        likesSet.setCircleRadius(3f);
-        likesSet.setDrawValues(false);
-
-        LineDataSet commentsSet = new LineDataSet(commentsEntries, "评论");
-        commentsSet.setColor(Color.parseColor("#4CAF50"));
-        commentsSet.setCircleColor(Color.parseColor("#4CAF50"));
-        commentsSet.setLineWidth(2f);
-        commentsSet.setCircleRadius(3f);
-        commentsSet.setDrawValues(false);
-
-        List<ILineDataSet> dataSets = new ArrayList<>();
-        dataSets.add(viewsSet);
-        dataSets.add(likesSet);
-        dataSets.add(commentsSet);
-
-        LineData lineData = new LineData(dataSets);
-        trendChart.setData(lineData);
+        BarData barData = new BarData(dataSet);
+        trendChart.setData(barData);
 
         XAxis xAxis = trendChart.getXAxis();
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setGranularity(1f);
-        xAxis.setLabelRotationAngle(-45f);
         xAxis.setTextSize(10f);
 
         trendChart.getAxisRight().setEnabled(false);
         trendChart.getAxisLeft().setValueFormatter(new LargeValueFormatter());
         trendChart.getLegend().setTextSize(12f);
         trendChart.setDescription(null);
-        trendChart.setTouchEnabled(true);
-        trendChart.setDragEnabled(true);
-        trendChart.setScaleEnabled(true);
-        trendChart.animateX(800);
+        trendChart.setFitBars(true);
+        trendChart.animateY(800);
         trendChart.invalidate();
     }
 
@@ -199,15 +164,15 @@ public class AnalyticsDashboardActivity extends AppCompatActivity {
         funnelContainer.removeAllViews();
 
         double exposure = toDouble(funnel.get("exposure"));
-        double click = toDouble(funnel.get("click"));
-        double addToCart = toDouble(funnel.get("addToCart"));
-        double order = toDouble(funnel.get("order"));
+        double productVideos = toDouble(funnel.get("productVideos"));
+        double linkedProducts = toDouble(funnel.get("linkedProducts"));
+        double totalProducts = toDouble(funnel.get("totalProducts"));
 
-        double max = Math.max(exposure, 1);
-        addFunnelBar(funnelContainer, "曝光", exposure, exposure, max, "#2196F3");
-        addFunnelBar(funnelContainer, "点击", click, (exposure > 0 ? click / exposure * 100 : 0), max, "#03A9F4");
-        addFunnelBar(funnelContainer, "加购", addToCart, (exposure > 0 ? addToCart / exposure * 100 : 0), max, "#FF9800");
-        addFunnelBar(funnelContainer, "下单", order, (exposure > 0 ? order / exposure * 100 : 0), max, "#4CAF50");
+        double max = Math.max(Math.max(exposure, productVideos), Math.max(linkedProducts, 1));
+        addFunnelBar(funnelContainer, "商品曝光", exposure, exposure, max, "#2196F3");
+        addFunnelBar(funnelContainer, "挂载视频", productVideos, (exposure > 0 ? productVideos / exposure * 100 : 0), max, "#03A9F4");
+        addFunnelBar(funnelContainer, "关联商品", linkedProducts, (exposure > 0 ? linkedProducts / exposure * 100 : 0), max, "#FF9800");
+        addFunnelBar(funnelContainer, "商品总数", totalProducts, (exposure > 0 ? totalProducts / exposure * 100 : 0), max, "#4CAF50");
     }
 
     private void addFunnelBar(LinearLayout container, String label, double value,
@@ -310,12 +275,12 @@ public class AnalyticsDashboardActivity extends AppCompatActivity {
         for (int i = 0; i < data.size(); i++) {
             Map<String, Object> item = data.get(i);
             String title = (String) item.get("title");
-            double sales = toDouble(item.get("salesCount"));
+            double sales = toDouble(item.get("bindCount"));
             entries.add(new BarEntry(i, (float) sales));
             labels.add(truncate(title, 8));
         }
 
-        BarDataSet dataSet = new BarDataSet(entries, "销量");
+        BarDataSet dataSet = new BarDataSet(entries, "关联视频数");
         dataSet.setColors(colors);
         dataSet.setValueTextSize(10f);
         dataSet.setValueFormatter(new LargeValueFormatter());

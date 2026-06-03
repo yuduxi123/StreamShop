@@ -27,11 +27,16 @@ public class CommentBottomSheetFragment extends BottomSheetDialogFragment {
     private static final String ARG_TARGET_TYPE = "targetType";
     private static final String ARG_TARGET_ID = "targetId";
 
+    public interface OnCommentPostedListener {
+        void onCommentPosted(String targetId, int newCount);
+    }
+
     private String targetType;
     private String targetId;
     private ApiService apiService;
     private List<Comment> comments = new ArrayList<>();
     private CommentAdapter adapter;
+    private OnCommentPostedListener commentPostedListener;
 
     private RecyclerView commentList;
     private TextView countHeader;
@@ -45,6 +50,10 @@ public class CommentBottomSheetFragment extends BottomSheetDialogFragment {
         args.putString(ARG_TARGET_ID, targetId);
         fragment.setArguments(args);
         return fragment;
+    }
+
+    public void setOnCommentPostedListener(OnCommentPostedListener listener) {
+        this.commentPostedListener = listener;
     }
 
     @Override
@@ -115,6 +124,9 @@ public class CommentBottomSheetFragment extends BottomSheetDialogFragment {
                         commentList.scrollToPosition(0);
                         updateCount();
                         sendBtn.setEnabled(true);
+                        if (commentPostedListener != null) {
+                            commentPostedListener.onCommentPosted(targetId, comments.size());
+                        }
                     });
                 }
             } catch (Exception e) {

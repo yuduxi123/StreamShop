@@ -55,19 +55,19 @@
         android:layout_gravity="bottom"
         android:background="@drawable/gradient_bottom" />
 
-    <!-- Progress bar at very bottom, just above the white nav bar -->
+    <!-- Progress bar at very bottom, thin white style -->
     <SeekBar
         android:id="@+id/video_seekbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="2dp"
         android:layout_gravity="bottom"
         android:layout_marginBottom="4dp"
         android:max="1000"
         android:progress="0"
         android:progressDrawable="@drawable/seekbar_progress"
         android:thumb="@drawable/seekbar_thumb"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp"
         android:splitTrack="false" />
 
     <!-- Current time / Duration -->
@@ -75,18 +75,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_marginBottom="20dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:layout_marginBottom="12dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/video_current_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
+            android:textColor="#99FFFFFF"
             android:textSize="11sp"
-            android:text="00:00" />
+            android:text="00:00"
+            android:shadowColor="#44000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
 
         <View
             android:layout_width="0dp"
@@ -97,31 +101,39 @@
             android:id="@+id/video_duration"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
+            android:textColor="#99FFFFFF"
             android:textSize="11sp"
-            android:text="00:00" />
+            android:text="00:00"
+            android:shadowColor="#44000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
     </LinearLayout>
 
-    <!-- @Username - above title, close to seekbar -->
+    <!-- @Username - above title -->
     <TextView
         android:id="@+id/video_username"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_marginStart="16dp"
-        android:layout_marginBottom="52dp"
+        android:layout_marginBottom="56dp"
         android:textColor="@android:color/white"
-        android:textSize="15sp"
+        android:textSize="14sp"
         android:textStyle="bold"
         android:clickable="true"
         android:focusable="true"
         android:background="?attr/selectableItemBackground"
+        android:shadowColor="#44000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2"
         android:text="@作者" />
 
     <!-- Title -->
     <TextView
         android:id="@+id/video_title"
-        android:layout_width="250dp"
+        android:layout_width="280dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_marginStart="16dp"
@@ -130,6 +142,10 @@
         android:textSize="13sp"
         android:maxLines="2"
         android:ellipsize="end"
+        android:shadowColor="#44000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2"
         android:text="视频标题" />
 
     <!-- Right action buttons -->
@@ -138,8 +154,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
-        android:layout_marginEnd="12dp"
-        android:layout_marginBottom="100dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="130dp"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -148,21 +164,21 @@
             android:id="@+id/video_avatar_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="28dp"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless">
 
             <!-- White circle wrapping avatar as border -->
             <FrameLayout
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:background="@drawable/bg_white_circle">
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/video_avatar"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_gravity="center"
                     app:shapeAppearanceOverlay="@style/CircleImageView"
                     android:src="@drawable/ic_avatar_placeholder" />
@@ -170,36 +186,14 @@
 
             <ImageView
                 android:id="@+id/video_follow_btn"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:layout_gravity="bottom|center_horizontal"
                 android:layout_marginBottom="-2dp"
                 android:src="@drawable/ic_follow_selector"
                 android:background="@drawable/bg_circle_orange"
-                android:padding="2dp" />
+                android:padding="1dp" />
         </FrameLayout>
-
-        <!-- Danmaku -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:layout_marginBottom="16dp">
-            <ImageButton
-                android:id="@+id/video_danmaku_btn"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@drawable/ic_danmaku_selector"
-                android:scaleType="centerInside" />
-            <TextView
-                android:id="@+id/video_danmaku_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="11sp"
-                android:text="弹幕" />
-        </LinearLayout>
 
         <!-- Like -->
         <LinearLayout
@@ -207,11 +201,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="20dp">
             <ImageButton
                 android:id="@+id/video_like_btn"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/ic_like_selector"
                 android:scaleType="centerInside" />
             <TextView
@@ -219,8 +213,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="11sp"
-                android:text="0" />
+                android:textSize="10sp"
+                android:text="0"
+                android:layout_marginTop="2dp" />
         </LinearLayout>
 
         <!-- Comment -->
@@ -229,11 +224,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="20dp">
             <ImageButton
                 android:id="@+id/video_comment_btn"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/ic_comment_selector"
                 android:scaleType="centerInside" />
             <TextView
@@ -241,8 +236,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="11sp"
-                android:text="0" />
+                android:textSize="10sp"
+                android:text="0"
+                android:layout_marginTop="2dp" />
         </LinearLayout>
 
         <!-- Collect -->
@@ -253,8 +249,8 @@
             android:gravity="center_horizontal">
             <ImageButton
                 android:id="@+id/video_collect_btn"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/ic_collect_selector"
                 android:scaleType="centerInside" />
             <TextView
@@ -262,16 +258,34 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="11sp"
-                android:text="收藏" />
+                android:textSize="10sp"
+                android:layout_marginTop="2dp" />
         </LinearLayout>
 
-        <!-- Playback Mode Toggle (small, music-player style) -->
+    </LinearLayout>
+
+    <!-- Small utility buttons: danmaku + playmode, above duration text at end of progress bar -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="30dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/video_danmaku_btn"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/ic_danmaku_selector"
+            android:scaleType="fitCenter" />
+
         <ImageButton
             android:id="@+id/video_playmode_btn"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginTop="12dp"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
             android:background="@drawable/ic_playmode_sequential"
             android:scaleType="fitCenter" />
     </LinearLayout>

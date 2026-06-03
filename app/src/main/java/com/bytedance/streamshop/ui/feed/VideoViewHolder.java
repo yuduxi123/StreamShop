@@ -1,6 +1,5 @@
 package com.bytedance.streamshop.ui.feed;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
@@ -8,7 +7,6 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -39,7 +37,6 @@ import org.json.JSONObject;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 public class VideoViewHolder extends RecyclerView.ViewHolder {
 
@@ -78,6 +75,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private boolean fallbackTried;
     private boolean isUserSeeking;
     private boolean loopMode;
+    private boolean danmakuEnabled = true;
     private OnVideoEndedListener playbackModeListener;
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
     private Context context;
@@ -601,40 +599,16 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     }
 
     private void showDanmakuInput() {
-        if (video == null || player == null || context == null) return;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("发送弹幕");
-
-        final EditText input = new EditText(context);
-        input.setHint("输入弹幕内容...");
-        input.setMaxLines(1);
-        input.setSingleLine(true);
-        input.setPadding(48, 32, 48, 32);
-        input.setTextSize(16);
-        builder.setView(input);
-
-        builder.setPositiveButton("发送", (dialog, which) -> {
-            String text = input.getText().toString().trim();
-            if (!text.isEmpty()) sendDanmaku(text);
+        if (video == null || fragmentManager == null) return;
+        DanmakuBottomSheetFragment sheet = DanmakuBottomSheetFragment.newInstance(video.getId());
+        sheet.setDanmakuEnabled(danmakuEnabled);
+        sheet.setOnDanmakuToggleListener(enabled -> {
+            danmakuEnabled = enabled;
+            if (danmakuView != null) {
+                danmakuView.setVisibility(enabled ? View.VISIBLE : View.GONE);
+            }
         });
-        builder.setNegativeButton("取消", null);
-        builder.show();
-    }
-
-    private void sendDanmaku(String content) {
-        if (video == null || player == null || !ApiClient.getInstance().isAuthenticated()) return;
-        long currentMs = player.getCurrentPosition();
-
-        String[] colors = {"#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#FF2D55"};
-        String color = colors[new Random().nextInt(colors.length)];
-
-        // Send to backend (persists + pushes via WebSocket to all viewers including self)
-        new Thread(() -> {
-            try {
-                apiService.postDanmaku(video.getId(), content, color, currentMs);
-            } catch (Exception ignored) {}
-        }).start();
+        sheet.show(fragmentManager, "danmaku");
     }
 
     public Video getVideo() {

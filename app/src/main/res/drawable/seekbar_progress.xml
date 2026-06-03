@@ -3,7 +3,7 @@
     <!-- Background track -->
     <item android:id="@android:id/background">
         <shape>
-            <solid android:color="#40FFFFFF" />
+            <solid android:color="#30FFFFFF" />
             <size android:height="2dp" />
         </shape>
     </item>
@@ -11,7 +11,7 @@
     <item android:id="@android:id/secondaryProgress">
         <clip>
             <shape>
-                <solid android:color="#60FFFFFF" />
+                <solid android:color="#50FFFFFF" />
                 <size android:height="2dp" />
             </shape>
         </clip>
@@ -20,8 +20,8 @@
     <item android:id="@android:id/progress">
         <clip>
             <shape>
-                <solid android:color="#FF6B35" />
-                <size android:height="3dp" />
+                <solid android:color="#FFFFFF" />
+                <size android:height="2dp" />
             </shape>
         </clip>
     </item>

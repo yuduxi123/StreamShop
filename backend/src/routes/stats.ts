@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { StorageService } from '../services/storage.service';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 interface ProductData {
   id: string; title: string; price: number; coverUrl: string; salesCount: number; category: string;
@@ -8,10 +9,12 @@ interface OrderData {
   id: string; status: string; totalAmount: number; discount: number; finalAmount: number; createdAt: string;
 }
 interface VideoData {
-  id: string; title: string; viewCount: number; likeCount: number; commentCount: number; shareCount: number;
+  id: string; title: string; coverUrl: string; authorId: string;
+  viewCount: number; likeCount: number; commentCount: number; shareCount: number;
 }
 interface LiveRoomData {
-  id: string; status: string; onlineCount: number; likeCount: number; viewerCount: number;
+  id: string; title: string; anchorId: string; status: string;
+  onlineCount: number; likeCount: number; viewerCount: number;
 }
 interface CartItemData {
   id: string; userId: string; productId: string; quantity: number;
@@ -33,104 +36,139 @@ const videoProductStorage = new StorageService<VideoProductData>('video_products
 
 const router = Router();
 
-router.get('/dashboard', (_req: Request, res: Response) => {
-  const orders = orderStorage.findAll();
-  const products = productStorage.findAll();
-  const videos = videoStorage.findAll();
-  const rooms = liveStorage.findAll();
+router.get('/dashboard', authMiddleware, (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+
+  const allOrders = orderStorage.findAll();
+  const allProducts = productStorage.findAll();
+  const allVideos = videoStorage.findAll();
+  const allRooms = liveStorage.findAll();
   const cartItems = cartStorage.findAll();
   const orderItems = orderItemStorage.findAll();
   const videoProducts = videoProductStorage.findAll();
 
-  // KPI
-  const totalOrders = orders.length;
-  const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.finalAmount || 0), 0);
-  const totalProducts = products.length;
-  const totalVideos = videos.length;
-  const totalViews = videos.reduce((s, v) => s + (v.viewCount || 0), 0);
-  const totalLikes = videos.reduce((s, v) => s + (v.likeCount || 0), 0);
-  const activeRooms = rooms.filter(r => r.status === 'live').length;
+  // Filter data by current user
+  const userVideos = allVideos.filter(v => v.authorId === userId);
+  const userRooms = allRooms.filter(r => r.anchorId === userId);
+  const userVideoIds = new Set(userVideos.map(v => v.id));
 
-  // Conversion funnel
-  const pending = orders.filter(o => o.status === 'pending').length;
-  const paid = orders.filter(o => o.status === 'paid').length;
-  const completed = orders.filter(o => o.status === 'completed').length;
-  const cancelled = orders.filter(o => o.status === 'cancelled').length;
+  // Products linked to user's videos
+  const userVideoProducts = videoProducts.filter(vp => userVideoIds.has(vp.videoId));
+  const linkedProductIds = new Set(userVideoProducts.map(vp => vp.productId));
+  const userProducts = allProducts.filter(p => linkedProductIds.has(p.id));
 
-  // Product conversion funnel: exposure → click → addToCart → order
-  const videosWithProducts = new Set(videoProducts.map(vp => vp.videoId));
-  const productExposure = videos
+  // Products linked to each user product (for bindCount)
+  const productBindCounts: Record<string, number> = {};
+  for (const vp of videoProducts) {
+    productBindCounts[vp.productId] = (productBindCounts[vp.productId] || 0) + 1;
+  }
+
+  // Platform-wide product bind counts (for topProducts & gmvRanking)
+  const platformProductBindCounts: Record<string, number> = {};
+  for (const vp of videoProducts) {
+    platformProductBindCounts[vp.productId] = (platformProductBindCounts[vp.productId] || 0) + 1;
+  }
+
+  // KPI — scoped to current user
+  const totalVideos = userVideos.length;
+  const totalViews = userVideos.reduce((s, v) => s + (v.viewCount || 0), 0);
+  const totalLikes = userVideos.reduce((s, v) => s + (v.likeCount || 0), 0);
+  const totalComments = userVideos.reduce((s, v) => s + (v.commentCount || 0), 0);
+  const totalRooms = userRooms.length;
+  const activeRooms = userRooms.filter(r => r.status === 'live').length;
+
+  // Product conversion funnel — based on real data
+  const videosWithProducts = new Set(userVideoProducts.map(vp => vp.videoId));
+  const exposure = userVideos
     .filter(v => videosWithProducts.has(v.id))
     .reduce((s, v) => s + (v.viewCount || 0), 0);
-  const productClick = Math.floor(productExposure * 0.45);
-  const addToCart = cartItems.length;
-  const ordered = orders.filter(o => o.status !== 'cancelled').length;
 
-  // GMV by month (last 6 months)
+  // Top products — platform-wide, sorted by how many videos link to each product
+  const topProducts = allProducts
+    .map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      coverUrl: p.coverUrl,
+      category: p.category,
+      bindCount: platformProductBindCounts[p.id] || 0,
+    }))
+    .sort((a, b) => b.bindCount - a.bindCount)
+    .slice(0, 10);
+
+  // Per-video performance — real data, sorted by views
+  const videoPerformance = userVideos
+    .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+    .map(v => ({
+      id: v.id,
+      title: v.title,
+      coverUrl: v.coverUrl,
+      views: v.viewCount || 0,
+      likes: v.likeCount || 0,
+      comments: v.commentCount || 0,
+      shares: v.shareCount || 0,
+    }));
+
+  // GMV by month (last 6 months) — for user's products
+  const userProductIds = new Set(userProducts.map(p => p.id));
   const now = new Date();
   const monthlyGMV: { month: string; gmv: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const gmv = orders
+    const gmv = allOrders
       .filter(o => o.status !== 'cancelled' && o.createdAt?.startsWith(key))
-      .reduce((s, o) => s + (o.finalAmount || 0), 0);
+      .reduce((s, o) => {
+        const items = orderItems.filter(oi => oi.orderId === o.id && userProductIds.has(oi.productId));
+        return s + items.reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
+      }, 0);
     monthlyGMV.push({ month: key, gmv });
   }
 
-  // Top 10 products by sales
-  const topProducts = [...products]
-    .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
-    .slice(0, 10)
-    .map(p => ({ id: p.id, title: p.title, price: p.price, coverUrl: p.coverUrl, salesCount: p.salesCount || 0, category: p.category }));
-
-  // GMV ranking by video/live room
-  const videoGMV: Record<string, number> = {};
+  // GMV ranking by video — platform-wide
   const productToVideo: Record<string, string> = {};
   for (const vp of videoProducts) {
     productToVideo[vp.productId] = vp.videoId;
   }
+  const videoGMV: Record<string, number> = {};
   for (const oi of orderItems) {
-    const order = orders.find(o => o.id === oi.orderId);
+    const order = allOrders.find(o => o.id === oi.orderId);
     if (!order || order.status === 'cancelled') continue;
     const vid = productToVideo[oi.productId];
-    const key = vid || 'direct-purchase';
-    videoGMV[key] = (videoGMV[key] || 0) + (oi.subtotal || 0);
+    if (!vid) continue;
+    videoGMV[vid] = (videoGMV[vid] || 0) + (oi.subtotal || 0);
   }
   const gmvRanking = Object.entries(videoGMV)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([id, gmv]) => {
-      const video = videos.find(v => v.id === id);
-      const room = rooms.find(r => r.id === id);
-      const name = video ? video.title : (room ? `直播间: ${room.id}` : '直接购买');
-      return { id, name, gmv: Math.round(gmv * 100) / 100 };
+      const video = allVideos.find(v => v.id === id);
+      return {
+        id,
+        name: video ? video.title : `视频: ${id}`,
+        gmv: Math.round(gmv * 100) / 100,
+      };
     });
-
-  // Views trend (last 14 days)
-  const avgDailyViews = Math.floor(totalViews / 14);
-  const totalComments = videos.reduce((s, v) => s + (v.commentCount || 0), 0);
-  const avgDailyComments = Math.floor(totalComments / 14);
-  const viewsTrend: { date: string; views: number; likes: number; comments: number }[] = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    viewsTrend.push({
-      date: key,
-      views: avgDailyViews + Math.floor(Math.random() * avgDailyViews * 0.5),
-      likes: Math.floor(totalLikes / 14) + Math.floor(Math.random() * 50),
-      comments: avgDailyComments + Math.floor(Math.random() * Math.max(avgDailyComments, 10) * 0.5),
-    });
-  }
 
   res.json({
-    kpi: { totalOrders, totalRevenue, totalProducts, totalVideos, totalViews, totalLikes, activeRooms },
-    funnel: { pending, paid, completed, cancelled, total: orders.length },
-    productFunnel: { exposure: productExposure, click: productClick, addToCart, order: ordered },
-    monthlyGMV,
+    kpi: {
+      totalVideos,
+      totalViews,
+      totalLikes,
+      totalComments,
+      totalRooms,
+      activeRooms,
+    },
+    productFunnel: {
+      exposure,
+      productVideos: videosWithProducts.size,
+      linkedProducts: linkedProductIds.size,
+      totalProducts: userProducts.length,
+    },
     topProducts,
+    videoPerformance,
+    monthlyGMV,
     gmvRanking,
-    viewsTrend,
   });
 });
 

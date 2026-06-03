@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -45,6 +47,10 @@
         <activity android:name=".ui.profile.FollowListActivity" android:exported="false" />
         <activity android:name=".ui.profile.AuthorVideoFeedActivity" android:exported="false" />
         <activity android:name=".ui.analytics.AnalyticsDashboardActivity" android:exported="false" />
+        <activity android:name=".ui.live.MyLiveRoomsActivity" android:exported="false" />
+        <activity android:name=".ui.live.AnchorLiveActivity" android:exported="false"
+            android:configChanges="orientation|screenSize" />
+        <activity android:name=".ui.live.LiveRoomEditActivity" android:exported="false" />
         <activity
             android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Theme.StreamShop.Crop"

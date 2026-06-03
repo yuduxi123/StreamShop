@@ -15,6 +15,8 @@ interface CommentData {
 
 const commentStorage = new StorageService<CommentData>('comments.json');
 const userStorage = new StorageService<any>('users.json');
+const videoStorage = new StorageService<any>('videos.json');
+const productStorage = new StorageService<any>('products.json');
 
 const router = Router();
 
@@ -63,6 +65,20 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     createdAt: new Date().toISOString(),
   };
   commentStorage.create(comment);
+
+  // Increment commentCount on the target
+  if (targetType === 'video') {
+    const video = videoStorage.findById(targetId);
+    if (video) {
+      videoStorage.update(targetId, { commentCount: (video.commentCount || 0) + 1 });
+    }
+  } else if (targetType === 'product') {
+    const product = productStorage.findById(targetId);
+    if (product) {
+      productStorage.update(targetId, { commentCount: (product.commentCount || 0) + 1 });
+    }
+  }
+
   res.status(201).json(comment);
 });
 

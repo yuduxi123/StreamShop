@@ -72,6 +72,15 @@ dependencies {
     // Charts
     implementation(libs.mpandroidchart)
 
+    // CameraX
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+
+    // RTMP Streaming
+    implementation(libs.rtmp.client)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

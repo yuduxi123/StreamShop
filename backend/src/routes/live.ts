@@ -8,6 +8,7 @@ interface LiveRoomData {
   id: string;
   title: string;
   coverUrl: string;
+  streamUrl?: string;
   anchorId: string;
   status: string;
   currentProductId: string | null;
@@ -36,11 +37,21 @@ function getWss(req: Request): WebSocketServer {
   return req.app.locals.wss as WebSocketServer;
 }
 
-// GET /api/live/rooms
+// GET /api/live/rooms?anchorId=&page=&limit=
 router.get('/rooms', (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
-  const result = liveStorage.paginate(page, limit);
+  const anchorId = req.query.anchorId as string;
+
+  let result;
+  if (anchorId) {
+    const filtered = liveStorage.query(r => r.anchorId === anchorId);
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    result = { data: filtered.slice(start, start + limit), total, page, limit };
+  } else {
+    result = liveStorage.paginate(page, limit);
+  }
 
   const enriched = result.data.map(room => {
     const users = userStorage.query(u => u.id === room.anchorId);
@@ -143,12 +154,31 @@ router.post('/rooms/:id/end', authMiddleware, (req: AuthRequest, res: Response) 
     res.status(403).json({ error: 'Forbidden' });
     return;
   }
-  const updated = liveStorage.update(id, { status: 'ended' });
+  const updated = liveStorage.update(id, { status: 'ended', streamUrl: undefined });
   if (!updated) {
     res.status(404).json({ error: 'Live room not found' });
     return;
   }
   res.json(updated);
+});
+
+// DELETE /api/live/rooms/:id
+router.delete('/rooms/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string;
+  const room = liveStorage.findById(id);
+  if (!room) {
+    res.status(404).json({ error: 'Live room not found' });
+    return;
+  }
+  if (room.anchorId !== req.user!.id && req.user!.role !== 'admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  // Remove product bindings first
+  const bindings = lrpStorage.query(b => b.liveRoomId === id);
+  bindings.forEach(b => lrpStorage.delete(b.id));
+  liveStorage.delete(id);
+  res.json({ success: true });
 });
 
 // POST /api/live/rooms/:id/product/:productId/explain

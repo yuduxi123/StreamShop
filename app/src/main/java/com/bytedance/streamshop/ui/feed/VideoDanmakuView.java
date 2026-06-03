@@ -141,12 +141,7 @@ public class VideoDanmakuView extends View {
 
     private void addActiveDanmaku(String text, String colorHex) {
         if (activeItems.size() > MAX_VISIBLE) return;
-        int color;
-        try {
-            color = 0xFF000000 | Integer.parseInt(colorHex.replace("#", ""), 16);
-        } catch (Exception e) {
-            color = 0xFFFFFFFF;
-        }
+        int color = 0xFFFFFFFF;
 
         float y = 40 + random.nextInt(Math.max(1, getHeight() - 80));
         DanmakuItem item = new DanmakuItem(text, getWidth(), y, color);

@@ -1,0 +1,1445 @@
+================================================================================
+  StreamShop 项目 — 全部问题与解决方案汇总
+  整理日期: 2026-06-03
+  项目路径: D:\AndriodProjects\StreamShop
+================================================================================
+
+本文档记录了从项目启动至今（6个迭代）遇到的所有技术问题、Bug及其完整解决方案。
+每个问题包含：问题描述、根本原因、解决思路、具体代码修改。
+
+================================================================================
+一、网络与连接问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 1: 首页黑屏 — "加载失败，点击重试"
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+App 首页 FeedFragment 显示黑屏，提示"加载失败，点击重试"，
+视频列表完全为空。
+
+【根本原因】
+后端 Express 服务器没有启动。Android App 通过 ApiClient 请求
+http://10.0.2.2:3000/api/videos 时连接超时。10.0.2.2 是 Android
+模拟器到宿主机的特殊 NAT 地址，需要宿主机上的后端服务正在监听。
+
+【解决方式】
+按正确顺序启动服务：
+  1. cd backend && npm run seed && npm run dev （启动后端 + 初始化数据）
+  2. 在 App 中点击"重试"或重启 App
+
+【涉及文件】
+无代码修改，纯运维问题。
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 2: 真机/雷电模拟器首页黑屏（Samsung SM-S9470 / LDPlayer）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+在 Android 官方模拟器上正常，但安装到真机（Samsung SM-S9470）或
+雷电模拟器（LDPlayer）后，首页完全黑屏，所有 API 请求失败。
+
+【根本原因】
+10.0.2.2 是 Android Studio 官方模拟器的专有地址，它通过虚拟路由将
+请求 NAT 到宿主机的 localhost。物理真机和第三方模拟器（雷电等）
+没有这个虚拟网络配置，10.0.2.2 地址不存在，所有 HTTP 请求超时。
+
+【解决思路】
+将后端地址从模拟器专用 IP 改为宿主机在局域网中的实际 IP 地址。
+电脑的局域网 IP 是 10.17.24.7。
+
+【具体修改】
+
+1. ApiClient.java — 修改 BASE_URL:
+   // 旧: http://10.0.2.2:3000/
+   // 新:
+   http://10.17.24.7:3000/
+
+2. LiveWebSocketClient.java — 修改 WebSocket URL:
+   // 旧: ws://10.0.2.2:3000
+   // 新:
+   ws://10.17.24.7:3000
+
+【注意事项】
+- 真机和电脑必须在同一局域网（连接同一个 WiFi 或 VPN）
+- 如果电脑 IP 变了（DHCP 重新分配），需要再次修改
+- 官方模拟器仍可使用 10.0.2.2，两个地址指向同一个后端
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/data/remote/ApiClient.java
+- app/src/main/java/com/bytedance/streamshop/data/remote/LiveWebSocketClient.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 3: Google CDN 视频 URL 全部返回 403 Forbidden
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+种子数据中使用的 Google CDN 视频地址（commondatastorage.googleapis.com
+/gtv-videos-bucket/sample/ForBiggerBlazes.mp4 等）全部返回 HTTP 403，
+ExoPlayer 无法播放任何视频。
+
+【根本原因】
+Google 关闭了 gtv-videos-bucket 的公开访问权限。该存储桶之前是
+Android 开发者文档中推荐的测试视频源，但 Google 在 2024 年底/2025 年初
+停止了公开服务。
+
+【解决思路】
+用多个来源的可用测试视频替换所有 Google CDN URL：
+  - 火山引擎 CDN: sf1-cdn-tos.huoshanstatic.com
+  - W3C 媒体示例: media.w3.org
+  - W3Schools 示例: w3schools.com
+  - Samplelib 示例: download.samplelib.com
+
+【具体修改】
+
+1. backend/src/data/videos.json — 替换所有 videoUrl 字段
+2. backend/src/seed.ts — 替换种子脚本中的 URL 列表
+3. 新的视频 URL 列表:
+   - https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4
+   - https://media.w3.org/2010/05/sintel/trailer.mp4
+   - https://www.w3schools.com/html/mov_bbb.mp4
+   - https://download.samplelib.com/mp4/sample-5s.mp4
+
+【涉及文件】
+- backend/src/data/videos.json
+- backend/src/seed.ts
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 4: MediaServer RTMP 推流 — "Cannot read properties of undefined"
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+开启直播推流时，后端 mediaServer 报错：
+"Cannot read properties of undefined (reading 'split')"
+
+【根本原因】
+mediaServer.ts 中处理推流事件时，对 streamName（即 stream key）
+调用了 .split() 方法，但当客户端推流请求格式不正确或缺少 stream key
+时，streamName 为 undefined，导致 TypeError。
+
+【解决方式】
+在 .split() 调用前添加 streamName 的存在性检查：
+
+  // 旧:
+  const parts = streamName.split('_');
+
+  // 新:
+  if (!streamName) {
+    // 拒绝没有 stream key 的推流
+    session.reject();
+    return;
+  }
+  const parts = streamName.split('_');
+
+【涉及文件】
+- backend/src/mediaServer.ts
+
+================================================================================
+二、编译与构建问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 5: mergeDebugResources 失败 — fragment_login.xml 缺少命名空间
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+执行 gradlew assembleDebug 时报错：
+"error: attribute 'app:passwordToggleEnabled' not found."
+
+【根本原因】
+fragment_login.xml 的根元素缺少 xmlns:app 命名空间声明。
+TextInputLayout 的 passwordToggleEnabled、cornerRadius、
+backgroundTint 等属性属于 Material Design 组件，需要 app 命名空间。
+
+【解决方式】
+在 fragment_login.xml 根元素 ScrollView 中添加：
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+
+【涉及文件】
+- app/src/main/res/layout/fragment_login.xml
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 6: compileDebugJavaWithJavac 编译失败
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+新增文件导致 Java 编译失败，错误信息为类型不匹配、找不到符号等。
+
+【根本原因】
+在实现"我的点赞"、"我的收藏"等功能时，新增了多个 Activity 和 Adapter，
+部分文件存在缺失 import、类名拼写错误、方法签名不匹配等问题。
+
+【解决方式】
+逐文件修复编译错误：
+  - 补全缺失的 import 语句
+  - 修正类名和方法名拼写
+  - 确保 RecyclerView Adapter 的泛型参数正确
+
+【涉及文件】
+多个文件（具体取决于编译错误列表）。
+
+================================================================================
+三、Fragment 生命周期崩溃问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 7: 登录后切回首页 → 黑屏有音频（无画面）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+从 Profile 页面进入 LoginActivity 登录成功后，通过底部导航栏切回首页
+（FeedFragment），屏幕全黑但能听到视频声音。
+
+【根本原因】
+FeedFragment 被销毁后重新创建时，onViewCreated() 创建了新的 ViewPager2，
+但没有调用 setAdapter()（因为旧的 adapter 引用不为 null，代码逻辑跳过了
+设置适配器的步骤）。然而，旧的 VideoPageFragment 实例仍然残留在
+FragmentManager 中，它们的 ExoPlayer 还在播放音频。
+
+具体流程：
+  1. FeedFragment 首次创建 → adapter = new FeedPagerAdapter(...)
+  2. setAdapter(adapter) → FragmentManager 中有了 VideoPageFragment 实例
+  3. 用户切到 Profile → Login → FeedFragment.onDestroyView() 调用
+  4. ViewPager2 被销毁，但 childFragmentManager 中的旧 Fragment 未清理
+  5. FeedFragment 重新创建 → adapter 变量 != null → 跳过了 setAdapter()
+  6. 新的 ViewPager2 没有 adapter → 界面空白
+  7. 但旧 Fragment 的 ExoPlayer 还在 → 有声音
+
+【解决思路】
+关键认知：FragmentStateAdapter 不允许被复用到新的 ViewPager2。
+必须在 onDestroyView() 中彻底清理旧的 Fragment 状态。
+
+【具体修改】
+
+在 FeedFragment.java 的 onDestroyView() 中：
+
+  @Override
+  public void onDestroyView() {
+      super.onDestroyView();
+      // 清理 childFragmentManager 中的所有旧 Fragment
+      for (Fragment f : getChildFragmentManager().getFragments()) {
+          getChildFragmentManager().beginTransaction()
+              .remove(f).commitNowAllowingStateLoss();
+      }
+      // 重置 adapter 引用，确保下次创建新的
+      adapter = null;
+      viewPager = null;
+  }
+
+在观察者回调中添加 adapter 为 null 的安全检查：
+  viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> {
+      if (adapter == null && viewPager != null) {
+          adapter = new FeedPagerAdapter(this, videos);
+          viewPager.setAdapter(adapter);
+      } else if (adapter != null) {
+          adapter.updateVideos(videos);
+      }
+  });
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 8: FragmentStateAdapter "Design assumption violated" 崩溃
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+登录后切回首页时 App 崩溃，Logcat 显示：
+  IllegalStateException: Design assumption violated.
+  at FragmentStateAdapter.placeFragmentInViewHolder(...)
+
+【根本原因】
+FragmentStateAdapter 内部使用 FragmentManager 管理子 Fragment，
+每个 Fragment 有唯一的 tag。当旧的 Fragment 未被完全清理、新的
+adapter 实例尝试用同样的逻辑创建 Fragment 时，tag 冲突导致异常。
+
+这是问题 7 的后续——仅将 adapter 设为 null 不足以清理
+FragmentManager 中的状态。
+
+【解决方式】
+与问题 7 的最终方案相同——在 onDestroyView() 中手动移除所有
+childFragmentManager 中的 Fragment。关键代码：
+
+  // 这行是核心：commitNowAllowingStateLoss 立即执行事务
+  getChildFragmentManager().beginTransaction()
+      .remove(f).commitNowAllowingStateLoss();
+
+commitNow()（而非 commit()）确保 Fragment 在 onDestroyView 返回前
+被彻底移除，不留残留状态。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 9: ExoPlayer setDataSourceCallback failed (status 0x80000000)
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+Fragment 生命周期修复后，ExoPlayer 在播放时反复崩溃，
+错误: "setDataSourceCallback failed" status=0x80000000
+
+【根本原因】
+反复创建/销毁 Fragment 导致 ExoPlayer 实例管理混乱。
+ViewPager2 + FragmentStateAdapter 的组合在处理视频播放时
+存在固有问题：Fragment 的生命周期与播放器生命周期耦合过紧。
+
+【解决思路】
+彻底重构视频 Feed 架构——放弃 ViewPager2 的 Fragment 模式，
+改用 ViewPager2 + RecyclerView.Adapter 模式（每个页面是一个
+ViewHolder 而非 Fragment）。
+
+新架构：
+  ViewPager2 → FeedPagerAdapter(RecyclerView.Adapter)
+    → VideoViewHolder(extends RecyclerView.ViewHolder)
+      → 包含 PlayerView + ExoPlayer 实例
+
+优势：
+  - ViewHolder 生命周期由 RecyclerView 管理，更加可控
+  - 不需要 childFragmentManager，消除 Fragment 相关崩溃
+  - 每个 ViewHolder 独立管理自己的 ExoPlayer
+
+【具体修改】
+
+1. 创建 VideoViewHolder.java — 替代 VideoPageFragment
+   - 持有 PlayerView 引用
+   - 管理自己的 ExoPlayer 实例
+   - 在 onViewRecycled() 中释放播放器
+
+2. 创建 FeedPagerAdapter.java — 替代 FragmentStateAdapter
+   - extends RecyclerView.Adapter<VideoViewHolder>
+   - 在 onBindViewHolder 中初始化播放器
+   - 在 onViewDetachedFromWindow 中暂停播放
+
+3. 修改 FeedFragment.java
+   - 移除 childFragmentManager 相关清理代码
+   - 使用新的 FeedPagerAdapter
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java (新建)
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedPagerAdapter.java (重写)
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java (修改)
+- app/src/main/res/layout/fragment_video_page.xml (修改适配 ViewHolder)
+
+================================================================================
+四、视频播放问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 10: 首页显示封面图但视频不播放
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+视频列表加载成功，封面图正常显示，但 PlayerView 一直是黑屏，
+视频不播放。用户看到的只有静态图片。
+
+【根本原因】
+ExoPlayer 在模拟器环境下播放远程视频存在兼容性问题：
+  1. 模拟器缺少硬件视频解码器
+  2. 部分视频编码格式（如 H.265/HEVC）不被模拟器支持
+  3. 网络延迟导致播放器进入错误状态后未恢复
+
+【解决思路】
+三层防护策略：
+
+第一层 — 封面图兜底:
+  在 PlayerView 下方放置 ImageView，用 Glide 加载封面图。
+  播放器准备好之前，用户看到的是封面图而非黑屏。
+
+第二层 — 状态监听:
+  监听 ExoPlayer 的状态变化：
+  - STATE_READY → 隐藏封面图，开始播放
+  - STATE_BUFFERING → 显示封面图（如有）或加载动画
+  - STATE_IDLE/STATE_ENDED → 显示封面图
+
+第三层 — 错误处理:
+  onPlayerError 回调中保持封面图显示，不暴露黑屏。
+
+【具体修改】
+
+1. fragment_video_page.xml — 添加封面 ImageView:
+   <FrameLayout>
+       <ImageView android:id="@+id/video_cover" ... />
+       <PlayerView android:id="@+id/video_player" ... />
+   </FrameLayout>
+
+2. VideoPageFragment.java（后改为 VideoViewHolder.java）:
+   // 加载封面
+   Glide.with(this).load(video.getCoverUrl()).into(coverImage);
+
+   // 监听播放器状态
+   player.addListener(new Player.Listener() {
+       @Override
+       public void onPlaybackStateChanged(int state) {
+           if (state == Player.STATE_READY) {
+               coverImage.setVisibility(View.GONE);
+               player.play();
+           }
+       }
+   });
+
+【涉及文件】
+- app/src/main/res/layout/fragment_video_page.xml
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoPageFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 11: 多个视频同时播放（音频重叠）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+ViewPager2 预加载机制导致相邻页面的视频也同时播放，
+用户同时听到 2-3 个视频的音频。
+
+【根本原因】
+ViewPager2 默认会预加载左右各 1 个页面（offscreenPageLimit = 1 默认值）。
+预加载的页面也会触发 onBindViewHolder → 初始化 ExoPlayer → 自动播放。
+而 ExoPlayer 默认 setPlayWhenReady(true)，导致多个播放器同时播放。
+
+【解决思路】
+1. 设置 offscreenPageLimit 为 1（保留预加载以保持滑动流畅）
+2. 核心方案：实现页面选择回调，只有当前可见页面的播放器才播放
+
+  ViewPager2.registerOnPageChangeCallback(new OnPageChangeCallback() {
+      @Override
+      public void onPageSelected(int position) {
+          // 暂停所有其他播放器
+          for (int i = 0; i < adapter.getItemCount(); i++) {
+              if (i != position) {
+                  pausePlayerAt(i);
+              }
+          }
+          // 恢复当前页面的播放
+          resumePlayerAt(position);
+      }
+  });
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedPagerAdapter.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 12: 播放控制 — 点击暂停/播放 + 进度条
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户需求：点击视频切换播放/暂停，并显示一个可拖动的进度条。
+初始实现没有这两个功能。
+
+【解决思路】
+
+播放/暂停:
+  在视频区域添加点击监听 → 调用 player.play() / player.pause()
+  → 显示短暂的播放/暂停图标动画（300ms 淡出）
+
+进度条:
+  使用 SeekBar，通过 Handler.postDelayed 每 300ms 轮询更新：
+    - 当前进度 = player.getCurrentPosition()
+    - 总时长 = player.getDuration()
+  用户拖动 SeekBar → OnSeekBarChangeListener.onStopTrackingTouch()
+  → player.seekTo(progress)
+
+【具体修改】
+
+1. 布局添加:
+   - 播放/暂停指示器 ImageView（居中，默认隐藏）
+   - SeekBar（底部，自定义 drawable）
+
+2. VideoViewHolder.java 核心逻辑:
+   // 播放/暂停切换
+   playerView.setOnClickListener(v -> {
+       if (player.isPlaying()) {
+           player.pause();
+           showIndicator(R.drawable.ic_pause_indicator);
+       } else {
+           player.play();
+           showIndicator(R.drawable.ic_play_indicator);
+       }
+   });
+
+   // 进度条定时更新
+   handler.postDelayed(new Runnable() {
+       @Override
+       public void run() {
+           if (player != null && player.isPlaying()) {
+               seekBar.setProgress((int) player.getCurrentPosition());
+               seekBar.setMax((int) player.getDuration());
+           }
+           handler.postDelayed(this, 300);
+       }
+   }, 300);
+
+【涉及文件】
+- app/src/main/res/layout/fragment_video_page.xml
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+- app/src/main/res/drawable/ic_play_indicator.xml
+- app/src/main/res/drawable/ic_pause_indicator.xml
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 13: 自动播放下一个视频
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户需求：当前视频播放完毕后自动切换到下一个视频。
+
+【解决思路】
+利用 ExoPlayer 的 onPlaybackStateChanged 回调，
+当 state == Player.STATE_ENDED 时调用 ViewPager2.setCurrentItem(position + 1, true)。
+
+需要在 FeedPagerAdapter 中持有 ViewPager2 的引用以便控制翻页。
+
+【具体修改】
+
+VideoViewHolder 中:
+  player.addListener(new Player.Listener() {
+      @Override
+      public void onPlaybackStateChanged(int state) {
+          if (state == Player.STATE_ENDED) {
+              // 通知 Adapter 切换到下一个视频
+              if (onVideoEndedListener != null) {
+                  onVideoEndedListener.onEnded(position);
+              }
+          }
+      }
+  });
+
+FeedPagerAdapter 中:
+  public interface OnVideoEndedListener {
+      void onEnded(int currentPosition);
+  }
+
+FeedFragment 中:
+  adapter.setOnVideoEndedListener(pos -> {
+      if (pos < adapter.getItemCount() - 1) {
+          viewPager.setCurrentItem(pos + 1, true);
+      }
+  });
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedPagerAdapter.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java
+
+================================================================================
+五、直播功能问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 14: 多次重复弹出摄像头权限请求（3-4 次）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户点击"开始直播"后，系统连续弹出 3-4 次摄像头权限请求对话框。
+即使用户已经授权，下次进入直播页面还会再次弹出。
+
+【根本原因】
+权限请求分散在多个地方，且 SurfaceView 的 surfaceCreated() 回调
+会多次触发，每次都重新检查权限 → 发现未就绪 → 再次请求。
+
+具体触发链路：
+  1. Activity onCreate → 检查权限 → 第 1 次弹窗
+  2. SurfaceView.surfaceCreated → startStreaming → 检查权限 → 第 2 次弹窗
+  3. CameraX 内部初始化 → 再次检查 → 第 3 次弹窗
+  4. 某些设备 SurfaceView 重建 → 第 4 次弹窗
+
+另外，isStreaming 标志只在 onConnectionSuccessRtmp() 中设为 true，
+而 onConnectionSuccessRtmp() 是异步回调，在 surfaceCreated() 多次触发时
+还没有被调用，所以 isStreaming 一直为 false，无法阻止重复调用。
+
+【解决思路】
+引入一个独立的 startAttempted 标志，在第一次尝试启动推流时立即设为 true，
+阻止后续所有重复调用。与 isStreaming（推流是否成功）解耦。
+
+  private boolean startAttempted = false;  // 是否已经尝试过启动
+  private boolean isStreaming = false;     // 推流是否成功建立
+  private boolean surfaceReady = false;     // SurfaceView 是否就绪
+  private boolean permissionsReady = false; // 权限是否已授予
+
+  private void tryStartStreaming() {
+      if (surfaceReady && permissionsReady && !startAttempted) {
+          startAttempted = true;  // 立即标记，防止重入
+          startStreaming();
+      }
+  }
+
+  // 连接失败时重置标志，允许重试
+  @Override
+  public void onConnectionFailedRtmp(String reason) {
+      handler.postDelayed(() -> {
+          if (!isDestroyed() && !isStreaming) {
+              startAttempted = false;  // 允许重试
+              tryStartStreaming();
+          }
+      }, 3000);
+  }
+
+权限请求集中在 Activity 启动时一次性完成，不再分散在多处。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/live/AnchorLiveActivity.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 15: Camera2 + OpenGL 进入直播间立即闪退
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+为了解决摄像头预览无法填满屏幕的问题，将 Camera1 + SurfaceView
+替换为 Camera2 + OpenGlView（利用 OpenGL 实现 centerCrop 渲染）。
+结果用户点击进入直播间后 App 立即崩溃闪退。
+
+【根本原因】
+RtmpCamera2 + OpenGlView 的实现存在兼容性问题：
+  1. OpenGlView 需要 GLSurfaceView 的 EGL 上下文，模拟器 GPU 支持有限
+  2. pedroSG94 库的 RtmpCamera2 在某些设备上 OpenGL 线程初始化失败
+  3. Camera2 API 在模拟器上的支持不如 Camera1 稳定
+
+【解决思路】
+回退到 Camera1 + SurfaceView 方案，保留问题 14 的权限修复。
+完整的回退内容：
+  - OpenGlView → SurfaceView（XML 布局）
+  - RtmpCamera2 → RtmpCamera1（Java 代码）
+  - 移除 GLSurfaceView 相关代码
+  - 恢复 SurfaceHolder.Callback 实现
+  - 恢复 surfaceReady 标志位
+
+关于画面无法填满屏幕的问题，使用 SurfaceView 的 layout 参数调整，
+而非 Camera2/OpenGL。
+
+【涉及文件】
+- app/src/main/res/layout/activity_anchor_live.xml（OpenGlView → SurfaceView）
+- app/src/main/java/com/bytedance/streamshop/ui/live/AnchorLiveActivity.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 16: 已结束的直播间无法删除，列表混乱
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户的"我的直播"列表中，已结束的直播间和正在直播的混在一起，
+无法区分，也无法删除已结束的。
+
+【解决思路】
+后端添加 status 过滤支持，前端添加"进行中"/"已结束"Tab 切换。
+
+1. 后端 live.ts — 支持 status 查询参数:
+   router.get('/', (req, res) => {
+       const status = req.query.status;  // 'live' | 'ended'
+       let rooms = liveStorage.findAll();
+       if (status) rooms = rooms.filter(r => r.status === status);
+       ...
+   });
+
+2. Android MyLiveRoomsActivity — 添加 TabLayout:
+   - "进行中" Tab → 加载 status=live
+   - "已结束" Tab → 加载 status=ended
+   - 已结束的直播间显示删除按钮
+
+【涉及文件】
+- backend/src/routes/live.ts
+- app/src/main/java/com/bytedance/streamshop/ui/live/MyLiveRoomsActivity.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 17: 摄像头预览不填满屏幕（上下有黑边/绿条）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+SurfaceView 的摄像头预览画面不能填满屏幕，上下有黑边或绿色区域。
+预览宽高比与手机屏幕宽高比不匹配。
+
+【根本原因】
+SurfaceView 默认使用居中适应（fitCenter）的缩放模式，
+摄像头输出的画面比例（通常是 4:3 或 16:9）与手机屏幕比例不一致时，
+会产生黑边。pedroSG94 库的 RtmpCamera1 使用 SurfaceView 时，
+底层预览尺寸由 prepareVideo() 参数决定。
+
+【解决思路】
+1. prepareVideo() 参数设为与屏幕接近的比例（如 1280x720 = 16:9）
+2. SurfaceView 的 layout_width/layout_height 设为 match_parent
+3. 在父布局 FrameLayout 中使用 android:layout_gravity="center"
+   配合 clipChildren=false 实现裁切效果
+
+如果仍无法完美填充，这是 SurfaceView 的固有限制。
+要真正实现任意比例的 centerCrop，需要 Camera2 + OpenGL（但如问题 15，
+在模拟器上有兼容性问题）。
+
+【涉及文件】
+- app/src/main/res/layout/activity_anchor_live.xml
+- app/src/main/java/com/bytedance/streamshop/ui/live/AnchorLiveActivity.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 18: 摄像头预览旋转 90 度 / 镜像翻转
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+摄像头预览画面旋转了 90 度（横屏显示的图像被压扁），
+或者前置摄像头画面是镜像的（左右颠倒）。
+
+【根本原因】
+1. 旋转 90 度：Android 摄像头传感器的物理方向通常是横屏（landscape），
+   而 App 是竖屏（portrait），需要旋转 90 度才能正确显示。
+2. 镜像：前置摄像头默认会输出镜像画面（模拟照镜子的效果），
+   这是 Android Camera API 的默认行为。
+
+【解决思路】
+1. 旋转问题：在 prepareVideo 中使用 270 度旋转参数
+   rtmpCamera1.prepareVideo(1280, 720, 30, 1200 * 1024, 270);
+   //                                         旋转角度 ↑
+   // 270 = 竖屏顺时针旋转 270° = 摄像头传感器 → 竖屏方向
+
+2. 镜像问题：使用 Camera1 的 setDisplayOrientation 可以修正方向，
+   但前置摄像头的镜像效果是预期行为（用户习惯照镜子），不做修正。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/live/AnchorLiveActivity.java
+
+================================================================================
+六、购物车与订单问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 19: 第二次下单总是失败（"提交订单"无反应）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+第一次下单成功，但紧接着第二次下单时，点击"提交订单"按钮没有任何反应。
+
+【根本原因】
+OrderConfirmActivity 中的订单状态在第一次成功提交后没有被重置。
+具体来说：
+  1. isSubmitting 标志在第一次提交后被设为 true
+  2. 成功后 finish() 回到上一个页面
+  3. 用户再次进入 OrderConfirmActivity → isSubmitting 仍为 true
+     （如果是同一个 Activity 实例被复用）
+  4. save() 方法中检查 if (isSubmitting) return → 直接跳过
+
+如果是新 Activity 实例，问题可能出在购物车数据层面：
+上一个订单的商品没有从购物车中正确清除。
+
+【解决方式】
+1. 在 OrderConfirmActivity 的 onStop()/onDestroy() 中重置 isSubmitting
+2. 后端订单创建成功后，清理购物车中对应的商品:
+   - 订单中包含的 cart items → 从 carts.json 中删除
+3. Android 端在 onResume() 中重新加载购物车数据
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/order/OrderConfirmActivity.java
+- backend/src/routes/order.ts
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 20: 商品底部弹窗 — "加入购物车"按钮不可见
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+点击视频中的商品标签后弹出的 BottomSheet 中，"立即购买"按钮可见，
+但"加入购物车"按钮在屏幕下方被截断，用户看不到。
+
+【根本原因】
+BottomSheet 的内容高度 + 按钮区域超出了屏幕可视范围。
+具体是布局中商品信息（图片、名称、价格、描述等）占用了太多垂直空间，
+导致按钮被挤出底部。
+
+【解决方式】
+1. 精简商品信息区域 — 减少图片大小和描述文本行数
+2. 将两个按钮放在固定高度的底部区域，使用 layout_gravity="bottom"
+3. BottomSheet 的 peekHeight 和 expandedOffset 合理设置
+
+【涉及文件】
+- app/src/main/res/layout/bottom_sheet_product.xml
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 21: "添加购物车失败" Toast 提示
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+点击"加入购物车"后 Toast 提示"添加购物车失败"。
+
+【根本原因】
+两种可能原因：
+  1. 用户未登录 → API 请求没有有效的 JWT Token
+     → 后端 authMiddleware 返回 401
+  2. ApiService.addToCart() 请求格式与后端期望不一致
+
+【解决方式】
+1. 在 addToCart() 调用前检查登录状态。如果未登录，提示用户先登录
+2. 确保请求体格式正确:
+   {
+     "productId": "...",
+     "quantity": 1
+   }
+3. 后端 cart 路由接收到的字段名与 Android 发送的匹配
+   （注意 productId vs product_id 的命名差异）
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/data/remote/ApiService.java
+- backend/src/routes/cart.ts
+
+================================================================================
+七、用户界面 (UI/UX) 问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 22: Profile 页面"我的直播"按钮位置调整
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户要求将"我的直播"按钮从操作行（与订单、点赞等并列）移到
+页面右上角，只保留图标，去掉文字。
+
+【解决思路】
+1. 在 Profile 页面的顶部深色头部区域包裹一个 FrameLayout
+2. 在 FrameLayout 右上角放置一个 ImageView 作为直播入口图标
+3. 使用 android:layout_gravity="top|end" 定位到右上角
+4. 设置 android:tint="#FF3B30"（红色）使其醒目
+5. 从下方操作行中移除"我的直播"项
+
+【具体修改】
+
+1. fragment_profile.xml — 头部改为 FrameLayout:
+   <FrameLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:background="#1A1A1A">
+
+       <!-- 原始头部内容 LinearLayout -->
+       <LinearLayout ... >
+           <!-- 头像、用户名、统计数据 -->
+       </LinearLayout>
+
+       <!-- 直播图标 — 右上角 -->
+       <ImageView
+           android:id="@+id/profile_live_rooms_icon"
+           android:layout_width="36dp"
+           android:layout_height="36dp"
+           android:layout_gravity="top|end"
+           android:layout_marginTop="42dp"
+           android:layout_marginEnd="16dp"
+           android:src="@drawable/ic_live"
+           android:tint="#FF3B30"
+           android:clickable="true"
+           android:focusable="true" />
+   </FrameLayout>
+
+2. ProfileFragment.java — 修改点击处理:
+   // 旧: findViewById(R.id.profile_live_rooms).setOnClickListener(...)
+   // 新:
+   liveRoomsIcon = findViewById(R.id.profile_live_rooms_icon);
+   liveRoomsIcon.setOnClickListener(v -> {
+       startActivity(new Intent(getActivity(), MyLiveRoomsActivity.class));
+   });
+
+3. 操作行移除"我的直播"项，剩余 5 项: 订单 | 点赞 | 视频 | 收藏 | 运营分析
+
+【涉及文件】
+- app/src/main/res/layout/fragment_profile.xml
+- app/src/main/java/com/bytedance/streamshop/ui/profile/ProfileFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 23: "我的点赞"页面不存在
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+点击 Profile 页面的"点赞"入口没有反应，没有对应的页面。
+
+【根本原因】
+"我的点赞"功能的 UI 页面从未被创建，只有后端 API 存在。
+
+【解决方式】
+创建完整的"我的点赞"功能：
+
+1. 新建 LikedVideosActivity.java
+   - RecyclerView 网格布局（3 列）
+   - 每个 item 显示视频封面 + 点赞数（红心图标）
+   - 点击 item → 打开全屏视频播放页面
+
+2. 新建 activity_liked_videos.xml
+   - Toolbar（返回按钮 + 标题"我的点赞"）
+   - RecyclerView（GridLayoutManager, spanCount=3）
+
+3. 新建 item_liked_video.xml
+   - ImageView（视频封面）
+   - ImageView（红心图标）+ TextView（点赞数）
+
+4. AndroidManifest.xml 注册 Activity
+
+5. ProfileFragment 接入点击事件
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/profile/LikedVideosActivity.java
+- app/src/main/res/layout/activity_liked_videos.xml
+- app/src/main/res/layout/item_liked_video.xml
+- app/src/main/AndroidManifest.xml
+- app/src/main/java/com/bytedance/streamshop/ui/profile/ProfileFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 24: "我的收藏"不显示商品收藏
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+"我的收藏"页面只显示收藏的视频，不显示收藏的商品。
+
+【解决思路】
+添加 Tab 切换（视频收藏 / 商品收藏），使用 TabLayout + ViewPager2。
+
+1. 后端添加商品收藏 API:
+   GET /api/favorites/products → 返回用户收藏的商品列表
+
+2. Android 添加 ProductFavoriteFragment:
+   - 网格布局展示收藏的商品
+   - 商品图片、名称、价格
+
+3. FavoritesActivity 改为 TabLayout + ViewPager2 架构
+
+【涉及文件】
+- backend/src/routes/interaction.ts
+- app/src/main/java/com/bytedance/streamshop/ui/profile/FavoritesActivity.java
+- app/src/main/res/layout/activity_favorites.xml
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 25: 商品叠加卡片过大，遮挡视频内容
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+视频播放页面中，右下角的商品推荐卡片太大，遮挡了视频的重要画面区域。
+
+【解决方式】
+将商品卡片的整体尺寸缩小到原来的 3/4:
+  - ImageView: 120dp × 120dp → 90dp × 90dp
+  - 文字大小: 14sp → 12sp
+  - 按钮 padding: 减小
+  - CardView layout_width: 180dp → 135dp
+
+【涉及文件】
+- app/src/main/res/layout/item_product_card.xml
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 26: 作者头像白色边框不圆（能看到方角）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+视频播放页左侧作者头像周围有白色边框，但边框的四个角是方的，
+不是正圆形。
+
+【根本原因】
+使用了普通的 ImageView + background drawable 设置白色圆形，
+但 background drawable 的 shape 虽然定义为 oval/ring，
+ImageView 本身的 scaleType 和裁剪模式不正确。
+
+【解决方式】
+使用 Material Design 的 ShapeableImageView:
+  <com.google.android.material.imageview.ShapeableImageView
+      android:id="@+id/author_avatar"
+      android:layout_width="48dp"
+      android:layout_height="48dp"
+      app:shapeAppearanceOverlay="@style/CircleImageView"
+      android:strokeColor="#FFFFFF"
+      android:strokeWidth="2dp" />
+
+配合 style:
+  <style name="CircleImageView">
+      <item name="cornerFamily">rounded</item>
+      <item name="cornerSize">50%</item>
+  </style>
+
+【涉及文件】
+- app/src/main/res/layout/fragment_video_page.xml
+- app/src/main/res/values/styles.xml
+
+================================================================================
+八、数据准确性问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 27: 新注册用户发布的视频不在主页显示
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+新注册的账号发布视频后，主页（Feed）中找不到该视频。
+其他用户也看不到。只有使用种子数据中的老账号发布的视频才可见。
+
+【根本原因】
+后端 POST /api/videos 接口在创建视频时，始终将 status 硬编码为
+'draft'（草稿），忽略了客户端传入的 status 值。
+
+  // 旧代码 (video.ts):
+  const video: VideoData = {
+      ...
+      status: 'draft',  // ← 始终是草稿！
+      ...
+  };
+
+Feed API（GET /api/videos）在查询时只会返回 status='published'
+的视频，所以草稿状态的视频永远不会出现在主页。
+
+【解决方式】
+
+1. 后端 video.ts — 读取客户端传入的 status:
+   const { title, tags, status: reqStatus } = req.body;
+   const validStatuses = ['draft', 'published', 'taken_down'];
+   const status = validStatuses.includes(reqStatus) ? reqStatus : 'draft';
+   // status 现在使用客户端传入的值（如果有效），否则默认 draft
+
+2. Android VideoEditActivity.java — 默认选择"已发布":
+   发布状态 Spinner 默认选中 index=1（"已发布"），而不是 index=0（"草稿"）:
+   ArrayAdapter<String> adapter = new ArrayAdapter<>(...);
+   statusSpinner.setAdapter(adapter);
+   statusSpinner.setSelection(1); // 默认: published
+
+【涉及文件】
+- backend/src/routes/video.ts
+- app/src/main/java/com/bytedance/streamshop/ui/profile/VideoEditActivity.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 28: 运营分析数据完全不准确（核心问题）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+运营分析 Dashboard 的数据严重不可信，表现为：
+  1. KPI 数据是系统中所有用户的总和，不是当前用户自己的数据
+  2. "播放趋势"图表使用 Math.random() 生成随机假数据
+  3. "转化漏斗"中点击率硬编码为 45%
+  4. "热门商品"排名基于 salesCount 静态种子数据，永不更新
+  5. "GMV 排行"是当前用户的个人排名，不是全平台排名
+
+【根本原因】
+
+原始 stats.ts 存在以下 5 个具体问题：
+
+1. 未进行用户范围过滤：没有使用 authMiddleware，
+   KPI 统计的是 allVideos.length / allOrders.length 等全局数据
+
+2. 趋势数据完全伪造：
+   viewsTrend 的 14 天数据每条都用 Math.random() * 1000 + 500 生成
+
+3. 点击率硬编码：
+   productFunnel.click = Math.round(exposure * 0.45)
+   没有任何真实的点击追踪机制
+
+4. 热门商品使用静态数据：
+   按 products.json 中的 salesCount 排序
+   但 salesCount 是种子数据导入时就写死的，从未更新
+
+5. GMV 排行范围错误：
+   只统计当前用户的视频产生的 GMV，不是全平台排名
+
+【解决思路与具体修改】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 1: 添加用户认证和范围过滤
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧: router.get('/dashboard', (req, res) => {  // 无认证
+  // 新:
+  router.get('/dashboard', authMiddleware, (req: AuthRequest, res: Response) => {
+      const userId = req.user!.id;
+
+      // 所有数据按当前用户过滤
+      const userVideos = allVideos.filter(v => v.authorId === userId);
+      const userRooms = allRooms.filter(r => r.anchorId === userId);
+      const userVideoIds = new Set(userVideos.map(v => v.id));
+      ...
+  });
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 2: KPI 改为当前用户范围
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧（全局数据）:
+  kpi: { totalOrders, totalVideos, totalViews, totalLikes, activeRooms }
+
+  // 新（当前用户数据）:
+  const totalVideos = userVideos.length;
+  const totalViews = userVideos.reduce((s, v) => s + (v.viewCount || 0), 0);
+  const totalLikes = userVideos.reduce((s, v) => s + (v.likeCount || 0), 0);
+  const totalComments = userVideos.reduce((s, v) => s + (v.commentCount || 0), 0);
+  const totalRooms = userRooms.length;
+  const activeRooms = userRooms.filter(r => r.status === 'live').length;
+
+  kpi: { totalVideos, totalViews, totalLikes, totalComments, totalRooms, activeRooms }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 3: 移除伪造趋势 → 替换为真实视频表现数据
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧（随机假数据）:
+  for (let i = 13; i >= 0; i--) {
+      viewsTrend.push({ date: ..., views: Math.round(Math.random() * 1000 + 500) });
+  }
+
+  // 新（真实数据）:
+  const videoPerformance = userVideos
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+      .map(v => ({
+          id: v.id,
+          title: v.title,
+          coverUrl: v.coverUrl,
+          views: v.viewCount || 0,
+          likes: v.likeCount || 0,
+          comments: v.commentCount || 0,
+          shares: v.shareCount || 0,
+      }));
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 4: 移除伪造点击率 → 改用真实商品关联数据
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧（45% 假点击率）:
+  productFunnel: { exposure, click: Math.round(exposure * 0.45), addToCart, order }
+
+  // 新（真实关联数据）:
+  const videosWithProducts = new Set(userVideoProducts.map(vp => vp.videoId));
+  const exposure = userVideos
+      .filter(v => videosWithProducts.has(v.id))
+      .reduce((s, v) => s + (v.viewCount || 0), 0);
+
+  productFunnel: {
+      exposure,                                    // 挂载商品的视频总曝光
+      productVideos: videosWithProducts.size,       // 挂载了商品的视频数
+      linkedProducts: linkedProductIds.size,         // 被关联的商品数
+      totalProducts: userProducts.length,            // 用户商品总数
+  }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 5: 修复热门商品 → 基于真实关联次数
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧（静态 salesCount）:
+  topProducts = products.sort((a, b) => b.salesCount - a.salesCount)
+
+  // 新（全平台视频关联次数 bindCount）:
+  const platformProductBindCounts: Record<string, number> = {};
+  for (const vp of videoProducts) {
+      platformProductBindCounts[vp.productId] =
+          (platformProductBindCounts[vp.productId] || 0) + 1;
+  }
+
+  const topProducts = allProducts
+      .map(p => ({
+          id: p.id, title: p.title, price: p.price,
+          coverUrl: p.coverUrl, category: p.category,
+          bindCount: platformProductBindCounts[p.id] || 0,
+      }))
+      .sort((a, b) => b.bindCount - a.bindCount)
+      .slice(0, 10);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+修改 6: GMV 排行改为全平台范围
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // 旧（仅当前用户的视频）:
+  for (const vp of userVideoProducts) { ... }
+  const video = userVideos.find(v => v.id === id);
+
+  // 新（全平台视频）:
+  for (const vp of videoProducts) { ... }
+  const video = allVideos.find(v => v.id === id);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Android 端适配
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. KPI 卡片字段映射更新:
+   totalOrders → totalLikes
+   totalRevenue → totalComments
+
+2. 趋势图从 LineChart 改为 HorizontalBarChart:
+   - 每条代表一个视频，按播放量降序
+   - 标签截断为 10 个字符（过长加"…"）
+   - 数值使用 LargeValueFormatter（万/亿/k 格式化）
+
+3. 转化漏斗文案更新:
+   "曝光 → 点击(45%) → 加购 → 下单"
+   → "商品曝光 → 挂载视频 → 关联商品 → 商品总数"
+
+4. 热门商品图表: bindCount 替代 salesCount
+   图例: "销量" → "关联视频数"
+
+【涉及文件】
+- backend/src/routes/stats.ts（完全重写）
+- app/src/main/java/com/bytedance/streamshop/ui/analytics/AnalyticsDashboardActivity.java
+- app/src/main/res/layout/activity_analytics_dashboard.xml
+
+================================================================================
+九、弹幕 (Danmaku) 功能问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 29: 发送弹幕后视频上不显示
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户在视频播放页面发送弹幕，Toast 提示发送成功，但弹幕没有显示在
+视频画面上。
+
+【根本原因】
+弹幕的数据流有三个环节：
+  1. Android → POST /api/danmaku → 存储到后端
+  2. 后端 → WebSocket 广播 → 其他观众
+  3. Android DanmakuView → 渲染到屏幕上
+
+问题出在第 3 步：DanmakuView 没有订阅数据源。
+发送成功后没有调用 danmakuView.addDanmaku() 将弹幕添加到渲染队列。
+
+【解决方式】
+1. 发送弹幕的 API 回调成功后，立即将弹幕添加到本地 DanmakuView
+2. 监听 WebSocket 消息，收到其他人的弹幕时也添加到 DanmakuView
+3. 弹幕显示时间根据文本长度动态计算（每字符约 200ms）
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 30: 发送一条弹幕出现 4 条相同的
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+每次发送一条弹幕，屏幕上出现 4 条完全相同的弹幕。
+
+【根本原因】
+弹幕被多次添加到 DanmakuView 的渲染队列：
+  1. 发送成功后本地添加 1 次
+  2. WebSocket 收到自己的消息又添加 1 次
+  3. 可能注册了多个事件监听器，每个都添加 1 次
+  4. 总计 = 1 × 4 = 4 条
+
+【解决方式】
+1. 去重策略：发送者不处理自己的 WebSocket 回显
+   - 发送弹幕时本地直接添加到 DanmakuView
+   - WebSocket 收到消息时，检查 userId 是否为当前用户:
+     if (danmaku.userId.equals(myUserId)) return; // 跳过自己的
+
+2. 确保只注册一次 WebSocket 监听器:
+   - 在 onViewCreated 中注册
+   - 在 onDestroyView 中取消注册
+   - 使用标志位防止重复注册
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+
+================================================================================
+十、关注 (Follow) 功能问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 31: 关注数不更新 — 关注/取关后数字不变
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户在作者主页点击"关注"按钮后，按钮状态变了（已关注/未关注切换），
+但作者的粉丝数没有变化。切换到其他页面再回来，数字仍然不变。
+
+【根本原因】
+用户的粉丝数（followerCount）和被关注数（followingCount）存储在
+users.json 中作为静态字段，更新逻辑通过 interaction.ts 中的
+updateFollowCount 函数手动增减。但 interaction.ts 中调用
+updateFollowCount 的代码存在 bug：使用了错误的字段名或未正确保存。
+
+更重要的是，这种"手动维护计数器"的设计从根本上就是脆弱的——
+计数器和实际关注关系数据（follows.json）容易不一致。
+
+【解决思路】
+改为动态计算模式——不再存储静态计数器，每次查询时从 follows.json
+实时计算关注数和粉丝数。
+
+后端 user.ts:
+  // 旧（静态计数器）:
+  user.followerCount  // 可能在 users.json 中过期
+
+  // 新（动态计算）:
+  const followerCount = follows.filter(f => f.followingId === userId).length;
+  const followingCount = follows.filter(f => f.followerId === userId).length;
+
+清理工作:
+  1. 移除 interaction.ts 中的 updateFollowCount 调用
+  2. 清理 users.json 中的过期 followerCount/followingCount 字段
+  3. 修正关注按钮的最小宽度（防止文字被截断）
+
+【涉及文件】
+- backend/src/routes/user.ts
+- backend/src/routes/interaction.ts
+- backend/src/data/users.json
+- app/src/main/res/layout/activity_author_profile.xml
+
+================================================================================
+十一、功能架构与新增模块
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 32: 缺少混合 Feed（视频 + 直播卡片混合）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户需求：首页应该混合显示视频和直播卡片，而不是只有视频。
+
+【解决思路】
+
+后端:
+1. 新建 feed.logic.ts — Feed 流业务逻辑
+   - 合并视频列表和直播列表
+   - 按时间或推荐算法排序
+   - FeedItem 类型: 'video' | 'live'
+
+2. 新建 feed.ts 路由 — GET /api/feed
+   - 返回混合的 FeedItem 数组
+   - 支持分页
+
+Android:
+1. FeedItem 数据模型:
+   - type: "video" | "live"
+   - 根据 type 包含不同的数据字段
+
+2. FeedPagerAdapter 支持多种 ViewType:
+   - VIEW_TYPE_VIDEO → VideoViewHolder
+   - VIEW_TYPE_LIVE → LiveFeedCardViewHolder
+
+3. 新建 LiveFeedCardViewHolder:
+   - 显示直播间封面、主播名、在线人数
+   - 点击跳转到直播间
+
+4. 新建 FeedRepository + FeedViewModel:
+   - 调用 GET /api/feed
+   - 管理混合数据的状态
+
+【涉及文件】
+- backend/src/services/feed.logic.ts (新建)
+- backend/src/routes/feed.ts (新建)
+- app/src/main/java/com/bytedance/streamshop/data/model/FeedItem.java (新建)
+- app/src/main/java/com/bytedance/streamshop/data/remote/FeedRepository.java (新建)
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedViewModel.java (修改)
+- app/src/main/java/com/bytedance/streamshop/ui/feed/LiveFeedCardViewHolder.java (新建)
+- app/src/main/res/layout/item_feed_live_card.xml (新建)
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 33: 缺少首页 Tab 切换（视频 / 直播）
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户需要在首页顶部有"视频"和"直播"两个 Tab 切换。
+
+【解决思路】
+创建 HomeContainerFragment 作为首页容器:
+  - 内部使用 ViewPager2 + TabLayout
+  - Tab 1: FeedFragment（混合视频+直播卡片）
+  - Tab 2: LiveListFragment（纯直播列表，类似抖音直播页）
+
+导航调整:
+  - nav_main.xml 中首页目标从 FeedFragment 改为 HomeContainerFragment
+  - 底部导航不变
+
+Tab 间通信:
+  HomeContainerFragment 实现 LiveTabSwitchListener 接口
+  - 从视频 Tab 点击直播卡片可切换到直播 Tab
+  - 自动滚动到对应直播间
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/home/HomeContainerFragment.java (新建)
+- app/src/main/res/layout/fragment_home_container.xml (新建)
+- app/src/main/res/navigation/nav_main.xml (修改)
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 34: 缺少即时通讯（IM）功能
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+项目没有消息/私信功能，用户之间无法沟通。
+
+【解决思路】
+1. 后端扩展 WebSocket:
+   - 在已有的 ws.ts 基础上添加消息处理逻辑
+   - 消息类型: text / image / product_share
+   - 存储到 messages.json
+
+2. 后端消息路由:
+   - GET /api/messages → 当前用户的会话列表
+   - GET /api/messages/:conversationId → 特定会话的消息历史
+   - POST /api/messages → 发送新消息（WebSocket 广播）
+
+3. Android 消息页面:
+   - MessageListActivity — 会话列表
+   - MessageChatActivity — 聊天界面
+   - MessageViewModel — 管理 WebSocket 连接和消息状态
+
+4. 导航入口:
+   - 底部导航栏添加"消息"Tab
+
+【涉及文件】
+- backend/src/routes/message.ts (新建)
+- backend/src/services/ws.ts (扩展)
+- app/src/main/java/com/bytedance/streamshop/ui/message/MessageListActivity.java (新建)
+- app/src/main/java/com/bytedance/streamshop/ui/message/MessageChatActivity.java (新建)
+- app/src/main/java/com/bytedance/streamshop/ui/message/MessageViewModel.java (新建)
+
+================================================================================
+附录 A: 项目启动顺序
+================================================================================
+
+正确的启动顺序如下：
+
+1. 启动后端服务器:
+   cd D:\AndriodProjects\StreamShop\backend
+   npm run seed    # 初始化种子数据（首次或需要重置数据时）
+   npm run dev     # 启动 Express + MediaServer (端口 3000 + RTMP 1935)
+
+2. 启动管理后台（可选）:
+   cd D:\AndriodProjects\StreamShop\admin-web
+   npm run dev
+
+3. 编译安装 Android App:
+   cd D:\AndriodProjects\StreamShop
+   .\gradlew assembleDebug
+   D:\sdk\platform-tools\adb.exe -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
+
+4. 如果使用真机或雷电模拟器：
+   确保 ApiClient.java 中的 BASE_URL 使用的是电脑局域网 IP
+   （例如 http://10.17.24.7:3000/），而不是 10.0.2.2
+
+================================================================================
+附录 B: 关键技术决策记录
+================================================================================
+
+1. ViewPager2 + RecyclerView.Adapter vs FragmentStateAdapter
+   最终选择：RecyclerView.Adapter
+   原因：FragmentStateAdapter 存在生命周期管理问题，多次崩溃
+   文件: FeedPagerAdapter.java extends RecyclerView.Adapter<VideoViewHolder>
+
+2. Camera1 + SurfaceView vs Camera2 + OpenGL
+   最终选择：Camera1 + SurfaceView
+   原因：Camera2 + OpenGL 在模拟器上存在严重兼容性问题，直接闪退
+   文件: AnchorLiveActivity.java 使用 RtmpCamera1 + SurfaceView
+
+3. 后端存储方案
+   选择：JSON 文件存储（StorageService<T>泛型封装）
+   原因：学习项目，不需要数据库。文件路径: backend/src/data/*.json
+   优点：零配置、可直接查看/编辑数据、Git 可追踪
+
+4. 关注数计算方式
+   选择：动态计算（每次查询从 follows.json 实时统计）
+   原因：静态计数器容易出现数据不一致，动态计算保证准确性
+
+5. 运营分析数据来源
+   选择：全部从真实数据计算（非 Mock/随机）
+   KPI/漏斗: 按当前用户过滤
+   热门商品/GMV排行: 全平台范围
+   视频表现: 按视频实际 viewCount/likeCount/commentCount 排序
+
+================================================================================
+附录 C: 常见调试技巧
+================================================================================
+
+1. 查看 Android Logcat（过滤 StreamShop）:
+   D:\sdk\platform-tools\adb.exe -s emulator-5554 logcat -s StreamShop:* AndroidRuntime:E
+
+2. 查看后端日志:
+   后端终端窗口实时输出 Express 请求日志和 MediaServer 推流日志
+
+3. 重置后端数据:
+   删除 backend/src/data/*.json，重新运行 npm run seed
+
+4. 验证 API 是否正常:
+   浏览器访问 http://localhost:3000/api/videos
+   应该返回 JSON 数据
+
+5. 测试用户登录:
+   - 账号: 13800138000（种子数据中的测试用户）
+   - 或注册新账号（手机号 11 位，密码需含字母和数字）
+
+================================================================================
+  全文完 — 共计 34 个问题，覆盖 6 个开发迭代
+================================================================================

@@ -114,18 +114,26 @@ public class LiveRoomActivity extends AppCompatActivity {
         player.setPlayWhenReady(true);
         player.setRepeatMode(Player.REPEAT_MODE_ALL);
 
-        // Use a sample video accessible in China
-        String videoUrl = "https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4";
-        MediaItem mediaItem = MediaItem.fromUri(videoUrl);
-        player.setMediaItem(mediaItem);
-        player.prepare();
-
         player.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(androidx.media3.common.PlaybackException error) {
                 runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "视频加载失败，请检查网络", Toast.LENGTH_SHORT).show());
             }
         });
+    }
+
+    private void playStream(String streamUrl) {
+        if (streamUrl == null || streamUrl.isEmpty()) {
+            // Fallback to a sample video when no stream
+            String fallbackUrl = "https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4";
+            MediaItem mediaItem = MediaItem.fromUri(fallbackUrl);
+            player.setMediaItem(mediaItem);
+            player.prepare();
+            return;
+        }
+        MediaItem mediaItem = MediaItem.fromUri(streamUrl);
+        player.setMediaItem(mediaItem);
+        player.prepare();
     }
 
     private void loadRoomDetail() {
@@ -139,8 +147,10 @@ public class LiveRoomActivity extends AppCompatActivity {
                     products.addAll(roomProducts);
                 }
                 String title = (String) room.get("title");
+                String streamUrl = (String) room.get("streamUrl");
                 runOnUiThread(() -> {
                     if (title != null) roomTitle.setText(title);
+                    playStream(streamUrl);
                     productAdapter.notifyDataSetChanged();
                 });
             } catch (Exception ignored) {}
