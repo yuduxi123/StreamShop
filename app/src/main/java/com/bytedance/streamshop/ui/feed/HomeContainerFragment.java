@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -20,6 +21,8 @@ public class HomeContainerFragment extends Fragment {
 
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
+    private HomeStateViewModel homeStateViewModel;
+    private ViewPager2.OnPageChangeCallback pageChangeCallback;
 
     @Nullable
     @Override
@@ -34,6 +37,7 @@ public class HomeContainerFragment extends Fragment {
 
         tabLayout = view.findViewById(R.id.home_tab_layout);
         viewPager = view.findViewById(R.id.home_tab_pager);
+        homeStateViewModel = new ViewModelProvider(requireActivity()).get(HomeStateViewModel.class);
 
         viewPager.setOffscreenPageLimit(1);
         viewPager.setAdapter(new HomeTabAdapter(this));
@@ -41,6 +45,27 @@ public class HomeContainerFragment extends Fragment {
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             tab.setText(position == 0 ? "推荐" : "直播");
         }).attach();
+
+        pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                homeStateViewModel.setHomeTabPosition(position);
+            }
+        };
+        viewPager.registerOnPageChangeCallback(pageChangeCallback);
+        viewPager.setCurrentItem(homeStateViewModel.getHomeTabPosition(), false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (viewPager != null && pageChangeCallback != null) {
+            viewPager.unregisterOnPageChangeCallback(pageChangeCallback);
+        }
+        pageChangeCallback = null;
+        viewPager = null;
+        tabLayout = null;
+        super.onDestroyView();
     }
 
     public void switchToLiveTab() {

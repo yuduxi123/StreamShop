@@ -29,6 +29,7 @@ public class FeedFragment extends Fragment {
     private CircularProgressIndicator loadingView;
     private TextView errorView;
     private FeedViewModel viewModel;
+    private HomeStateViewModel homeStateViewModel;
     private FeedPagerAdapter adapter;
     private List<FeedItem> feedItems = new ArrayList<>();
     private int currentPosition = 0;
@@ -44,12 +45,16 @@ public class FeedFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        homeStateViewModel = new ViewModelProvider(requireActivity()).get(HomeStateViewModel.class);
         initViews(view);
         setupViewModel();
     }
 
     @Override
     public void onDestroyView() {
+        if (homeStateViewModel != null) {
+            homeStateViewModel.setFeedPosition(currentPosition);
+        }
         if (adapter != null) {
             for (int i = 0; i < adapter.getItemCount(); i++) {
                 RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, i);
@@ -114,7 +119,10 @@ public class FeedFragment extends Fragment {
                 adapter.setItems(feedItems);
             }
 
-            currentPosition = Math.min(currentPosition, feedItems.size() - 1);
+            int savedPosition = homeStateViewModel != null
+                    ? homeStateViewModel.getFeedPosition()
+                    : currentPosition;
+            currentPosition = Math.min(savedPosition, feedItems.size() - 1);
             viewPager.setCurrentItem(currentPosition, false);
 
             loadingView.setVisibility(View.GONE);
@@ -168,6 +176,9 @@ public class FeedFragment extends Fragment {
         playHolderAt(position);
         lastPlayingPosition = position;
         currentPosition = position;
+        if (homeStateViewModel != null) {
+            homeStateViewModel.setFeedPosition(position);
+        }
 
         if (position >= feedItems.size() - 2) {
             viewModel.loadMore();
