@@ -22,6 +22,7 @@ public class ApiClient {
     private final Gson gson;
     private String authToken;
     private String currentUsername;
+    private String currentAccount;
     private String currentUserId;
     private String currentAvatarUrl;
 
@@ -77,6 +78,7 @@ public class ApiClient {
     public void clearAuthToken() {
         this.authToken = null;
         this.currentUsername = null;
+        this.currentAccount = null;
         this.currentUserId = null;
         this.currentAvatarUrl = null;
     }
@@ -91,6 +93,14 @@ public class ApiClient {
 
     public void setCurrentUsername(String username) {
         this.currentUsername = username;
+    }
+
+    public String getCurrentAccount() {
+        return currentAccount;
+    }
+
+    public void setCurrentAccount(String account) {
+        this.currentAccount = account;
     }
 
     public String getCurrentAvatarUrl() {

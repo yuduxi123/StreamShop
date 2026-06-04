@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Person 1 (back left) -->
+    <path
+        android:pathData="M14,8a5,5 0,1,0 0,10 5,5 0,1,0 0,-10z"
+        android:fillColor="#333333" />
+    <path
+        android:pathData="M4,38c0,-5.523 4.477,-10 10,-10s10,4.477 10,10"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#333333"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+    <!-- Person 2 (front right) -->
+    <path
+        android:pathData="M28,10a5,5 0,1,0 0,10 5,5 0,1,0 0,-10z"
+        android:fillColor="#333333" />
+    <path
+        android:pathData="M18,40c0,-5.523 5.373,-10 12,-10s12,4.477 12,10"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#333333"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+</vector>

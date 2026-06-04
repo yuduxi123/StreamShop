@@ -90,12 +90,10 @@ public class AuthorProfileActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 currentUser = apiService.getUserProfile(userId);
-                isFollowing = apiService.isFollowing(userId);
                 runOnUiThread(() -> {
                     usernameText.setText(currentUser.getUsername());
                     followingCountText.setText(formatCount(currentUser.getFollowing()));
                     followersCountText.setText(formatCount(currentUser.getFollowers()));
-                    updateFollowButton();
 
                     Glide.with(AuthorProfileActivity.this)
                             .load(currentUser.getAvatarUrl())
@@ -109,7 +107,16 @@ public class AuthorProfileActivity extends AppCompatActivity {
                     Toast.makeText(AuthorProfileActivity.this, "加载用户信息失败", Toast.LENGTH_SHORT).show();
                     finish();
                 });
+                return;
             }
+
+            // Follow status is non-fatal — failure just means we can't show follow state
+            try {
+                isFollowing = apiService.isFollowing(userId);
+            } catch (Exception ignored) {
+                isFollowing = false;
+            }
+            runOnUiThread(this::updateFollowButton);
         }).start();
     }
 

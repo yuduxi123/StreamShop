@@ -37,14 +37,15 @@
         android:scaleType="centerCrop"
         android:visibility="visible" />
 
-    <!-- Play/Pause indicator (center of screen, shown briefly on toggle) -->
+    <!-- Play/Pause indicator (center of screen, shown on pause) -->
     <ImageView
         android:id="@+id/video_play_indicator"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:layout_gravity="center"
         android:visibility="gone"
-        android:alpha="0"
+        android:clickable="true"
+        android:focusable="true"
         android:src="@drawable/ic_play_indicator" />
 
     <!-- Dark gradient overlay at bottom for text readability -->
@@ -155,7 +156,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="130dp"
+        android:layout_marginBottom="90dp"
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
@@ -246,7 +247,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="20dp">
             <ImageButton
                 android:id="@+id/video_collect_btn"
                 android:layout_width="40dp"
@@ -259,6 +261,29 @@
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
                 android:textSize="10sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Forward -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+            <ImageButton
+                android:id="@+id/video_forward_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_forward"
+                android:background="@android:color/transparent"
+                android:scaleType="centerInside" />
+            <TextView
+                android:id="@+id/video_forward_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:text="0"
                 android:layout_marginTop="2dp" />
         </LinearLayout>
 
@@ -284,8 +309,8 @@
 
         <ImageButton
             android:id="@+id/video_playmode_btn"
-            android:layout_width="25dp"
-            android:layout_height="25dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:background="@drawable/ic_playmode_sequential"
             android:scaleType="fitCenter" />
     </LinearLayout>

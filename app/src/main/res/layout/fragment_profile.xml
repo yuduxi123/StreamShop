@@ -15,44 +15,114 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center"
             android:background="#1A1A1A"
             android:paddingTop="40dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="24dp"
+            android:paddingHorizontal="16dp">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/profile_avatar"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_avatar_placeholder"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                app:shapeAppearanceOverlay="@style/CircleImageView"
-                app:strokeWidth="2dp"
-                app:strokeColor="#33FFFFFF" />
-
-            <TextView
-                android:id="@+id/profile_username"
-                android:layout_width="wrap_content"
+            <!-- Logged-out header: centered style -->
+            <LinearLayout
+                android:id="@+id/profile_header_logged_out"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:text="未登录" />
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
-            <TextView
-                android:id="@+id/profile_login_btn"
-                android:layout_width="wrap_content"
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/profile_avatar_logged_out"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:src="@drawable/ic_avatar_placeholder"
+                    app:shapeAppearanceOverlay="@style/CircleImageView"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#33FFFFFF" />
+
+                <TextView
+                    android:id="@+id/profile_username_logged_out"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:text="未登录" />
+
+                <TextView
+                    android:id="@+id/profile_login_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="#FF3B30"
+                    android:textSize="14sp"
+                    android:text="点击登录"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+
+            <!-- Logged-in header: left-aligned Douyin style -->
+            <LinearLayout
+                android:id="@+id/profile_header_logged_in"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="#FF3B30"
-                android:textSize="14sp"
-                android:text="点击登录"
-                android:padding="8dp"
-                android:clickable="true"
-                android:focusable="true" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/profile_avatar"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:src="@drawable/ic_avatar_placeholder"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    app:shapeAppearanceOverlay="@style/CircleImageView"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#33FFFFFF" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/profile_username"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:text="已登录" />
+
+                        <ImageButton
+                            android:id="@+id/profile_edit_name_btn"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="6dp"
+                            android:src="@drawable/ic_edit_name"
+                            android:background="@android:color/transparent"
+                            android:scaleType="centerInside" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/profile_account"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="#999999"
+                        android:textSize="9sp"
+                        android:text="" />
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Stats row: 获赞 / 关注 / 粉丝 -->
             <LinearLayout
@@ -325,17 +395,6 @@
             android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false"
             android:padding="2dp" />
-
-        <!-- Empty state -->
-        <TextView
-            android:id="@+id/profile_empty_videos"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:gravity="center"
-            android:text="暂无作品"
-            android:textColor="#999999"
-            android:textSize="15sp"
-            android:visibility="gone" />
 
         <!-- Logout button -->
         <com.google.android.material.button.MaterialButton

@@ -53,9 +53,11 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private final TextView likeCountText;
     private final TextView commentCountText;
     private final TextView collectCountText;
+    private final TextView forwardCountText;
     private final ImageButton likeButton;
     private final ImageButton commentButton;
     private final ImageButton collectButton;
+    private final ImageButton forwardButton;
     private final ImageButton playModeButton;
     private final ViewGroup productContainer;
     private final SeekBar seekBar;
@@ -93,9 +95,11 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         likeCountText = itemView.findViewById(R.id.video_like_count);
         commentCountText = itemView.findViewById(R.id.video_comment_count);
         collectCountText = itemView.findViewById(R.id.video_collect_count);
+        forwardCountText = itemView.findViewById(R.id.video_forward_count);
         likeButton = itemView.findViewById(R.id.video_like_btn);
         commentButton = itemView.findViewById(R.id.video_comment_btn);
         collectButton = itemView.findViewById(R.id.video_collect_btn);
+        forwardButton = itemView.findViewById(R.id.video_forward_btn);
         playModeButton = itemView.findViewById(R.id.video_playmode_btn);
         productContainer = itemView.findViewById(R.id.product_card_container);
         seekBar = itemView.findViewById(R.id.video_seekbar);
@@ -114,6 +118,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         if (likeButton != null) likeButton.setOnClickListener(v -> toggleLike());
         if (commentButton != null) commentButton.setOnClickListener(v -> showComments());
         if (collectButton != null) collectButton.setOnClickListener(v -> toggleCollect());
+        if (forwardButton != null) forwardButton.setOnClickListener(v -> showForwardSheet());
         if (playModeButton != null) playModeButton.setOnClickListener(v -> togglePlayMode());
         if (videoRoot != null) videoRoot.setOnClickListener(v -> togglePlayPause());
 
@@ -162,6 +167,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
         bindVideo();
         setupProductCards();
+        if (playIndicator != null) playIndicator.setVisibility(View.GONE);
         initPlayer();
         loadDanmaku();
         connectDanmakuWebSocket();
@@ -172,6 +178,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
             isPlaying = true;
             player.setPlayWhenReady(true);
             if (danmakuView != null) danmakuView.play();
+            if (playIndicator != null) playIndicator.setVisibility(View.GONE);
             startProgressUpdates();
         }
     }
@@ -213,6 +220,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         if (titleText != null) titleText.setText(video.getTitle());
         if (likeCountText != null) likeCountText.setText(formatCount(video.getLikeCount()));
         if (commentCountText != null) commentCountText.setText(formatCount(video.getCommentCount()));
+        if (forwardCountText != null) forwardCountText.setText(formatCount(video.getShareCount()));
 
         loadInteractionStates();
     }
@@ -466,6 +474,19 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         }
     }
 
+    private void showForwardSheet() {
+        if (fragmentManager != null && video != null) {
+            ForwardUserBottomSheetFragment sheet = ForwardUserBottomSheetFragment.newInstance(video.getId());
+            sheet.setOnForwardListener(newShareCount -> {
+                if (video != null) {
+                    video.setShareCount(newShareCount);
+                    if (forwardCountText != null) forwardCountText.setText(formatCount(newShareCount));
+                }
+            });
+            sheet.show(fragmentManager, "forward");
+        }
+    }
+
     private void showProductDetail(Product product) {
         if (fragmentManager != null) {
             ProductDetailBottomSheetFragment sheet = ProductDetailBottomSheetFragment.newInstance(product);
@@ -479,25 +500,21 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         if (player == null) return;
         if (isPlaying) {
             pause();
-            showPlayIndicator(false);
+            showPlayIndicator();
         } else {
-            play();
-            showPlayIndicator(true);
+            resumePlay();
         }
     }
 
-    private void showPlayIndicator(boolean playing) {
+    private void resumePlay() {
+        play();
+        if (playIndicator != null) playIndicator.setVisibility(View.GONE);
+    }
+
+    private void showPlayIndicator() {
         if (playIndicator == null) return;
-        playIndicator.setImageResource(playing ? R.drawable.ic_play_indicator : R.drawable.ic_pause_indicator);
         playIndicator.setVisibility(View.VISIBLE);
-        playIndicator.setAlpha(1f);
-        playIndicator.animate()
-                .alpha(0f)
-                .setDuration(600)
-                .setStartDelay(200)
-                .withEndAction(() -> {
-                    if (playIndicator != null) playIndicator.setVisibility(View.GONE);
-                });
+        playIndicator.setOnClickListener(v -> resumePlay());
     }
 
     // --- Progress ---

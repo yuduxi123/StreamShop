@@ -8,14 +8,14 @@ const userStorage = new StorageService<any>('users.json');
 const router = Router();
 
 router.post('/register', (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    res.status(400).json({ error: 'Username and password required' });
+  const { username, account, password } = req.body;
+  if (!username || !account || !password) {
+    res.status(400).json({ error: 'Username, account and password required' });
     return;
   }
-  const result = AuthService.register(username, password);
+  const result = AuthService.register(username, account, password);
   if (!result) {
-    res.status(409).json({ error: 'Username already exists' });
+    res.status(409).json({ error: 'Account already exists' });
     return;
   }
   res.status(201).json(result);
@@ -48,12 +48,14 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
 router.patch('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   const updates: any = {};
   if (req.body.avatarUrl !== undefined) updates.avatarUrl = req.body.avatarUrl;
+  if (req.body.username !== undefined) updates.username = req.body.username;
+  // account is immutable - never update it
   const updated = userStorage.update(req.user!.id, updates);
   if (!updated) {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  const { password, ...user } = updated;
+  const { password: _, ...user } = updated;
   res.json(user);
 });
 

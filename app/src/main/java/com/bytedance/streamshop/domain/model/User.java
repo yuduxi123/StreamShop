@@ -5,6 +5,7 @@ import java.io.Serializable;
 public class User implements Serializable {
     private String id;
     private String username;
+    private String account;
     private String avatarUrl;
     private String role;
     private String createdAt;
@@ -25,6 +26,8 @@ public class User implements Serializable {
     public void setId(String id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public String getAccount() { return account; }
+    public void setAccount(String account) { this.account = account; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public String getRole() { return role; }

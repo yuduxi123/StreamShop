@@ -1,5 +1,6 @@
 package com.bytedance.streamshop.ui.messages;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -9,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
+import com.bytedance.streamshop.ui.feed.ForwardedVideoActivity;
 import com.google.android.material.imageview.ShapeableImageView;
 
 import java.text.SimpleDateFormat;
@@ -33,10 +36,14 @@ import java.util.Map;
 public class ChatActivity extends AppCompatActivity {
     private static final int VIEW_TYPE_SENT = 0;
     private static final int VIEW_TYPE_RECEIVED = 1;
+    private static final int VIEW_TYPE_SENT_FORWARD = 2;
+    private static final int VIEW_TYPE_RECEIVED_FORWARD = 3;
 
     private String conversationId;
     private String otherUserId;
     private String currentUserId;
+    private boolean isGroup;
+    private String groupName;
 
     private RecyclerView messageList;
     private EditText inputView;
@@ -55,9 +62,11 @@ public class ChatActivity extends AppCompatActivity {
 
         conversationId = getIntent().getStringExtra("conversation_id");
         otherUserId = getIntent().getStringExtra("other_user_id");
+        isGroup = getIntent().getBooleanExtra("is_group", false);
+        groupName = getIntent().getStringExtra("group_name");
         currentUserId = ApiClient.getInstance().getCurrentUserId();
 
-        if (conversationId == null || otherUserId == null) {
+        if (conversationId == null || (!isGroup && otherUserId == null)) {
             finish();
             return;
         }
@@ -69,8 +78,12 @@ public class ChatActivity extends AppCompatActivity {
 
     private void initViews() {
         TextView titleText = findViewById(R.id.chat_title);
-        String otherName = getIntent().getStringExtra("other_username");
-        titleText.setText(otherName != null ? otherName : "聊天");
+        if (isGroup && groupName != null) {
+            titleText.setText(groupName);
+        } else {
+            String otherName = getIntent().getStringExtra("other_username");
+            titleText.setText(otherName != null ? otherName : "聊天");
+        }
 
         findViewById(R.id.chat_back).setOnClickListener(v -> finish());
 
@@ -133,7 +146,12 @@ public class ChatActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
-                Map<String, Object> msg = apiService.sendMessage(otherUserId, content);
+                Map<String, Object> msg;
+                if (isGroup) {
+                    msg = apiService.sendGroupMessage(conversationId, content);
+                } else {
+                    msg = apiService.sendMessage(otherUserId, content);
+                }
                 messages.add(msg);
                 runOnUiThread(() -> {
                     adapter.notifyItemInserted(messages.size() - 1);
@@ -158,19 +176,67 @@ public class ChatActivity extends AppCompatActivity {
         public int getItemViewType(int position) {
             Map<String, Object> msg = messages.get(position);
             String senderId = (String) msg.get("senderId");
-            return currentUserId != null && currentUserId.equals(senderId) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+            String type = (String) msg.get("type");
+            boolean isSent = currentUserId != null && currentUserId.equals(senderId);
+            if ("forward".equals(type)) {
+                return isSent ? VIEW_TYPE_SENT_FORWARD : VIEW_TYPE_RECEIVED_FORWARD;
+            }
+            return isSent ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
         }
 
         @NonNull @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int type) {
-            int layout = type == VIEW_TYPE_SENT ? R.layout.item_message_sent : R.layout.item_message_received;
+            int layout;
+            if (type == VIEW_TYPE_SENT_FORWARD || type == VIEW_TYPE_RECEIVED_FORWARD) {
+                layout = R.layout.item_message_forward;
+            } else if (type == VIEW_TYPE_SENT) {
+                layout = R.layout.item_message_sent;
+            } else {
+                layout = R.layout.item_message_received;
+            }
             return new VH(LayoutInflater.from(parent.getContext()).inflate(layout, parent, false));
         }
 
         @Override
         public void onBindViewHolder(@NonNull VH h, int pos) {
             Map<String, Object> msg = messages.get(pos);
-            h.content.setText((String) msg.get("content"));
+            String type = (String) msg.get("type");
+            if ("forward".equals(type)) {
+                String title = (String) msg.get("videoTitle");
+                if (title == null) {
+                    String content = (String) msg.get("content");
+                    title = content != null ? content.replace("[转发视频] ", "") : "";
+                }
+                if (h.forwardTitle != null) h.forwardTitle.setText(title != null ? title : "");
+                String coverUrl = (String) msg.get("videoCoverUrl");
+                if (h.forwardCover != null && coverUrl != null && !coverUrl.isEmpty()) {
+                    com.bumptech.glide.Glide.with(ChatActivity.this)
+                            .load(coverUrl)
+                            .centerCrop()
+                            .into(h.forwardCover);
+                }
+                h.itemView.setOnClickListener(v -> {
+                    String videoId = (String) msg.get("videoId");
+                    if (videoId != null) {
+                        Intent intent = new Intent(ChatActivity.this, ForwardedVideoActivity.class);
+                        intent.putExtra("video_id", videoId);
+                        startActivity(intent);
+                    }
+                });
+            } else {
+                String text = (String) msg.get("content");
+                if (isGroup && h.senderName != null) {
+                    String senderName = (String) msg.get("senderUsername");
+                    boolean isSelf = currentUserId != null && currentUserId.equals(msg.get("senderId"));
+                    if (!isSelf && senderName != null) {
+                        h.senderName.setVisibility(View.VISIBLE);
+                        h.senderName.setText(senderName);
+                    } else {
+                        h.senderName.setVisibility(View.GONE);
+                    }
+                }
+                if (h.content != null) h.content.setText(text != null ? text : "");
+            }
         }
 
         @Override
@@ -178,9 +244,15 @@ public class ChatActivity extends AppCompatActivity {
 
         class VH extends RecyclerView.ViewHolder {
             TextView content;
+            TextView forwardTitle;
+            ImageView forwardCover;
+            TextView senderName;
             VH(View v) {
                 super(v);
                 content = v.findViewById(R.id.msg_content);
+                forwardTitle = v.findViewById(R.id.msg_forward_title);
+                forwardCover = v.findViewById(R.id.msg_forward_cover);
+                senderName = v.findViewById(R.id.msg_sender_name);
             }
         }
     }

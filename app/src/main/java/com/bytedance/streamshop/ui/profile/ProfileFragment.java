@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.app.AlertDialog;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -44,18 +47,23 @@ import java.util.Map;
 
 public class ProfileFragment extends Fragment {
 
+    private View headerLoggedOut;
+    private View headerLoggedIn;
     private ShapeableImageView avatarView;
+    private ShapeableImageView avatarViewLoggedOut;
     private TextView usernameText;
+    private TextView usernameTextLoggedOut;
+    private TextView accountText;
     private TextView loginBtn;
     private MaterialButton logoutBtn;
     private View statsRow;
     private View actionsRow;
     private RecyclerView videoGrid;
-    private TextView emptyVideos;
     private TextView likesCountText;
     private TextView followingCountText;
     private TextView followersCountText;
 
+    private ImageButton editNameBtn;
     private View liveRoomsIcon;
 
     private final List<Video> myVideos = new ArrayList<>();
@@ -101,14 +109,19 @@ public class ProfileFragment extends Fragment {
     }
 
     private void initViews(View view) {
+        headerLoggedOut = view.findViewById(R.id.profile_header_logged_out);
+        headerLoggedIn = view.findViewById(R.id.profile_header_logged_in);
         avatarView = view.findViewById(R.id.profile_avatar);
+        avatarViewLoggedOut = view.findViewById(R.id.profile_avatar_logged_out);
         usernameText = view.findViewById(R.id.profile_username);
+        usernameTextLoggedOut = view.findViewById(R.id.profile_username_logged_out);
+        accountText = view.findViewById(R.id.profile_account);
+        editNameBtn = view.findViewById(R.id.profile_edit_name_btn);
         loginBtn = view.findViewById(R.id.profile_login_btn);
         logoutBtn = view.findViewById(R.id.profile_logout_btn);
         statsRow = view.findViewById(R.id.profile_stats_row);
         actionsRow = view.findViewById(R.id.profile_actions_row);
         videoGrid = view.findViewById(R.id.profile_video_grid);
-        emptyVideos = view.findViewById(R.id.profile_empty_videos);
         likesCountText = view.findViewById(R.id.profile_likes_count);
         followingCountText = view.findViewById(R.id.profile_following_count);
         followersCountText = view.findViewById(R.id.profile_followers_count);
@@ -209,6 +222,54 @@ public class ProfileFragment extends Fragment {
             options.fixAspectRatio = true;
             cropLauncher.launch(new CropImageContractOptions(null, options));
         });
+
+        editNameBtn.setOnClickListener(v -> showEditNameDialog());
+    }
+
+    private void showEditNameDialog() {
+        EditText input = new EditText(getContext());
+        input.setText(ApiClient.getInstance().getCurrentUsername());
+        input.setPadding(48, 48, 48, 48);
+        input.setTextColor(0xFF333333);
+        input.setTextSize(16);
+
+        new AlertDialog.Builder(getContext())
+                .setTitle("修改名字")
+                .setView(input)
+                .setPositiveButton("确定", (dialog, which) -> {
+                    String newName = input.getText().toString().trim();
+                    if (!newName.isEmpty()) {
+                        updateUsername(newName);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void updateUsername(String newName) {
+        editNameBtn.setEnabled(false);
+        new Thread(() -> {
+            try {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("username", newName);
+                new ApiService().updateMyProfile(updates);
+                ApiClient.getInstance().setCurrentUsername(newName);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        usernameText.setText(newName);
+                        editNameBtn.setEnabled(true);
+                        Toast.makeText(getContext(), "名字已更新", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            } catch (Exception e) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        editNameBtn.setEnabled(true);
+                        Toast.makeText(getContext(), "修改失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }).start();
     }
 
     private void setupVideoGrid() {
@@ -258,8 +319,12 @@ public class ProfileFragment extends Fragment {
     private void updateAuthState() {
         boolean loggedIn = ApiClient.getInstance().isAuthenticated();
         if (loggedIn) {
+            headerLoggedOut.setVisibility(View.GONE);
+            headerLoggedIn.setVisibility(View.VISIBLE);
             String username = ApiClient.getInstance().getCurrentUsername();
+            String account = ApiClient.getInstance().getCurrentAccount();
             usernameText.setText(username != null ? username : "已登录");
+            accountText.setText(account != null ? "账号：" + account : "");
             loginBtn.setVisibility(View.GONE);
             logoutBtn.setVisibility(View.VISIBLE);
             statsRow.setVisibility(View.VISIBLE);
@@ -275,17 +340,18 @@ public class ProfileFragment extends Fragment {
 
             loadMyVideos();
         } else {
-            usernameText.setText("未登录");
+            headerLoggedOut.setVisibility(View.VISIBLE);
+            headerLoggedIn.setVisibility(View.GONE);
+            usernameTextLoggedOut.setText("未登录");
             loginBtn.setText("点击登录");
             loginBtn.setVisibility(View.VISIBLE);
             logoutBtn.setVisibility(View.GONE);
             statsRow.setVisibility(View.GONE);
             actionsRow.setVisibility(View.GONE);
             liveRoomsIcon.setVisibility(View.GONE);
-            avatarView.setImageResource(R.drawable.ic_avatar_placeholder);
+            avatarViewLoggedOut.setImageResource(R.drawable.ic_avatar_placeholder);
             myVideos.clear();
             gridAdapter.notifyDataSetChanged();
-            emptyVideos.setVisibility(View.VISIBLE);
         }
     }
 
@@ -326,7 +392,6 @@ public class ProfileFragment extends Fragment {
                         myVideos.clear();
                         if (data != null) myVideos.addAll(data);
                         gridAdapter.notifyDataSetChanged();
-                        emptyVideos.setVisibility(myVideos.isEmpty() ? View.VISIBLE : View.GONE);
                         videoGrid.setVisibility(myVideos.isEmpty() ? View.GONE : View.VISIBLE);
                         loadStats();
                     });
@@ -334,7 +399,6 @@ public class ProfileFragment extends Fragment {
             } catch (Exception e) {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
-                        emptyVideos.setVisibility(View.VISIBLE);
                         videoGrid.setVisibility(View.GONE);
                     });
                 }

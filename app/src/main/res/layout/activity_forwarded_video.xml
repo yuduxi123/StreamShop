@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/video_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Video Player -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        app:use_controller="false"
+        app:resize_mode="zoom" />
+
+    <!-- Danmaku overlay -->
+    <com.bytedance.streamshop.ui.feed.VideoDanmakuView
+        android:id="@+id/video_danmaku_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="top"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="140dp"
+        android:clickable="false"
+        android:focusable="false" />
+
+    <!-- Cover image fallback -->
+    <ImageView
+        android:id="@+id/video_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="visible" />
+
+    <!-- Play/Pause indicator -->
+    <ImageView
+        android:id="@+id/video_play_indicator"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/ic_play_indicator" />
+
+    <!-- Back button -->
+    <ImageButton
+        android:id="@+id/forwarded_back_btn"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="start|top"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_back"
+        android:tint="#FFFFFF"
+        android:scaleType="centerInside" />
+
+    <!-- Dark gradient overlay at bottom -->
+    <View
+        android:id="@+id/bottom_gradient"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/gradient_bottom" />
+
+    <!-- Progress bar -->
+    <SeekBar
+        android:id="@+id/video_seekbar"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="4dp"
+        android:max="1000"
+        android:progress="0"
+        android:progressDrawable="@drawable/seekbar_progress"
+        android:thumb="@drawable/seekbar_thumb"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp"
+        android:splitTrack="false" />
+
+    <!-- Current time / Duration -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="12dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/video_current_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#99FFFFFF"
+            android:textSize="11sp"
+            android:text="00:00"
+            android:shadowColor="#44000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/video_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#99FFFFFF"
+            android:textSize="11sp"
+            android:text="00:00"
+            android:shadowColor="#44000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
+    </LinearLayout>
+
+    <!-- @Username -->
+    <TextView
+        android:id="@+id/video_username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="56dp"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground"
+        android:shadowColor="#44000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/video_title"
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="32dp"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:shadowColor="#44000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2" />
+
+    <!-- Right action buttons -->
+    <LinearLayout
+        android:id="@+id/right_actions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="90dp"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Author Avatar with follow button -->
+        <FrameLayout
+            android:id="@+id/video_avatar_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="28dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless">
+
+            <FrameLayout
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_white_circle">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/video_avatar"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    app:shapeAppearanceOverlay="@style/CircleImageView"
+                    android:src="@drawable/ic_avatar_placeholder" />
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/video_follow_btn"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="-2dp"
+                android:src="@drawable/ic_follow_selector"
+                android:background="@drawable/bg_circle_orange"
+                android:padding="1dp" />
+        </FrameLayout>
+
+        <!-- Like -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="20dp">
+            <ImageButton
+                android:id="@+id/video_like_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/ic_like_selector"
+                android:scaleType="centerInside" />
+            <TextView
+                android:id="@+id/video_like_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:text="0"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Comment -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="20dp">
+            <ImageButton
+                android:id="@+id/video_comment_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/ic_comment_selector"
+                android:scaleType="centerInside" />
+            <TextView
+                android:id="@+id/video_comment_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:text="0"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Collect -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="20dp">
+            <ImageButton
+                android:id="@+id/video_collect_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/ic_collect_selector"
+                android:scaleType="centerInside" />
+            <TextView
+                android:id="@+id/video_collect_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Forward -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+            <ImageButton
+                android:id="@+id/video_forward_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_forward"
+                android:background="@android:color/transparent"
+                android:scaleType="centerInside" />
+            <TextView
+                android:id="@+id/video_forward_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:text="0"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Danmaku + playmode buttons -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="30dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/video_danmaku_btn"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/ic_danmaku_selector"
+            android:scaleType="fitCenter" />
+
+        <ImageButton
+            android:id="@+id/video_playmode_btn"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="@drawable/ic_playmode_sequential"
+            android:scaleType="fitCenter" />
+    </LinearLayout>
+
+    <!-- Product cards -->
+    <LinearLayout
+        android:id="@+id/product_card_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start|bottom"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="80dp"
+        android:orientation="horizontal"
+        android:gravity="bottom" />
+
+</FrameLayout>

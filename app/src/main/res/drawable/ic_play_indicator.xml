@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="@android:color/white">
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Glass play triangle -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M8,5v14l11,-7z" />
+        android:pathData="M18,14v20l14,-10z"
+        android:fillColor="#66FFFFFF" />
 </vector>

@@ -57,9 +57,11 @@ public class VideoPageFragment extends Fragment {
     private TextView likeCountText;
     private TextView commentCountText;
     private TextView collectCountText;
+    private TextView forwardCountText;
     private ImageButton likeButton;
     private ImageButton commentButton;
     private ImageButton collectButton;
+    private ImageButton forwardButton;
     private ImageView followButton;
     private ViewGroup productContainer;
     private ImageView coverView;
@@ -116,9 +118,11 @@ public class VideoPageFragment extends Fragment {
         likeCountText = view.findViewById(R.id.video_like_count);
         commentCountText = view.findViewById(R.id.video_comment_count);
         collectCountText = view.findViewById(R.id.video_collect_count);
+        forwardCountText = view.findViewById(R.id.video_forward_count);
         likeButton = view.findViewById(R.id.video_like_btn);
         commentButton = view.findViewById(R.id.video_comment_btn);
         collectButton = view.findViewById(R.id.video_collect_btn);
+        forwardButton = view.findViewById(R.id.video_forward_btn);
         followButton = view.findViewById(R.id.video_follow_btn);
         productContainer = view.findViewById(R.id.product_card_container);
         seekBar = view.findViewById(R.id.video_seekbar);
@@ -133,6 +137,7 @@ public class VideoPageFragment extends Fragment {
         if (likeButton != null) likeButton.setOnClickListener(v -> toggleLike());
         if (commentButton != null) commentButton.setOnClickListener(v -> showComments());
         if (collectButton != null) collectButton.setOnClickListener(v -> toggleCollect());
+        if (forwardButton != null) forwardButton.setOnClickListener(v -> showForwardSheet());
         if (followButton != null) followButton.setOnClickListener(v -> toggleFollow());
 
         if (videoRoot != null) {
@@ -191,6 +196,8 @@ public class VideoPageFragment extends Fragment {
         if (titleText != null) titleText.setText(video.getTitle());
         if (likeCountText != null) likeCountText.setText(formatCount(video.getLikeCount()));
         if (commentCountText != null) commentCountText.setText(formatCount(video.getCommentCount()));
+
+        if (forwardCountText != null) forwardCountText.setText(formatCount(video.getShareCount()));
 
         loadInteractionStates();
     }
@@ -467,6 +474,19 @@ public class VideoPageFragment extends Fragment {
         }
     }
 
+    private void showForwardSheet() {
+        if (getParentFragmentManager() != null && video != null) {
+            ForwardUserBottomSheetFragment sheet = ForwardUserBottomSheetFragment.newInstance(video.getId());
+            sheet.setOnForwardListener(newShareCount -> {
+                if (video != null) {
+                    video.setShareCount(newShareCount);
+                    if (forwardCountText != null) forwardCountText.setText(formatCount(newShareCount));
+                }
+            });
+            sheet.show(getParentFragmentManager(), "forward");
+        }
+    }
+
     private String formatCount(int count) {
         if (count >= 10000) {
             return count / 10000 + "w";
@@ -480,25 +500,21 @@ public class VideoPageFragment extends Fragment {
         if (player == null) return;
         if (isPlaying) {
             pause();
-            showPlayIndicator(false);
+            showPlayIndicator();
         } else {
-            play();
-            showPlayIndicator(true);
+            resumePlay();
         }
     }
 
-    private void showPlayIndicator(boolean playing) {
+    private void resumePlay() {
+        play();
+        if (playIndicator != null) playIndicator.setVisibility(View.GONE);
+    }
+
+    private void showPlayIndicator() {
         if (playIndicator == null) return;
-        playIndicator.setImageResource(playing ? R.drawable.ic_play_indicator : R.drawable.ic_pause_indicator);
         playIndicator.setVisibility(View.VISIBLE);
-        playIndicator.setAlpha(1f);
-        playIndicator.animate()
-                .alpha(0f)
-                .setDuration(600)
-                .setStartDelay(200)
-                .withEndAction(() -> {
-                    if (playIndicator != null) playIndicator.setVisibility(View.GONE);
-                });
+        playIndicator.setOnClickListener(v -> resumePlay());
     }
 
     private final Runnable progressRunnable = new Runnable() {

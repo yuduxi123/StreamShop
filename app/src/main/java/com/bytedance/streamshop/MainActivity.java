@@ -1,7 +1,10 @@
 package com.bytedance.streamshop;
 
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,6 +12,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.bytedance.streamshop.databinding.ActivityMainBinding;
+import com.bytedance.streamshop.ui.profile.VideoEditActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +50,12 @@ public class MainActivity extends AppCompatActivity {
             tabs[i].setOnClickListener(v -> selectTab(index));
         }
 
+        // Publish button (middle, icon-only)
+        ImageView publishBtn = findViewById(R.id.nav_publish);
+        publishBtn.setOnClickListener(v -> {
+            startActivity(new Intent(this, VideoEditActivity.class));
+        });
+
         navController.addOnDestinationChangedListener((ctrl, dest, args) -> {
             for (int i = 0; i < tabs.length; i++) {
                 updateTabStyle(i, dest.getId() == tabDestIds[i][0]);
@@ -64,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTabStyle(int index, boolean selected) {
         TextView tab = tabs[index];
+        if (tab == null) return;
         if (selected) {
             tab.setTextColor(0xFFFFFFFF);
             tab.setTextSize(15);

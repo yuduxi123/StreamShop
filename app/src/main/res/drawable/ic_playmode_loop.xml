@@ -2,11 +2,18 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="32dp"
     android:height="32dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="@android:color/white">
-    <!-- Standard repeat/loop circular arrows -->
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <!-- Loop body -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M7,7h10v3l4,-4 -4,-4v3H5v6h2V7z M17,17H7v-3l-4,4 4,4v-3h12v-6h-2v4z" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M302.37,276.48h436.26v-61.44H302.37q-110.31,0 -188.13,81.51Q37.03,377.36 37.03,491.52v163.84q0,114.11 77.21,194.97 77.82,81.51 188.13,81.51h390.96q110.31,0 188.09,-81.51 77.21,-80.86 77.21,-194.97v-46.08h-61.44V655.36q0,89.5 -60.21,152.58 -59.6,62.46 -143.65,62.46H302.37q-84.05,0 -143.69,-62.46 -60.21,-63.08 -60.21,-152.58v-163.84q0,-89.5 60.21,-152.58Q218.32,276.48 302.37,276.48Z" />
+    <!-- Arrow -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M719.54,98.55l204.8,138.85 -204.8,138.85v-277.7Z" />
+    <!-- Number 1 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M473.62,733.55v-238.92l-59.47,51.2v-56.52l59.47,-55.21 53.17,9.34v290.12h-53.17Z" />
 </vector>

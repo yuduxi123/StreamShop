@@ -10,6 +10,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,18 +49,21 @@ public class ApiService {
             client.setAuthToken(token);
             Map<String, Object> userMap = (Map<String, Object>) result.get("user");
             String loggedUsername = (String) userMap.get("username");
+            String loggedAccount = (String) userMap.get("account");
             String loggedUserId = (String) userMap.get("id");
             String avatarUrl = (String) userMap.get("avatarUrl");
             client.setCurrentUsername(loggedUsername);
+            client.setCurrentAccount(loggedAccount != null ? loggedAccount : loggedUserId);
             client.setCurrentUserId(loggedUserId);
             client.setCurrentAvatarUrl(avatarUrl);
             return client.getGson().fromJson(client.getGson().toJson(userMap), User.class);
         }
     }
 
-    public User register(String username, String password) throws IOException {
+    public User register(String username, String account, String password) throws IOException {
         Map<String, String> body = new HashMap<>();
         body.put("username", username);
+        body.put("account", account);
         body.put("password", password);
         String json = client.getGson().toJson(body);
         Request request = new Request.Builder()
@@ -76,9 +80,11 @@ public class ApiService {
             client.setAuthToken(token);
             Map<String, Object> userMap = (Map<String, Object>) result.get("user");
             String loggedUsername = (String) userMap.get("username");
+            String loggedAccount = (String) userMap.get("account");
             String loggedUserId = (String) userMap.get("id");
             String avatarUrl = (String) userMap.get("avatarUrl");
             client.setCurrentUsername(loggedUsername);
+            client.setCurrentAccount(loggedAccount != null ? loggedAccount : loggedUserId);
             client.setCurrentUserId(loggedUserId);
             client.setCurrentAvatarUrl(avatarUrl);
             return client.getGson().fromJson(client.getGson().toJson(userMap), User.class);
@@ -101,6 +107,18 @@ public class ApiService {
                 .get()
                 .build();
         return executePaginated(request, Video.class);
+    }
+
+    public Video getVideoById(String videoId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "videos/" + videoId)
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Get video failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Video.class);
+        }
     }
 
     public ApiResponse<Video> getMyVideos(int page, int limit) throws IOException {
@@ -735,6 +753,47 @@ public class ApiService {
         }
     }
 
+    public List<Map<String, Object>> searchUsers(String query) throws IOException {
+        String encoded = java.net.URLEncoder.encode(query, "UTF-8");
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "users/search?q=" + encoded)
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Search users failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
+        }
+    }
+
+    public List<Map<String, Object>> searchVideos(String query) throws IOException {
+        String encoded = java.net.URLEncoder.encode(query, "UTF-8");
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "videos/search?q=" + encoded)
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Search videos failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
+        }
+    }
+
+    public List<Map<String, Object>> searchProducts(String query) throws IOException {
+        String encoded = java.net.URLEncoder.encode(query, "UTF-8");
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "products?search=" + encoded)
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Search products failed: " + resp.code());
+            Map<String, Object> result = client.getGson().fromJson(body, Map.class);
+            Object data = result.get("data");
+            return data instanceof List ? (List<Map<String, Object>>) data : new ArrayList<>();
+        }
+    }
+
     // ---- Stats ----
 
     public Map<String, Object> getDashboardStats() throws IOException {
@@ -780,6 +839,53 @@ public class ApiService {
         try (Response resp = client.getHttpClient().newCall(request).execute()) {
             String respBody = resp.body() != null ? resp.body().string() : "{}";
             if (!resp.isSuccessful()) throw new IOException("Send message failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> forwardVideo(String videoId, String receiverId) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("receiverId", receiverId);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "videos/" + videoId + "/share")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Forward video failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> createGroupChat(String name, List<String> memberIds) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("memberIds", memberIds);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages/conversations/group")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Create group failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> sendGroupMessage(String conversationId, String content) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("conversationId", conversationId);
+        body.put("content", content);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "messages")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Send group message failed: " + resp.code());
             return client.getGson().fromJson(respBody, Map.class);
         }
     }

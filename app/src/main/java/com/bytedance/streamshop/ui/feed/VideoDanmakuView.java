@@ -164,12 +164,7 @@ public class VideoDanmakuView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         for (DanmakuItem item : activeItems) {
-            strokePaint.setColor(0xCC000000);
-            canvas.drawText(item.text, item.x - 1, item.y, strokePaint);
-            canvas.drawText(item.text, item.x + 1, item.y, strokePaint);
-            canvas.drawText(item.text, item.x, item.y - 1, strokePaint);
-            canvas.drawText(item.text, item.x, item.y + 1, strokePaint);
-            textPaint.setColor(item.color);
+            textPaint.setColor(0xFFFFFFFF);
             canvas.drawText(item.text, item.x, item.y, textPaint);
         }
     }

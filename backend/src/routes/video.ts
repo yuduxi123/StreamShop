@@ -3,6 +3,22 @@ import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 
+interface MessageData {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  type?: 'text' | 'forward';
+  videoId?: string;
+  status: 'sent' | 'delivered' | 'read';
+  createdAt: string;
+}
+
+function getConversationId(a: string, b: string): string {
+  return [a, b].sort().join('_');
+}
+
 interface VideoData {
   id: string;
   title: string;
@@ -29,6 +45,7 @@ const videoStorage = new StorageService<VideoData>('videos.json');
 const vpStorage = new StorageService<VideoProduct>('video_products.json');
 const productStorage = new StorageService<any>('products.json');
 const userStorage = new StorageService<any>('users.json');
+const messageStorage = new StorageService<MessageData>('messages.json');
 
 const router = Router();
 
@@ -57,6 +74,24 @@ router.get('/', (req: Request, res: Response) => {
   });
 
   res.json({ data: enriched, total: result.total, page: result.page, limit: result.limit });
+});
+
+// GET /api/videos/search?q=xxx
+router.get('/search', (req: Request, res: Response) => {
+  const q = ((req.query.q as string) || '').trim().toLowerCase();
+  if (!q) { res.json([]); return; }
+  const keywords = q.split(/\s+/);
+  const results = videoStorage.query(v => {
+    const title = (v.title || '').toLowerCase();
+    return keywords.some(kw => title.includes(kw));
+  }).slice(0, 30);
+  // Enrich with author
+  const enriched = results.map(video => {
+    const users = userStorage.query(u => u.id === video.authorId);
+    const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
+    return { ...video, author };
+  });
+  res.json(enriched);
 });
 
 // GET /api/videos/:id
@@ -163,6 +198,57 @@ router.post('/:id/view', (req: Request, res: Response) => {
   }
   videoStorage.update(req.params.id as string, { viewCount: video.viewCount + 1 });
   res.json({ viewCount: video.viewCount + 1 });
+});
+
+// POST /api/videos/:id/share - forward video to a user
+router.post('/:id/share', authMiddleware, (req: AuthRequest, res: Response) => {
+  const video = videoStorage.findById(req.params.id as string);
+  if (!video) {
+    res.status(404).json({ error: 'Video not found' });
+    return;
+  }
+
+  const { receiverId } = req.body;
+  if (!receiverId) {
+    res.status(400).json({ error: 'receiverId required' });
+    return;
+  }
+
+  const receiver = userStorage.findById(receiverId);
+  if (!receiver) {
+    res.status(404).json({ error: 'Receiver not found' });
+    return;
+  }
+
+  const newShareCount = (video.shareCount || 0) + 1;
+  videoStorage.update(req.params.id as string, { shareCount: newShareCount });
+
+  const msg: MessageData = {
+    id: uuidv4(),
+    conversationId: getConversationId(req.user!.id, receiverId),
+    senderId: req.user!.id,
+    receiverId,
+    type: 'forward',
+    content: `[转发视频] ${video.title}`,
+    videoId: video.id,
+    status: 'sent',
+    createdAt: new Date().toISOString(),
+  };
+  messageStorage.create(msg);
+
+  // Push via WebSocket to receiver if online
+  const wss = (req.app as any).locals?.wss;
+  if (wss?.pushMessage) {
+    wss.pushMessage(receiverId, {
+      type: 'NEW_MESSAGE',
+      message: {
+        ...msg,
+        senderUsername: req.user!.username,
+      },
+    });
+  }
+
+  res.json({ shareCount: newShareCount });
 });
 
 export default router;

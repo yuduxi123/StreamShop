@@ -12,6 +12,8 @@
 
     <style name="Theme.StreamShop" parent="Base.Theme.StreamShop" />
 
+    <style name="Theme.StreamShop.Splash" parent="Theme.StreamShop" />
+
     <style name="Theme.StreamShop.Crop" parent="Theme.Material3.DayNight" />
 
     <!-- Bottom navigation text styles -->

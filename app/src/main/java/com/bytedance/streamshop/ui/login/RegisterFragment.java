@@ -17,6 +17,7 @@ import com.google.android.material.textfield.TextInputEditText;
 
 public class RegisterFragment extends Fragment {
 
+    private TextInputEditText usernameInput;
     private TextInputEditText accountInput;
     private TextInputEditText passwordInput;
     private TextInputEditText confirmInput;
@@ -34,6 +35,7 @@ public class RegisterFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        usernameInput = view.findViewById(R.id.register_username);
         accountInput = view.findViewById(R.id.register_account);
         passwordInput = view.findViewById(R.id.register_password);
         confirmInput = view.findViewById(R.id.register_confirm);
@@ -44,13 +46,20 @@ public class RegisterFragment extends Fragment {
     }
 
     private void attemptRegister() {
+        String username = usernameInput.getText().toString().trim();
         String account = accountInput.getText().toString().trim();
         String password = passwordInput.getText().toString().trim();
         String confirm = confirmInput.getText().toString().trim();
 
+        // 校验用户名
+        if (username.isEmpty()) {
+            showError("请输入用户名");
+            return;
+        }
+
         // 校验账号：11位及以上数字
         if (account.isEmpty()) {
-            showError("请输入账号");
+            showError("请输入数字账号");
             return;
         }
         if (!account.matches("\\d+")) {
@@ -89,10 +98,9 @@ public class RegisterFragment extends Fragment {
         new Thread(() -> {
             try {
                 ApiService api = new ApiService();
-                api.register(account, password);
+                api.register(username, account, password);
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
-                        // 注册成功，直接返回（已自动登录，因为ApiService.setAuthToken已设置）
                         getActivity().setResult(android.app.Activity.RESULT_OK);
                         getActivity().finish();
                     });

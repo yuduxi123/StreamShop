@@ -9,6 +9,7 @@ const JWT_EXPIRES_IN = '7d';
 export interface User {
   id: string;
   username: string;
+  account: string;
   avatarUrl: string;
   role: 'user' | 'admin';
   password: string;
@@ -18,14 +19,16 @@ export interface User {
 const userStorage = new StorageService<User>('users.json');
 
 export class AuthService {
-  static register(username: string, password: string): { user: Omit<User, 'password'>; token: string } | null {
-    const existing = userStorage.query(u => u.username === username);
+  static register(username: string, account: string, password: string): { user: Omit<User, 'password'>; token: string } | null {
+    const existing = userStorage.query(u => u.account === account);
     if (existing.length > 0) return null;
 
     const hashed = bcrypt.hashSync(password, 10);
+    const newId = uuidv4();
     const user: User = {
-      id: uuidv4(),
+      id: newId,
       username,
+      account,
       avatarUrl: `https://picsum.photos/seed/${username}/200/200`,
       role: 'user',
       password: hashed,
@@ -38,8 +41,8 @@ export class AuthService {
     return { user: userWithoutPassword, token };
   }
 
-  static login(username: string, password: string): { user: Omit<User, 'password'>; token: string } | null {
-    const users = userStorage.query(u => u.username === username);
+  static login(account: string, password: string): { user: Omit<User, 'password'>; token: string } | null {
+    const users = userStorage.query(u => u.account === account);
     if (users.length === 0) return null;
 
     const user = users[0];
