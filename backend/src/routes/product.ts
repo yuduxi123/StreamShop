@@ -24,6 +24,7 @@ interface VideoProduct {
   videoId: string;
   productId: string;
   displayOrder: number;
+  timestampMs: number;
 }
 
 const productStorage = new StorageService<ProductData>('products.json');
@@ -151,7 +152,7 @@ router.delete('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
 
 // POST /api/products/:id/bind-video
 router.post('/:id/bind-video', authMiddleware, (req: AuthRequest, res: Response) => {
-  const { videoId, displayOrder } = req.body;
+  const { videoId, displayOrder, timestampMs } = req.body;
   if (!videoId) {
     res.status(400).json({ error: 'videoId required' });
     return;
@@ -170,6 +171,7 @@ router.post('/:id/bind-video', authMiddleware, (req: AuthRequest, res: Response)
     videoId,
     productId: req.params.id as string,
     displayOrder: displayOrder || 0,
+    timestampMs: timestampMs || 0,
   };
   vpStorage.create(binding);
   res.status(201).json(binding);

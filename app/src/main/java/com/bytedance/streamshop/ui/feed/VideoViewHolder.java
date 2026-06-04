@@ -5,12 +5,17 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +25,8 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.SnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bytedance.streamshop.R;
@@ -59,8 +66,8 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private final ImageButton collectButton;
     private final ImageButton forwardButton;
     private final ImageButton playModeButton;
-    private final ViewGroup productContainer;
-    private final SeekBar seekBar;
+    private final RecyclerView productContainer;
+    private final DotSeekBar seekBar;
     private final TextView currentTimeText;
     private final TextView durationText;
     private final View videoRoot;
@@ -73,6 +80,9 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private ApiService apiService;
     private ExoPlayer player;
     private boolean isPlaying;
+    private long pendingSeekMs = 0;
+    private boolean hasExternalPlayer = false;
+    private boolean playerIsExternal = false;
     private boolean viewReported;
     private boolean fallbackTried;
     private boolean isUserSeeking;
@@ -83,6 +93,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private Context context;
     private FragmentManager fragmentManager;
     private LiveWebSocketClient wsClient;
+    private long videoDurationMs = 0;
 
     public VideoViewHolder(@NonNull View itemView) {
         super(itemView);
@@ -102,7 +113,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         forwardButton = itemView.findViewById(R.id.video_forward_btn);
         playModeButton = itemView.findViewById(R.id.video_playmode_btn);
         productContainer = itemView.findViewById(R.id.product_card_container);
-        seekBar = itemView.findViewById(R.id.video_seekbar);
+        seekBar = (DotSeekBar) itemView.findViewById(R.id.video_seekbar);
         currentTimeText = itemView.findViewById(R.id.video_current_time);
         durationText = itemView.findViewById(R.id.video_duration);
         videoRoot = itemView.findViewById(R.id.video_root);
@@ -110,6 +121,26 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         followButton = itemView.findViewById(R.id.video_follow_btn);
         danmakuView = itemView.findViewById(R.id.video_danmaku_view);
         danmakuButton = itemView.findViewById(R.id.video_danmaku_btn);
+
+        // Product card RecyclerView one-time setup
+        if (productContainer != null) {
+            productContainer.setLayoutManager(
+                    new LinearLayoutManager(itemView.getContext(), LinearLayoutManager.HORIZONTAL, false));
+            new StartSnapHelper().attachToRecyclerView(productContainer);
+
+            productContainer.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false;
+            });
+        }
 
         if (danmakuButton != null) danmakuButton.setOnClickListener(v -> showDanmakuInput());
         if (avatarContainer != null) avatarContainer.setOnClickListener(v -> openAuthorProfile());
@@ -139,7 +170,15 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                         long duration = player.getDuration();
                         if (duration > 0) {
                             long position = duration * seekBar.getProgress() / seekBar.getMax();
-                            player.seekTo(position);
+                            Product nearProduct = findNearProduct(position, duration);
+                            if (nearProduct != null) {
+                                player.seekTo(getEffectiveTimestamp(nearProduct));
+                                if (context != null) {
+                            showPlainToast(nearProduct.getTitle());
+                        }
+                            } else {
+                                player.seekTo(position);
+                            }
                         }
                     }
                 }
@@ -152,7 +191,10 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     }
 
     public void bind(Video video, Context context, FragmentManager fragmentManager) {
-        releasePlayer();
+        if (!hasExternalPlayer) {
+            releasePlayer();
+        }
+        hasExternalPlayer = false;
         if (wsClient != null) wsClient.disconnect();
         this.video = video;
         this.context = context;
@@ -168,7 +210,11 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         bindVideo();
         setupProductCards();
         if (playIndicator != null) playIndicator.setVisibility(View.GONE);
-        initPlayer();
+        if (player == null) {
+            initPlayer();
+        } else {
+            if (coverView != null) coverView.setVisibility(View.GONE);
+        }
         loadDanmaku();
         connectDanmakuWebSocket();
     }
@@ -203,6 +249,14 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
     private void bindVideo() {
         if (video == null) return;
+
+        if (video.getCoverUrl() != null && !video.getCoverUrl().isEmpty() && coverView != null) {
+            coverView.setVisibility(View.VISIBLE);
+            Glide.with(context)
+                    .load(video.getCoverUrl())
+                    .centerCrop()
+                    .into(coverView);
+        }
 
         if (video.getAuthor() != null) {
             if (usernameText != null) {
@@ -277,6 +331,11 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
             @Override
             public void onPlaybackStateChanged(int playbackState) {
                 if (playbackState == Player.STATE_READY) {
+                    if (pendingSeekMs > 0) {
+                        player.seekTo(pendingSeekMs);
+                        pendingSeekMs = 0;
+                    }
+                    if (coverView != null) coverView.setVisibility(View.GONE);
                     reportViewIfNeeded();
                     if (isPlaying && player != null) {
                         player.play();
@@ -349,47 +408,165 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         if (productContainer == null) return;
 
         productContainer.setVisibility(View.VISIBLE);
-        productContainer.removeAllViews();
+        productContainer.setAdapter(new ProductCardAdapter(video.getProducts()));
+        updateProgressDots();
+    }
 
-        for (Product product : video.getProducts()) {
-            View card = LayoutInflater.from(context)
-                    .inflate(R.layout.item_product_card, productContainer, false);
+    // --- Product card adapter ---
 
-            ImageView thumb = card.findViewById(R.id.product_thumb);
-            TextView titleText = card.findViewById(R.id.product_title);
-            TextView priceText = card.findViewById(R.id.product_price);
-            TextView originalPriceText = card.findViewById(R.id.product_original_price);
-            TextView discountText = card.findViewById(R.id.product_discount);
-            TextView stockInfoText = card.findViewById(R.id.product_stock_info);
+    private class ProductCardAdapter extends RecyclerView.Adapter<ProductCardAdapter.VH> {
+        private final List<Product> products;
 
-            if (thumb != null) Glide.with(context).load(product.getCoverUrl()).into(thumb);
-            if (titleText != null) titleText.setText(product.getTitle());
+        ProductCardAdapter(List<Product> products) {
+            this.products = products;
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View card = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_product_card, parent, false);
+            return new VH(card);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            Product product = products.get(position);
+
+            if (holder.thumb != null) Glide.with(context).load(product.getCoverUrl()).into(holder.thumb);
+            if (holder.titleText != null) holder.titleText.setText(product.getTitle());
 
             int price = (int) product.getPrice();
-            if (priceText != null) priceText.setText("¥" + price);
+            if (holder.priceText != null) holder.priceText.setText("¥" + price);
 
             double originalPrice = product.getOriginalPrice();
-            if (originalPrice > 0 && originalPrice > product.getPrice() && originalPriceText != null && discountText != null) {
-                originalPriceText.setVisibility(View.VISIBLE);
-                originalPriceText.setText("¥" + (int) originalPrice);
-                originalPriceText.setPaintFlags(originalPriceText.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            if (originalPrice > 0 && originalPrice > product.getPrice()
+                    && holder.originalPriceText != null && holder.discountText != null) {
+                holder.originalPriceText.setVisibility(View.VISIBLE);
+                holder.originalPriceText.setText("¥" + (int) originalPrice);
+                holder.originalPriceText.setPaintFlags(
+                        holder.originalPriceText.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
                 int discount = (int) (product.getPrice() * 100 / originalPrice);
-                discountText.setVisibility(View.VISIBLE);
-                discountText.setText(discount + "折");
+                holder.discountText.setVisibility(View.VISIBLE);
+                holder.discountText.setText(discount + "折");
             }
 
-            if (stockInfoText != null) {
+            if (holder.stockInfoText != null) {
                 if (product.getStock() <= 0) {
-                    stockInfoText.setText("已售罄");
-                    stockInfoText.setTextColor(0xFFFF3B30);
+                    holder.stockInfoText.setText("已售罄");
+                    holder.stockInfoText.setTextColor(0xFFFF3B30);
                 } else {
-                    stockInfoText.setText("已售" + formatCount(product.getSalesCount()));
-                    stockInfoText.setTextColor(0xFF999999);
+                    holder.stockInfoText.setText("已售" + formatCount(product.getSalesCount()));
+                    holder.stockInfoText.setTextColor(0xFF999999);
                 }
             }
 
-            card.setOnClickListener(v -> showProductDetail(product));
-            productContainer.addView(card);
+            if (holder.introButton != null) {
+                holder.introButton.setOnClickListener(v -> {
+                    if (player != null) {
+                        long ts = getEffectiveTimestamp(product);
+                        player.seekTo(ts);
+                        if (!isPlaying) {
+                            player.setPlayWhenReady(true);
+                            isPlaying = true;
+                            if (danmakuView != null) danmakuView.play();
+                            startProgressUpdates();
+                            if (playIndicator != null) playIndicator.setVisibility(View.GONE);
+                        }
+                        if (context != null) {
+                        showPlainToast(product.getTitle());
+                    }
+                    }
+                });
+            }
+
+            holder.itemView.setOnClickListener(v -> showProductDetail(product));
+        }
+
+        @Override
+        public int getItemCount() {
+            return products.size();
+        }
+
+        class VH extends RecyclerView.ViewHolder {
+            ImageView thumb;
+            TextView titleText, priceText, originalPriceText, discountText, stockInfoText, introButton;
+
+            VH(View v) {
+                super(v);
+                thumb = v.findViewById(R.id.product_thumb);
+                titleText = v.findViewById(R.id.product_title);
+                priceText = v.findViewById(R.id.product_price);
+                originalPriceText = v.findViewById(R.id.product_original_price);
+                discountText = v.findViewById(R.id.product_discount);
+                stockInfoText = v.findViewById(R.id.product_stock_info);
+                introButton = v.findViewById(R.id.product_intro_btn);
+            }
+        }
+    }
+
+    // --- StartSnapHelper: snaps items to the left edge so 2 cards are always complete ---
+
+    private static class StartSnapHelper extends SnapHelper {
+        @Nullable
+        @Override
+        public int[] calculateDistanceToFinalSnap(@NonNull RecyclerView.LayoutManager layoutManager,
+                                                  @NonNull View targetView) {
+            int[] out = new int[2];
+            if (layoutManager.canScrollHorizontally()) {
+                out[0] = layoutManager.getDecoratedLeft(targetView) - layoutManager.getPaddingLeft();
+                out[1] = 0;
+            }
+            return out;
+        }
+
+        @Nullable
+        @Override
+        public View findSnapView(RecyclerView.LayoutManager layoutManager) {
+            if (!(layoutManager instanceof LinearLayoutManager)) return null;
+            LinearLayoutManager lm = (LinearLayoutManager) layoutManager;
+            int itemCount = layoutManager.getItemCount();
+            if (itemCount == 0) return null;
+
+            int firstVisible = lm.findFirstVisibleItemPosition();
+            if (firstVisible == RecyclerView.NO_POSITION) return null;
+
+            View firstView = lm.findViewByPosition(firstVisible);
+            if (firstView == null) return null;
+
+            int left = lm.getDecoratedLeft(firstView);
+            int width = lm.getDecoratedMeasuredWidth(firstView);
+
+            if (left < -width / 2 && firstVisible + 1 < itemCount) {
+                View nextView = lm.findViewByPosition(firstVisible + 1);
+                if (nextView != null) return nextView;
+            }
+            return firstView;
+        }
+
+        @Override
+        public int findTargetSnapPosition(RecyclerView.LayoutManager layoutManager,
+                                          int velocityX, int velocityY) {
+            if (!(layoutManager instanceof LinearLayoutManager)) return RecyclerView.NO_POSITION;
+            LinearLayoutManager lm = (LinearLayoutManager) layoutManager;
+            int itemCount = layoutManager.getItemCount();
+            if (itemCount == 0) return RecyclerView.NO_POSITION;
+
+            int firstVisible = lm.findFirstVisibleItemPosition();
+            if (firstVisible == RecyclerView.NO_POSITION) return RecyclerView.NO_POSITION;
+
+            View firstView = lm.findViewByPosition(firstVisible);
+            if (firstView == null) return RecyclerView.NO_POSITION;
+
+            int left = lm.getDecoratedLeft(firstView);
+            int width = lm.getDecoratedMeasuredWidth(firstView);
+
+            int currentPage = (left < -width / 2) ? firstVisible + 1 : firstVisible;
+
+            if (Math.abs(velocityX) < 600) return currentPage;
+
+            int target = velocityX > 0 ? currentPage + 1 : currentPage - 1;
+            return Math.max(0, Math.min(target, itemCount - 1));
         }
     }
 
@@ -530,6 +707,10 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 if (duration > 0) {
                     int progress = (int) (position * seekBar.getMax() / duration);
                     seekBar.setProgress(progress);
+                    if (videoDurationMs != duration) {
+                        videoDurationMs = duration;
+                        updateProgressDots();
+                    }
                 }
                 currentTimeText.setText(formatTime(position));
                 durationText.setText(formatTime(duration));
@@ -558,6 +739,21 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
+    private void showPlainToast(String text) {
+        if (context == null) return;
+        Toast toast = new Toast(context);
+        toast.setDuration(Toast.LENGTH_SHORT);
+        TextView tv = new TextView(context);
+        tv.setText(text);
+        tv.setTextColor(0xFFFFFFFF);
+        tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+        tv.setBackgroundColor(0xCC333333);
+        int pad = (int) (12 * context.getResources().getDisplayMetrics().density);
+        tv.setPadding(pad, pad - 4, pad, pad - 4);
+        toast.setView(tv);
+        toast.show();
+    }
+
     private String formatCount(int count) {
         if (count >= 10000) {
             return count / 10000 + "w";
@@ -567,12 +763,92 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         return String.valueOf(count);
     }
 
+    private Product findNearProduct(long positionMs, long durationMs) {
+        if (video == null || video.getProducts() == null || video.getProducts().isEmpty()) return null;
+        List<Product> products = video.getProducts();
+        long threshold = Math.max(durationMs * 3 / 100, 500);
+        Product nearest = null;
+        long nearestDist = Long.MAX_VALUE;
+        for (int i = 0; i < products.size(); i++) {
+            long ts = getEffectiveTimestamp(products.get(i), i, products.size());
+            long dist = Math.abs(ts - positionMs);
+            if (dist < threshold && dist < nearestDist) {
+                nearestDist = dist;
+                nearest = products.get(i);
+            }
+        }
+        return nearest;
+    }
+
+    private long getEffectiveTimestamp(Product product) {
+        if (video == null || video.getProducts() == null) return 0;
+        List<Product> products = video.getProducts();
+        int index = products.indexOf(product);
+        return getEffectiveTimestamp(product, index, products.size());
+    }
+
+    private long getEffectiveTimestamp(Product product, int index, int totalCount) {
+        if (product.getTimestampMs() > 0) return product.getTimestampMs();
+        if (videoDurationMs <= 0) return 0;
+        return videoDurationMs * (index + 1) / (totalCount + 1);
+    }
+
+    private void updateProgressDots() {
+        if (seekBar == null || video == null || video.getProducts() == null
+                || video.getProducts().isEmpty() || videoDurationMs <= 0) {
+            if (seekBar != null) seekBar.setDotRatios(null);
+            return;
+        }
+        List<Product> products = video.getProducts();
+        List<Float> ratios = new ArrayList<>();
+        for (int i = 0; i < products.size(); i++) {
+            long ts = getEffectiveTimestamp(products.get(i), i, products.size());
+            float ratio = (float) ts / videoDurationMs;
+            ratio = Math.max(0f, Math.min(1f, ratio));
+            ratios.add(ratio);
+        }
+        seekBar.setDotRatios(ratios);
+    }
+
+    public ExoPlayer takePlayer() {
+        ExoPlayer p = player;
+        if (p != null) {
+            stopProgressUpdates();
+            p.setPlayWhenReady(false);
+            if (playerView != null) playerView.setPlayer(null);
+            player = null;
+            isPlaying = false;
+        }
+        return p;
+    }
+
+    public void useExistingPlayer(ExoPlayer existingPlayer, long positionMs) {
+        if (existingPlayer == null || playerView == null) return;
+        this.player = existingPlayer;
+        playerView.setPlayer(existingPlayer);
+        playerView.setUseController(false);
+        hasExternalPlayer = true;
+        playerIsExternal = true;
+        if (positionMs > 0) {
+            long currentPos = existingPlayer.getCurrentPosition();
+            if (Math.abs(currentPos - positionMs) > 500) {
+                existingPlayer.seekTo(positionMs);
+            }
+        }
+        if (coverView != null) coverView.setVisibility(View.GONE);
+    }
+
     private void releasePlayer() {
         if (player != null) {
             stopProgressUpdates();
             isPlaying = false;
-            player.stop();
-            player.release();
+            if (!playerIsExternal) {
+                player.stop();
+                player.release();
+            } else {
+                if (playerView != null) playerView.setPlayer(null);
+                playerIsExternal = false;
+            }
             player = null;
         }
     }
@@ -626,6 +902,22 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
             }
         });
         sheet.show(fragmentManager, "danmaku");
+    }
+
+    public long getCurrentPositionMs() {
+        if (player != null) {
+            long pos = player.getCurrentPosition();
+            return pos > 0 ? pos : 0;
+        }
+        return 0;
+    }
+
+    public boolean isCurrentlyPlaying() {
+        return isPlaying;
+    }
+
+    public void setRestoreInfo(long positionMs) {
+        this.pendingSeekMs = Math.max(0, positionMs);
     }
 
     public Video getVideo() {

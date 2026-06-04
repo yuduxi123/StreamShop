@@ -14,6 +14,7 @@ public class Product implements Serializable {
     private String status;
     private String category;
     private String createdAt;
+    private long timestampMs;
 
     public Product() {}
 
@@ -39,4 +40,6 @@ public class Product implements Serializable {
     public void setCategory(String category) { this.category = category; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    public long getTimestampMs() { return timestampMs; }
+    public void setTimestampMs(long timestampMs) { this.timestampMs = timestampMs; }
 }

@@ -10,13 +10,14 @@
         android:id="@+id/home_tab_layout"
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="@android:color/black"
+        android:background="#1A1A1A"
         app:tabIndicatorColor="#FFFFFF"
         app:tabIndicatorHeight="2dp"
         app:tabMode="fixed"
         app:tabGravity="fill"
         app:tabTextColor="#AAAAAA"
-        app:tabSelectedTextColor="#FFFFFF" />
+        app:tabSelectedTextColor="#FFFFFF"
+        app:tabTextAppearance="@style/HomeTabTextAppearance" />
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/home_tab_pager"

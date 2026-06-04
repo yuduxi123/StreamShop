@@ -69,7 +69,11 @@ router.get('/', (req: Request, res: Response) => {
     const users = userStorage.query(u => u.id === video.authorId);
     const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
     const bindings = vpStorage.query(vp => vp.videoId === video.id);
-    const products = bindings.map(b => productStorage.findById(b.productId)).filter(Boolean);
+    const products = bindings.map(b => {
+      const product = productStorage.findById(b.productId);
+      if (!product) return null;
+      return { ...product, timestampMs: b.timestampMs || 0 };
+    }).filter(Boolean);
     return { ...video, author, products };
   });
 
@@ -104,7 +108,11 @@ router.get('/:id', (req: Request, res: Response) => {
   const users = userStorage.query(u => u.id === video.authorId);
   const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
   const bindings = vpStorage.query(vp => vp.videoId === video.id);
-  const products = bindings.map(b => productStorage.findById(b.productId)).filter(Boolean);
+  const products = bindings.map(b => {
+    const product = productStorage.findById(b.productId);
+    if (!product) return null;
+    return { ...product, timestampMs: b.timestampMs || 0 };
+  }).filter(Boolean);
   res.json({ ...video, author, products });
 });
 

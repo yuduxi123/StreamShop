@@ -18,6 +18,7 @@ export interface VideoProduct {
   videoId: string;
   productId: string;
   displayOrder: number;
+  timestampMs: number;
 }
 
 export interface LiveRoomData {
@@ -83,7 +84,11 @@ export function buildFeedItems(input: BuildFeedInput): FeedItem[] {
         .filter(binding => binding.videoId === video.id)
         .sort((a, b) => a.displayOrder - b.displayOrder);
       const boundProducts = bindings
-        .map(binding => products.find(product => product.id === binding.productId))
+        .map(binding => {
+          const product = products.find(p => p.id === binding.productId);
+          if (!product) return null;
+          return { ...product, timestampMs: binding.timestampMs || 0 };
+        })
         .filter(Boolean);
       return {
         type: 'video',

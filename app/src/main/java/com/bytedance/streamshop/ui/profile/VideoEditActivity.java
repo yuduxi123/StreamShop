@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 public class VideoEditActivity extends AppCompatActivity {
-    private EditText titleInput, tagsInput, productNameInput, productPriceInput, productStockInput;
+    private EditText titleInput, tagsInput, productNameInput, productPriceInput, productStockInput, timestampInput;
     private Spinner statusSpinner;
     private TextView headerTitle, videoInfoText, productHint;
     private ImageView coverPreview, productPreview;
@@ -102,6 +102,7 @@ public class VideoEditActivity extends AppCompatActivity {
         productNameInput = findViewById(R.id.video_edit_product_name);
         productPriceInput = findViewById(R.id.video_edit_product_price);
         productStockInput = findViewById(R.id.video_edit_product_stock);
+        timestampInput = findViewById(R.id.video_edit_product_timestamp);
         productPreview = findViewById(R.id.video_edit_product_preview);
         productProgress = findViewById(R.id.video_edit_product_progress);
         productListView = findViewById(R.id.video_edit_product_list);
@@ -316,7 +317,18 @@ public class VideoEditActivity extends AppCompatActivity {
             return;
         }
 
-        PendingProduct pp = new PendingProduct(name, uploadedProductImageUrl, price, stock);
+        long timestampMs = 0;
+        String tsStr = timestampInput.getText().toString().trim();
+        if (!tsStr.isEmpty() && tsStr.contains(":")) {
+            String[] parts = tsStr.split(":");
+            try {
+                long minutes = Long.parseLong(parts[0]);
+                long seconds = Long.parseLong(parts[1]);
+                timestampMs = (minutes * 60 + seconds) * 1000;
+            } catch (NumberFormatException ignored) {}
+        }
+
+        PendingProduct pp = new PendingProduct(name, uploadedProductImageUrl, price, stock, timestampMs);
         pendingProducts.add(pp);
         productListAdapter.notifyItemInserted(pendingProducts.size() - 1);
 
@@ -324,6 +336,7 @@ public class VideoEditActivity extends AppCompatActivity {
         productNameInput.setText("");
         productPriceInput.setText("");
         productStockInput.setText("");
+        timestampInput.setText("");
         uploadedProductImageUrl = null;
         productPreview.setVisibility(View.GONE);
         productPreview.setImageDrawable(null);
@@ -392,7 +405,7 @@ public class VideoEditActivity extends AppCompatActivity {
                 for (PendingProduct pp : pendingProducts) {
                     try {
                         Product product = api.createProduct(pp.title, pp.coverUrl, pp.price, pp.stock);
-                        api.bindVideoToProduct(product.getId(), videoId);
+                        api.bindVideoToProduct(product.getId(), videoId, pp.timestampMs);
                     } catch (Exception e) {
                         // Log but continue — don't fail the whole save for one product
                         runOnUiThread(() -> Toast.makeText(VideoEditActivity.this,
@@ -441,12 +454,14 @@ public class VideoEditActivity extends AppCompatActivity {
         String coverUrl;
         double price;
         int stock;
+        long timestampMs;
 
-        PendingProduct(String title, String coverUrl, double price, int stock) {
+        PendingProduct(String title, String coverUrl, double price, int stock, long timestampMs) {
             this.title = title;
             this.coverUrl = coverUrl;
             this.price = price;
             this.stock = stock;
+            this.timestampMs = timestampMs;
         }
     }
 
@@ -466,6 +481,11 @@ public class VideoEditActivity extends AppCompatActivity {
             PendingProduct pp = pendingProducts.get(position);
             h.nameText.setText(pp.title);
             h.priceText.setText("¥" + (int) pp.price);
+            if (h.timestampText != null) {
+                long mins = pp.timestampMs / 60000;
+                long secs = (pp.timestampMs / 1000) % 60;
+                h.timestampText.setText(String.format("%d:%02d", mins, secs));
+            }
             Glide.with(h.thumbView).load(pp.coverUrl).into(h.thumbView);
             h.removeBtn.setOnClickListener(v -> removeProduct(h.getBindingAdapterPosition()));
         }
@@ -477,7 +497,7 @@ public class VideoEditActivity extends AppCompatActivity {
 
         class VH extends RecyclerView.ViewHolder {
             ImageView thumbView;
-            TextView nameText, priceText;
+            TextView nameText, priceText, timestampText;
             Button removeBtn;
 
             VH(View v) {
@@ -485,6 +505,7 @@ public class VideoEditActivity extends AppCompatActivity {
                 thumbView = v.findViewById(R.id.edit_product_thumb);
                 nameText = v.findViewById(R.id.edit_product_name);
                 priceText = v.findViewById(R.id.edit_product_price);
+                timestampText = v.findViewById(R.id.edit_product_timestamp);
                 removeBtn = v.findViewById(R.id.edit_product_remove);
             }
         }

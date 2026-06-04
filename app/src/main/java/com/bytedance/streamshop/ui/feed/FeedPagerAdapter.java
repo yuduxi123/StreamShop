@@ -5,6 +5,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentManager;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bytedance.streamshop.R;
@@ -23,6 +24,11 @@ public class FeedPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     private FragmentManager fragmentManager;
     private VideoViewHolder.OnVideoEndedListener playbackModeListener;
     private LiveFeedCardViewHolder.OnLiveCardClickListener liveCardClickListener;
+    private String restoreVideoId = null;
+    private long restorePositionMs = 0;
+    private ExoPlayer savedPlayer;
+    private String savedPlayerVideoId;
+    private long savedPlayerPositionMs;
 
     public void setFragmentManager(FragmentManager fragmentManager) {
         this.fragmentManager = fragmentManager;
@@ -34,6 +40,22 @@ public class FeedPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
     public void setLiveCardClickListener(LiveFeedCardViewHolder.OnLiveCardClickListener listener) {
         this.liveCardClickListener = listener;
+    }
+
+    public void setRestoreInfo(String videoId, long positionMs) {
+        this.restoreVideoId = videoId;
+        this.restorePositionMs = positionMs;
+    }
+
+    public void setSavedPlayer(ExoPlayer player, String videoId, long positionMs) {
+        this.savedPlayer = player;
+        this.savedPlayerVideoId = videoId;
+        this.savedPlayerPositionMs = positionMs;
+    }
+
+    private void clearRestoreInfo() {
+        this.restoreVideoId = null;
+        this.restorePositionMs = 0;
     }
 
     public void setItems(List<FeedItem> items) {
@@ -84,6 +106,20 @@ public class FeedPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         if (holder instanceof VideoViewHolder) {
             Video video = item.getVideo();
             if (video != null) {
+                // Phase 2: inject saved player before bind (no cover flash)
+                if (savedPlayer != null && savedPlayerVideoId != null
+                        && savedPlayerVideoId.equals(video.getId())) {
+                    ((VideoViewHolder) holder).useExistingPlayer(savedPlayer, savedPlayerPositionMs);
+                    savedPlayer = null;
+                    savedPlayerVideoId = null;
+                    savedPlayerPositionMs = 0;
+                }
+                // Phase 1 fallback: restore info for seek-based recovery
+                else if (restoreVideoId != null && restoreVideoId.equals(video.getId())
+                        && restorePositionMs > 0) {
+                    ((VideoViewHolder) holder).setRestoreInfo(restorePositionMs);
+                    clearRestoreInfo();
+                }
                 ((VideoViewHolder) holder).bind(video, holder.itemView.getContext(), fragmentManager);
                 ((VideoViewHolder) holder).setOnPlaybackModeListener(playbackModeListener);
             }

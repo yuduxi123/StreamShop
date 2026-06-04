@@ -208,9 +208,10 @@ public class ApiService {
         }
     }
 
-    public boolean bindVideoToProduct(String productId, String videoId) throws IOException {
+    public boolean bindVideoToProduct(String productId, String videoId, long timestampMs) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("videoId", videoId);
+        body.put("timestampMs", timestampMs);
         String json = client.getGson().toJson(body);
         Request request = new Request.Builder()
                 .url(client.getBaseUrl() + "products/" + productId + "/bind-video")

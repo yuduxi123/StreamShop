@@ -55,16 +55,16 @@ function run(): void {
 
   // Videos with product bindings
   const videoProducts = [
-    { id: ids.video1 + '_' + ids.product1, videoId: ids.video1, productId: ids.product1, displayOrder: 0 },
-    { id: ids.video1 + '_' + ids.product7, videoId: ids.video1, productId: ids.product7, displayOrder: 1 },
-    { id: ids.video2 + '_' + ids.product2, videoId: ids.video2, productId: ids.product2, displayOrder: 0 },
-    { id: ids.video2 + '_' + ids.product4, videoId: ids.video2, productId: ids.product4, displayOrder: 1 },
-    { id: ids.video2 + '_' + ids.product8, videoId: ids.video2, productId: ids.product8, displayOrder: 2 },
-    { id: ids.video3 + '_' + ids.product3, videoId: ids.video3, productId: ids.product3, displayOrder: 0 },
-    { id: ids.video4 + '_' + ids.product5, videoId: ids.video4, productId: ids.product5, displayOrder: 0 },
-    { id: ids.video4 + '_' + ids.product6, videoId: ids.video4, productId: ids.product6, displayOrder: 1 },
-    { id: ids.video5 + '_' + ids.product9, videoId: ids.video5, productId: ids.product9, displayOrder: 0 },
-    { id: ids.video5 + '_' + ids.product10, videoId: ids.video5, productId: ids.product10, displayOrder: 1 },
+    { id: ids.video1 + '_' + ids.product1, videoId: ids.video1, productId: ids.product1, displayOrder: 0, timestampMs: 0 },
+    { id: ids.video1 + '_' + ids.product7, videoId: ids.video1, productId: ids.product7, displayOrder: 1, timestampMs: 0 },
+    { id: ids.video2 + '_' + ids.product2, videoId: ids.video2, productId: ids.product2, displayOrder: 0, timestampMs: 0 },
+    { id: ids.video2 + '_' + ids.product4, videoId: ids.video2, productId: ids.product4, displayOrder: 1, timestampMs: 0 },
+    { id: ids.video2 + '_' + ids.product8, videoId: ids.video2, productId: ids.product8, displayOrder: 2, timestampMs: 0 },
+    { id: ids.video3 + '_' + ids.product3, videoId: ids.video3, productId: ids.product3, displayOrder: 0, timestampMs: 0 },
+    { id: ids.video4 + '_' + ids.product5, videoId: ids.video4, productId: ids.product5, displayOrder: 0, timestampMs: 0 },
+    { id: ids.video4 + '_' + ids.product6, videoId: ids.video4, productId: ids.product6, displayOrder: 1, timestampMs: 0 },
+    { id: ids.video5 + '_' + ids.product9, videoId: ids.video5, productId: ids.product9, displayOrder: 0, timestampMs: 0 },
+    { id: ids.video5 + '_' + ids.product10, videoId: ids.video5, productId: ids.product10, displayOrder: 1, timestampMs: 0 },
   ];
   write('video_products.json', videoProducts);
 

@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -34,6 +35,7 @@ public class FeedFragment extends Fragment {
     private List<FeedItem> feedItems = new ArrayList<>();
     private int currentPosition = 0;
     private int lastPlayingPosition = -1;
+    private boolean wasPlayingBeforePause = true;
 
     @Nullable
     @Override
@@ -55,10 +57,27 @@ public class FeedFragment extends Fragment {
         if (homeStateViewModel != null) {
             homeStateViewModel.setFeedPosition(currentPosition);
         }
-        if (adapter != null) {
+        // Phase 2: save current player, release the rest
+        if (homeStateViewModel != null && adapter != null && recyclerView != null
+                && currentPosition >= 0 && currentPosition < feedItems.size()) {
             for (int i = 0; i < adapter.getItemCount(); i++) {
                 RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, i);
-                releaseHolder(holder);
+                if (holder instanceof VideoViewHolder) {
+                    VideoViewHolder vvh = (VideoViewHolder) holder;
+                    if (i == currentPosition && vvh.getVideo() != null) {
+                        long pos = vvh.getCurrentPositionMs();
+                        boolean wasPlaying = vvh.isCurrentlyPlaying();
+                        if (wasPlaying) {
+                            wasPlayingBeforePause = true;
+                        }
+                        ExoPlayer saved = vvh.takePlayer();
+                        homeStateViewModel.savePlayer(saved, vvh.getVideo().getId(), pos);
+                        homeStateViewModel.saveVideoPlaybackState(
+                                vvh.getVideo().getId(), pos, wasPlayingBeforePause);
+                    } else {
+                        vvh.release();
+                    }
+                }
             }
         }
         if (viewPager != null) {
@@ -108,27 +127,57 @@ public class FeedFragment extends Fragment {
                 });
                 adapter.setLiveCardClickListener(this::openLiveRoom);
                 viewPager.setAdapter(adapter);
+
+                // Wire restore info from ViewModel before binding
+                int savedPosition = homeStateViewModel != null
+                        ? homeStateViewModel.getFeedPosition()
+                        : currentPosition;
+                currentPosition = Math.min(savedPosition, feedItems.size() - 1);
+                FeedItem restoreItem = feedItems.get(currentPosition);
+                if (restoreItem != null && restoreItem.getVideo() != null
+                        && homeStateViewModel != null) {
+                    // Phase 2: reattach saved player (no cover flash)
+                    if (homeStateViewModel.hasSavedPlayer()
+                            && restoreItem.getVideo().getId().equals(
+                                    homeStateViewModel.getSavedPlayerVideoId())) {
+                        adapter.setSavedPlayer(
+                                homeStateViewModel.takePlayer(restoreItem.getVideo().getId()),
+                                restoreItem.getVideo().getId(),
+                                homeStateViewModel.getSavedPlayerPositionMs());
+                    }
+                    // Phase 1 fallback: seek-based recovery
+                    else if (restoreItem.getVideo().getId().equals(
+                            homeStateViewModel.getSavedVideoId())) {
+                        adapter.setRestoreInfo(
+                                restoreItem.getVideo().getId(),
+                                homeStateViewModel.getSavedPlaybackPositionMs());
+                    }
+                }
+
                 adapter.setItems(feedItems);
             } else if (itemList.size() > feedItems.size()) {
                 List<FeedItem> newItems = itemList.subList(feedItems.size(), itemList.size());
                 feedItems = itemList;
                 adapter.addItems(newItems);
                 return;
+            } else if (itemList.size() == feedItems.size()) {
+                // Same size = same feed, skip rebind to preserve external player
+                return;
             } else {
                 feedItems = itemList;
                 adapter.setItems(feedItems);
             }
 
-            int savedPosition = homeStateViewModel != null
-                    ? homeStateViewModel.getFeedPosition()
-                    : currentPosition;
-            currentPosition = Math.min(savedPosition, feedItems.size() - 1);
             viewPager.setCurrentItem(currentPosition, false);
 
             loadingView.setVisibility(View.GONE);
             errorView.setVisibility(View.GONE);
 
             viewPager.post(() -> {
+                if (homeStateViewModel != null && !homeStateViewModel.isSavedPlaying()) {
+                    lastPlayingPosition = currentPosition;
+                    return;
+                }
                 playHolderAt(currentPosition);
                 lastPlayingPosition = currentPosition;
             });
@@ -211,15 +260,10 @@ public class FeedFragment extends Fragment {
         }
     }
 
-    private void releaseHolder(RecyclerView.ViewHolder holder) {
-        if (holder instanceof VideoViewHolder) {
-            ((VideoViewHolder) holder).release();
-        }
-    }
-
     @Override
     public void onResume() {
         super.onResume();
+        wasPlayingBeforePause = true;
         if (feedItems.isEmpty()) {
             viewModel.loadVideos();
         } else {
@@ -230,6 +274,17 @@ public class FeedFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
+        capturePlayStateBeforePause();
         pauseCurrentVideo();
+    }
+
+    private void capturePlayStateBeforePause() {
+        if (adapter != null && recyclerView != null
+                && currentPosition >= 0 && currentPosition < feedItems.size()) {
+            RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, currentPosition);
+            if (holder instanceof VideoViewHolder) {
+                wasPlayingBeforePause = ((VideoViewHolder) holder).isCurrentlyPlaying();
+            }
+        }
     }
 }

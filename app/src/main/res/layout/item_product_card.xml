@@ -93,6 +93,20 @@
                 android:textColor="#999999"
                 android:textSize="10sp"
                 android:text="库存充足" />
+
+            <!-- Intro button -->
+            <TextView
+                android:id="@+id/product_intro_btn"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_intro_btn"
+                android:text="介绍"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true" />
         </LinearLayout>
     </LinearLayout>
 
