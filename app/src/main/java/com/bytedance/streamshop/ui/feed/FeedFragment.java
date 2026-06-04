@@ -1,5 +1,6 @@
 package com.bytedance.streamshop.ui.feed;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,10 +16,12 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.domain.model.FeedItem;
+import com.bytedance.streamshop.ui.live.LiveRoomActivity;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class FeedFragment extends Fragment {
     private ViewPager2 viewPager;
@@ -30,11 +33,6 @@ public class FeedFragment extends Fragment {
     private List<FeedItem> feedItems = new ArrayList<>();
     private int currentPosition = 0;
     private int lastPlayingPosition = -1;
-    private LiveTabSwitchListener liveTabSwitchListener;
-
-    public void setLiveTabSwitchListener(LiveTabSwitchListener listener) {
-        this.liveTabSwitchListener = listener;
-    }
 
     @Nullable
     @Override
@@ -103,11 +101,7 @@ public class FeedFragment extends Fragment {
                         viewPager.setCurrentItem(nextPos, true);
                     }
                 });
-                adapter.setLiveCardClickListener(room -> {
-                    if (liveTabSwitchListener != null) {
-                        liveTabSwitchListener.onSwitchToLiveTab();
-                    }
-                });
+                adapter.setLiveCardClickListener(this::openLiveRoom);
                 viewPager.setAdapter(adapter);
                 adapter.setItems(feedItems);
             } else if (itemList.size() > feedItems.size()) {
@@ -153,6 +147,17 @@ public class FeedFragment extends Fragment {
         });
 
         viewModel.loadVideos();
+    }
+
+    private void openLiveRoom(Map<String, Object> room) {
+        if (room == null || getActivity() == null) return;
+        Object id = room.get("id");
+        String roomId = id != null ? String.valueOf(id) : "";
+        if (roomId.isEmpty()) return;
+
+        Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
+        intent.putExtra("room_id", roomId);
+        startActivity(intent);
     }
 
     private void onFeedPageSelected(int position) {

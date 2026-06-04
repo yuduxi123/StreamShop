@@ -39,7 +39,7 @@ public class HomeContainerFragment extends Fragment {
         viewPager.setAdapter(new HomeTabAdapter(this));
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            tab.setText(position == 0 ? "视频" : "直播");
+            tab.setText(position == 0 ? "推荐" : "直播");
         }).attach();
     }
 
@@ -58,9 +58,7 @@ public class HomeContainerFragment extends Fragment {
         @Override
         public Fragment createFragment(int position) {
             if (position == 0) {
-                FeedFragment feedFragment = new FeedFragment();
-                feedFragment.setLiveTabSwitchListener(() -> switchToLiveTab());
-                return feedFragment;
+                return new FeedFragment();
             }
             return new LiveListFragment();
         }
