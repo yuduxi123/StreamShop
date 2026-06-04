@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AnchorLiveActivity extends AppCompatActivity implements ConnectCheckerRtmp {
+    private static final String TAG = "AnchorLive";
 
     private String roomId;
     private String roomTitle;
@@ -82,6 +83,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
 
         serverIp = extractServerIp();
         rtmpUrl = "rtmp://" + serverIp + ":1935/live/" + roomId;
+        Log.d(TAG, "RTMP publish url: " + rtmpUrl);
 
         initViews();
         loadRoomProducts();
@@ -115,6 +117,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         if (roomTitle != null && !roomTitle.isEmpty()) {
             roomTitleView.setText(roomTitle);
         }
+        statusBadge.setText("连接中");
 
         findViewById(R.id.anchor_back_btn).setOnClickListener(v -> showEndConfirmDialog());
 
@@ -151,6 +154,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
 
         connectingOverlay.setVisibility(View.VISIBLE);
         connectingText.setText("正在准备摄像头...");
+        statusBadge.setText("连接中");
 
         try {
             rtmpCamera1 = new RtmpCamera1(cameraPreview, this);
@@ -165,7 +169,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 finish();
             }
         } catch (Exception e) {
-            Log.e("AnchorLive", "startStreaming failed", e);
+            Log.e(TAG, "startStreaming failed", e);
             Toast.makeText(this, "启动摄像头失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
             finish();
         }
@@ -173,28 +177,27 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
 
     @Override
     public void onConnectionStartedRtmp(String rtmpUrl) {
+        Log.d(TAG, "RTMP connection started: " + rtmpUrl);
         runOnUiThread(() -> connectingText.setText("正在连接..."));
     }
 
     @Override
     public void onConnectionSuccessRtmp() {
+        Log.d(TAG, "RTMP connection success");
         runOnUiThread(() -> {
             connectingOverlay.setVisibility(View.GONE);
-            statusBadge.setText("直播中");
+            statusBadge.setText("推流中");
             isStreaming = true;
             Toast.makeText(this, "直播已开始", Toast.LENGTH_SHORT).show();
-
-            new Thread(() -> {
-                try {
-                    apiService.startLiveRoom(roomId);
-                } catch (Exception ignored) {}
-            }).start();
         });
+        syncLiveStarted();
     }
 
     @Override
     public void onConnectionFailedRtmp(String reason) {
+        Log.e(TAG, "RTMP connection failed: " + reason);
         runOnUiThread(() -> {
+            statusBadge.setText("连接失败");
             connectingText.setText("连接失败，重试中...");
             Toast.makeText(this, "推流连接失败: " + reason, Toast.LENGTH_LONG).show();
         });
@@ -212,6 +215,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
 
     @Override
     public void onDisconnectRtmp() {
+        Log.d(TAG, "RTMP disconnected");
         runOnUiThread(() -> {
             isStreaming = false;
             statusBadge.setText("已断开");
@@ -237,6 +241,23 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 }
                 runOnUiThread(() -> productAdapter.notifyDataSetChanged());
             } catch (Exception ignored) {}
+        }).start();
+    }
+
+    private void syncLiveStarted() {
+        new Thread(() -> {
+            try {
+                Map<String, Object> room = apiService.startLiveRoom(roomId);
+                Object streamUrl = room != null ? room.get("streamUrl") : null;
+                Log.d(TAG, "Live room start synced, streamUrl=" + streamUrl);
+                runOnUiThread(() -> statusBadge.setText("直播中"));
+            } catch (Exception e) {
+                Log.e(TAG, "Start live room failed", e);
+                runOnUiThread(() -> {
+                    statusBadge.setText("同步失败");
+                    Toast.makeText(this, "直播状态同步失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
         }).start();
     }
 

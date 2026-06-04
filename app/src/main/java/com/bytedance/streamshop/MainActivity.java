@@ -8,7 +8,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
+import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.bytedance.streamshop.databinding.ActivityMainBinding;
@@ -26,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        applyStatusBarInset();
 
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
@@ -65,8 +70,35 @@ public class MainActivity extends AppCompatActivity {
         selectTab(0);
     }
 
+    private void applyStatusBarInset() {
+        final int initialLeft = binding.navHostFragment.getPaddingLeft();
+        final int initialTop = binding.navHostFragment.getPaddingTop();
+        final int initialRight = binding.navHostFragment.getPaddingRight();
+        final int initialBottom = binding.navHostFragment.getPaddingBottom();
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.navHostFragment, (view, insets) -> {
+            Insets statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
+            view.setPadding(initialLeft, initialTop + statusBars.top, initialRight, initialBottom);
+            return insets;
+        });
+    }
+
     private void selectTab(int index) {
-        navController.navigate(tabDestIds[index][0]);
+        int destinationId = tabDestIds[index][0];
+        if (navController.getCurrentDestination() != null
+                && navController.getCurrentDestination().getId() == destinationId) {
+            for (int i = 0; i < tabs.length; i++) {
+                updateTabStyle(i, i == index);
+            }
+            return;
+        }
+
+        NavOptions navOptions = new NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setRestoreState(true)
+                .setPopUpTo(navController.getGraph().getStartDestinationId(), false, true)
+                .build();
+        navController.navigate(destinationId, null, navOptions);
         for (int i = 0; i < tabs.length; i++) {
             updateTabStyle(i, i == index);
         }

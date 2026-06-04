@@ -1,5 +1,6 @@
 import NodeMediaServer from 'node-media-server';
 import { StorageService } from './services/storage.service';
+import { buildLiveStreamUrl } from './routes/live.logic';
 
 interface LiveRoomData {
   id: string;
@@ -59,10 +60,9 @@ export function createMediaServer(serverIp: string): NodeMediaServer {
     console.log(`[MediaServer] Stream started: roomId=${roomId}, path=${session?.streamPath}`);
 
     if (roomId) {
-      const flvUrl = `http://${serverIp}:8000/live/${roomId}.flv`;
       liveStorage.update(roomId, {
         status: 'live',
-        streamUrl: flvUrl,
+        streamUrl: buildLiveStreamUrl(serverIp, roomId),
       });
     }
   });

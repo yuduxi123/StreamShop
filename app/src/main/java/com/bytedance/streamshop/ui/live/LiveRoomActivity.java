@@ -1,7 +1,10 @@
 package com.bytedance.streamshop.ui.live;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,6 +43,10 @@ import java.util.Locale;
 import java.util.Map;
 
 public class LiveRoomActivity extends AppCompatActivity {
+    private static final String TAG = "LiveRoomActivity";
+    private static final int STREAM_RETRY_DELAY_MS = 2000;
+    private static final int MAX_STREAM_RETRY_COUNT = 10;
+
     private String roomId;
     private String userId = "1d552fd0-fd85-4952-a0cc-edb4fd674ed5"; // default user
     private String username = "test_user";
@@ -49,6 +56,7 @@ public class LiveRoomActivity extends AppCompatActivity {
     private LiveWebSocketClient wsClient;
     private ApiService apiService;
     private TextView onlineCountText, hotValueText, roomTitle;
+    private TextView streamPlaceholder;
     private EditText inputView;
     private RecyclerView productList;
     private ProductAdapter productAdapter;
@@ -56,6 +64,9 @@ public class LiveRoomActivity extends AppCompatActivity {
 
     private final List<Map<String, Object>> products = new ArrayList<>();
     private NumberFormat priceFmt = NumberFormat.getNumberInstance(Locale.CHINA);
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private int streamRetryCount = 0;
+    private boolean streamLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +95,7 @@ public class LiveRoomActivity extends AppCompatActivity {
         roomTitle = findViewById(R.id.live_room_title);
         onlineCountText = findViewById(R.id.live_online_count);
         hotValueText = findViewById(R.id.live_hot_value);
+        streamPlaceholder = findViewById(R.id.live_stream_placeholder);
         inputView = findViewById(R.id.live_input);
         danmakuView = findViewById(R.id.live_danmaku_view);
         couponContainer = findViewById(R.id.live_coupon_container);
@@ -117,20 +129,30 @@ public class LiveRoomActivity extends AppCompatActivity {
         player.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(androidx.media3.common.PlaybackException error) {
-                runOnUiThread(() -> Toast.makeText(LiveRoomActivity.this, "视频加载失败，请检查网络", Toast.LENGTH_SHORT).show());
+                Log.e(TAG, "Live stream playback failed", error);
+                runOnUiThread(() -> {
+                    showStreamPlaceholder("直播画面加载失败");
+                    Toast.makeText(LiveRoomActivity.this, "视频加载失败，请检查网络", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                if (playbackState == Player.STATE_READY) {
+                    runOnUiThread(() -> hideStreamPlaceholder());
+                }
             }
         });
     }
 
     private void playStream(String streamUrl) {
         if (streamUrl == null || streamUrl.isEmpty()) {
-            // Fallback to a sample video when no stream
-            String fallbackUrl = "https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4";
-            MediaItem mediaItem = MediaItem.fromUri(fallbackUrl);
-            player.setMediaItem(mediaItem);
-            player.prepare();
+            showStreamPlaceholder("直播画面未接入");
             return;
         }
+        streamLoaded = true;
+        showStreamPlaceholder("正在加载直播画面...");
+        Log.d(TAG, "Playing live stream: " + streamUrl);
         MediaItem mediaItem = MediaItem.fromUri(streamUrl);
         player.setMediaItem(mediaItem);
         player.prepare();
@@ -152,9 +174,36 @@ public class LiveRoomActivity extends AppCompatActivity {
                     if (title != null) roomTitle.setText(title);
                     playStream(streamUrl);
                     productAdapter.notifyDataSetChanged();
+                    if (TextUtils.isEmpty(streamUrl)) {
+                        scheduleStreamRetry();
+                    }
                 });
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.e(TAG, "Load live room detail failed", e);
+            }
         }).start();
+    }
+
+    private void scheduleStreamRetry() {
+        if (streamLoaded || streamRetryCount >= MAX_STREAM_RETRY_COUNT) return;
+        streamRetryCount++;
+        showStreamPlaceholder("等待直播画面接入...");
+        mainHandler.postDelayed(() -> {
+            if (!streamLoaded) {
+                loadRoomDetail();
+            }
+        }, STREAM_RETRY_DELAY_MS);
+    }
+
+    private void showStreamPlaceholder(String message) {
+        if (streamPlaceholder == null) return;
+        streamPlaceholder.setText(message);
+        streamPlaceholder.setVisibility(View.VISIBLE);
+    }
+
+    private void hideStreamPlaceholder() {
+        if (streamPlaceholder == null) return;
+        streamPlaceholder.setVisibility(View.GONE);
     }
 
     private void connectWebSocket() {
@@ -289,6 +338,7 @@ public class LiveRoomActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        mainHandler.removeCallbacksAndMessages(null);
         if (player != null) { player.stop(); player.release(); player = null; }
         if (wsClient != null) wsClient.disconnect();
     }

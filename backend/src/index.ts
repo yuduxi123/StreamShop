@@ -65,18 +65,24 @@ app.get('/api/health', (_req, res) => {
 
 // Get local IP for media server URLs
 function getLocalIp(): string {
+  const candidates: string[] = [];
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name] || []) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+        candidates.push(iface.address);
       }
     }
   }
-  return 'localhost';
+
+  const preferred = candidates.find(address => address.startsWith('10.'))
+    || candidates.find(address => address.startsWith('192.168.'))
+    || candidates.find(address => /^172\.(1[6-9]|2\d|3[0-1])\./.test(address));
+  return preferred || candidates[0] || 'localhost';
 }
 
 const localIp = process.env.SERVER_IP || getLocalIp();
+app.locals.serverIp = localIp;
 const mediaServer = createMediaServer(localIp);
 
 const PORT = process.env.PORT || 3000;

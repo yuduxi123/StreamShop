@@ -1,5 +1,6 @@
 package com.bytedance.streamshop.ui.feed;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,10 +16,12 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.domain.model.FeedItem;
+import com.bytedance.streamshop.ui.live.LiveRoomActivity;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class FeedFragment extends Fragment {
     private ViewPager2 viewPager;
@@ -26,15 +29,11 @@ public class FeedFragment extends Fragment {
     private CircularProgressIndicator loadingView;
     private TextView errorView;
     private FeedViewModel viewModel;
+    private HomeStateViewModel homeStateViewModel;
     private FeedPagerAdapter adapter;
     private List<FeedItem> feedItems = new ArrayList<>();
     private int currentPosition = 0;
     private int lastPlayingPosition = -1;
-    private LiveTabSwitchListener liveTabSwitchListener;
-
-    public void setLiveTabSwitchListener(LiveTabSwitchListener listener) {
-        this.liveTabSwitchListener = listener;
-    }
 
     @Nullable
     @Override
@@ -46,12 +45,16 @@ public class FeedFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        homeStateViewModel = new ViewModelProvider(requireActivity()).get(HomeStateViewModel.class);
         initViews(view);
         setupViewModel();
     }
 
     @Override
     public void onDestroyView() {
+        if (homeStateViewModel != null) {
+            homeStateViewModel.setFeedPosition(currentPosition);
+        }
         if (adapter != null) {
             for (int i = 0; i < adapter.getItemCount(); i++) {
                 RecyclerView.ViewHolder holder = adapter.getViewHolderAt(recyclerView, i);
@@ -103,11 +106,7 @@ public class FeedFragment extends Fragment {
                         viewPager.setCurrentItem(nextPos, true);
                     }
                 });
-                adapter.setLiveCardClickListener(room -> {
-                    if (liveTabSwitchListener != null) {
-                        liveTabSwitchListener.onSwitchToLiveTab();
-                    }
-                });
+                adapter.setLiveCardClickListener(this::openLiveRoom);
                 viewPager.setAdapter(adapter);
                 adapter.setItems(feedItems);
             } else if (itemList.size() > feedItems.size()) {
@@ -120,7 +119,10 @@ public class FeedFragment extends Fragment {
                 adapter.setItems(feedItems);
             }
 
-            currentPosition = Math.min(currentPosition, feedItems.size() - 1);
+            int savedPosition = homeStateViewModel != null
+                    ? homeStateViewModel.getFeedPosition()
+                    : currentPosition;
+            currentPosition = Math.min(savedPosition, feedItems.size() - 1);
             viewPager.setCurrentItem(currentPosition, false);
 
             loadingView.setVisibility(View.GONE);
@@ -155,6 +157,17 @@ public class FeedFragment extends Fragment {
         viewModel.loadVideos();
     }
 
+    private void openLiveRoom(Map<String, Object> room) {
+        if (room == null || getActivity() == null) return;
+        Object id = room.get("id");
+        String roomId = id != null ? String.valueOf(id) : "";
+        if (roomId.isEmpty()) return;
+
+        Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
+        intent.putExtra("room_id", roomId);
+        startActivity(intent);
+    }
+
     private void onFeedPageSelected(int position) {
         if (adapter == null) return;
         if (lastPlayingPosition >= 0 && lastPlayingPosition != position) {
@@ -163,6 +176,9 @@ public class FeedFragment extends Fragment {
         playHolderAt(position);
         lastPlayingPosition = position;
         currentPosition = position;
+        if (homeStateViewModel != null) {
+            homeStateViewModel.setFeedPosition(position);
+        }
 
         if (position >= feedItems.size() - 2) {
             viewModel.loadMore();

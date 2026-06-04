@@ -3,6 +3,7 @@ import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from '../websocket/wsServer';
+import { resolveLiveStartUpdates } from './live.logic';
 
 interface LiveRoomData {
   id: string;
@@ -35,6 +36,10 @@ const router = Router();
 
 function getWss(req: Request): WebSocketServer {
   return req.app.locals.wss as WebSocketServer;
+}
+
+function getServerIp(req: Request): string {
+  return (req.app.locals.serverIp as string) || req.hostname;
 }
 
 // GET /api/live/rooms?anchorId=&page=&limit=
@@ -133,7 +138,7 @@ router.post('/rooms/:id/start', authMiddleware, (req: AuthRequest, res: Response
     res.status(403).json({ error: 'Forbidden' });
     return;
   }
-  const updated = liveStorage.update(id, { status: 'live', onlineCount: 0, likeCount: 0 });
+  const updated = liveStorage.update(id, resolveLiveStartUpdates(getServerIp(req), room));
   if (!updated) {
     res.status(404).json({ error: 'Live room not found' });
     return;
