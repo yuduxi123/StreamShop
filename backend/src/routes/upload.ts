@@ -46,7 +46,8 @@ router.post('/', authMiddleware, upload.single('file'), (req: AuthRequest, res: 
     res.status(400).json({ error: 'No file uploaded' });
     return;
   }
-  const url = `http://10.17.24.7:3000/uploads/${file.filename}`;
+  const host = req.get('host') || 'localhost:3000';
+  const url = `${req.protocol}://${host}/uploads/${file.filename}`;
   res.json({ url, filename: file.filename, size: file.size });
 });
 
