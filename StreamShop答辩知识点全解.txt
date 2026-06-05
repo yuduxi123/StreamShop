@@ -1,4 +1,4 @@
-================================================================================
+﻿================================================================================
         StreamShop 直播电商APP — 答辩知识点完全讲解
 ================================================================================
 
@@ -238,12 +238,32 @@ StreamShop 是一个仿抖音风格的短视频直播电商平台，包含三个
     - 播放时显示 2 秒播放图标动画后隐藏
     - 暂停时显示半透明暂停图标
 
-4.4 商品卡片展示（VideoViewHolder 中的产品卡片）
+4.4 商品卡片展示与视频时间点绑定（VideoViewHolder 中的产品卡片）
 
   每个视频可以绑定多个商品，在视频中显示为横向卡片：
     - 卡片包含：商品缩略图、标题、现价、原价（划线）、折扣率
+    - 卡片底部有橙色"介绍"按钮
     - 点击卡片 → 弹出 ProductDetailBottomSheetFragment
     - 弹窗中有三个按钮：立即购买 / 加入购物车 / 收藏
+
+  商品-视频时间点绑定（核心新功能）：
+    - 商家发布视频时，可为每个商品设置绑定的时间点（mm:ss 格式输入）
+    - 点击商品卡片"介绍"按钮 → 视频 seekTo 到绑定时间点 → Toast 显示商品名
+    - 进度条上显示白色圆点（DotSeekBar 自定义 View）标记时间位置
+    - 拖拽进度条到打点附近（3% 时长阈值）自动吸附到最近商品时间点
+    - 历史商品无时间点则按视频时长均匀分布：
+      - 1 个商品 → 视频中心点（50%）
+      - 2 个商品 → 三等分点的第 1、第 2 个（33%、67%）
+      - N 个商品 → duration × (i+1) / (N+1)
+
+  技术实现：
+    - DotSeekBar.java：继承 AppCompatSeekBar，onDraw() 用 Canvas 画白色圆点
+    - VideoViewHolder 新增方法：
+      - getEffectiveTimestamp() → 有 timestampMs 用原值，否则计算默认位置
+      - updateProgressDots() → 计算所有商品的时间比例，设置到 DotSeekBar
+      - findNearProduct() → 3% 时长阈值内找最近商品，实现拖拽吸附
+    - Toast 使用自定义 View（纯文本无图标），白字深灰背景
+    - 后端 VideoProduct 接口添加 timestampMs 字段，feed.logic.ts + video.ts 注入
 
 4.5 ViewPager2 垂直滑动（FeedFragment）
 
@@ -692,6 +712,37 @@ Q9: 即时通讯怎么实现？
 Q10: 管理后台用的什么技术？
    答：React 19 + TypeScript + Vite + React Router，
        调用和 Android 相同的 REST API。
+
+Q11: 商品-视频时间点绑定怎么实现的？
+  答：这是一个完整的全链路功能——后端存储、Android 展示和交互。
+
+  数据层：VideoProduct 表加 timestampMs 字段（毫秒），
+  bind-video 端点接收并存储，feed 和 video 的 GET 端点注入到 product 对象。
+
+  UI 层：
+    - 商家发布视频时，每个商品可填 mm:ss 格式的时间点
+    - 用户端商品卡片上有橙色"介绍"按钮，点击 → 视频跳转到绑定时间点
+    - 进度条上白色圆点（DotSeekBar 自定义 View，Canvas 画圆）标记位置
+    - 拖拽进度条到打点 3% 时长范围内自动吸附 + Toast 显示商品名
+
+  兼容性：历史商品 timestampMs=0 → 按 videoDuration × (i+1)/(N+1) 均匀分布
+
+  关键技术点：
+    - DotSeekBar 继承 AppCompatSeekBar，onDraw() 画圆
+    - findNearProduct() 遍历所有商品找最近打点（threshold = max(3%×duration, 500ms)）
+    - Toast 用自定义纯文本 View（避免国产 ROM 显示 App 图标）
+
+Q12: 商品卡片吸附滚动和 Touch 冲突怎么解决的？
+  答：两个问题有因果关系——
+
+  吸附：PagerSnapHelper 默认居中对齐，导致卡片露出半边。
+  解决：自定义 StartSnapHelper，左边缘对齐，每页恰好 2 张完整卡片。
+
+  Touch 冲突：商品卡片左右滑会触发外层 ViewPager2 切 Tab。
+  最终方案：ACTION_DOWN 立刻 requestDisallowInterceptTouchEvent(true)，
+  区域内所有水平滑动都归商品卡片控制；ACTION_UP/CANCEL 恢复。
+  同时把 LayoutManager + SnapHelper + OnTouchListener 初始化移到构造函数，
+  避免每次 bind() 重复创建导致 "OnFlingListener already set" 崩溃。
 
 ================================================================================
                           — 全文完 —

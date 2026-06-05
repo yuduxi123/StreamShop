@@ -1,10 +1,10 @@
-================================================================================
+﻿================================================================================
   StreamShop 项目 — 全部问题与解决方案汇总
-  整理日期: 2026-06-03
+  整理日期: 2026-06-05
   项目路径: D:\AndriodProjects\StreamShop
 ================================================================================
 
-本文档记录了从项目启动至今（6个迭代）遇到的所有技术问题、Bug及其完整解决方案。
+本文档记录了从项目启动至今（7个迭代）遇到的所有技术问题、Bug及其完整解决方案。
 每个问题包含：问题描述、根本原因、解决思路、具体代码修改。
 
 ================================================================================
@@ -1441,5 +1441,180 @@ Tab 间通信:
    - 或注册新账号（手机号 11 位，密码需含字母和数字）
 
 ================================================================================
-  全文完 — 共计 34 个问题，覆盖 6 个开发迭代
+十二、第 7 迭代新增问题（商品-视频时间点绑定 + 播放器保活 + 吸附滚动）
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 35: 商品卡片吸附不完整 — 显示半个卡片
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+商品卡片的 RecyclerView 使用 PagerSnapHelper 时，吸附状态停在
+"第一个商品窗一半 + 第二个完整 + 第三个一半"的状态，不能完整展示
+2 张商品卡片。
+
+【根本原因】
+PagerSnapHelper 默认将 item 的 center 对齐到 RecyclerView 的 center。
+由于 RecyclerView 宽度（232dp）和各 item 宽度（110dp + 6dp margin）
+的关系，居中对齐会导致两端露出相邻 item 的一半。
+
+【解决思路】
+创建自定义 StartSnapHelper，将 item 的左边缘对齐到 RecyclerView 的左边缘：
+  - findSnapView(): 找到第一个完全可见的 item，如果被遮挡超过一半则选下一个
+  - calculateDistanceToFinalSnap(): 计算目标 item 左边缘到 RV 左边缘的距离
+  - findTargetSnapPosition(): 处理 fling 惯性滑动，每次固定前进/后退一页
+
+Page 宽度 = 两张卡的宽度（110 + 6 = 116dp × 2 = 232dp），恰好 2 张完整卡片。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java（StartSnapHelper 内部类）
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 36: 首页滑动商品卡片时误切到消息栏/直播页
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+在首页视频中左右滑动商品卡片时，ViewPager2（home_tab_pager）或外层
+RecyclerView 会拦截触摸事件，导致滑动商品卡片变成了切换 Tab 或视频。
+
+【根本原因】
+Android 触摸事件分发链：父 View（ViewPager2）→ 子 View（商品 RecyclerView）。
+父 View 的 onInterceptTouchEvent 在检测到水平滑动时会拦截事件。
+用户手指在商品卡片区域滑动时，父 ViewPager2 先抢走了事件。
+
+【解决思路—多次迭代】
+方案 1：ACTION_MOVE 中检测 dx > dy 时设置 disallow → 太晚了，父 View 已经拦截
+方案 2：用 disallowSet 标志防重复 → RecyclerView 内部的 disallow 调用被覆盖
+最终方案：用户明确要求——"只要左右滑动位置在商品浮窗区域，就控制商品浮窗"
+  - ACTION_DOWN → 立即调用 requestDisallowInterceptTouchEvent(true)
+  - ACTION_UP/CANCEL → 恢复为 false
+  - 不需要方向检测，区域内所有滑动都属于商品卡片
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 37: Profile 页面点击视频后 App 闪退
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+在"我的"页面点击视频进入全屏播放时 App 闪退，Logcat 报错：
+"IllegalStateException: An instance of OnFlingListener already set."
+
+【根本原因】
+setupProductCards() 在每次 bind() 时被调用，每次都：
+  1. 创建新的 StartSnapHelper
+  2. 调用 snapHelper.attachToRecyclerView(productContainer)
+而 RecyclerView 只允许设置一个 OnFlingListener，重复 attach 就抛异常。
+
+【解决思路】
+将一次性初始化操作从 setupProductCards() 移到构造函数中：
+  - LayoutManager（LinearLayoutManager HORIZONTAL）
+  - SnapHelper（StartSnapHelper）
+  - OnTouchListener（requestDisallowInterceptTouchEvent）
+构造函数只在 ViewHolder 创建时执行一次，后续 bind() 只更新数据。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 38: 播放器状态保活 — Tab 切换后视频从头开始播放
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+用户在首页视频 Tab 和直播 Tab 之间切换时，视频会丢失播放进度，
+切换回来后从头开始播放。Activity 重建时（如旋转屏幕）也会丢失。
+
+【根本原因】
+Fragment 在 Tab 切换时会被销毁（onDestroyView），其中的 ExoPlayer
+实例也一并被释放。每次重新创建 Fragment 都需要新建 ExoPlayer 并从头播放。
+
+【解决思路】
+通过 HomeStateViewModel 在 Fragment 销毁前保存播放器状态：
+  1. VideoViewHolder.takePlayer() → 从 PlayerView 取出 ExoPlayer
+     → 传给 FeedPagerAdapter → 存入 HomeStateViewModel
+  2. Fragment 重建时 → 从 HomeStateViewModel 取出 ExoPlayer
+     → VideoViewHolder.useExistingPlayer(existingPlayer, positionMs)
+  3. useExistingPlayer 将外部播放器绑定到新的 PlayerView，保持位置
+
+关键技术点：
+  - takePlayer() 中调用 playerView.setPlayer(null) 解绑
+  - useExistingPlayer 中调用 playerView.setPlayer(existingPlayer) 重新绑定
+  - hasExternalPlayer 标志防止重复创建
+  - playerIsExternal 标志防止释放不属于当前 ViewHolder 的播放器
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/feed/HomeStateViewModel.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/VideoViewHolder.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedPagerAdapter.java
+- app/src/main/java/com/bytedance/streamshop/ui/feed/FeedFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 39: 商品-视频时间点绑定 — 完整功能实现
+═══════════════════════════════════════════════════════════════════════════════
+
+【需求描述】
+商家发布视频时可绑定商品到视频的特定时间点。用户在主页点击商品卡片
+"介绍"按钮或拖拽进度条到打点位置时，视频跳转到绑定时间点并显示商品名称。
+历史商品无时间点则按视频时长均匀分布。
+
+【数据流】
+后端 seed/API → video_products.json 存 timestampMs
+  → feed.logic.ts / video.ts GET 端点把 binding.timestampMs 注入 product 对象
+    → Android Gson 反序列化 → Product.timestampMs
+      → VideoViewHolder：计算打点位置 + 处理跳转
+
+【实现细节】
+1. 后端（4 个文件）：
+   - product.ts：VideoProduct 接口加 timestampMs，bind-video 端点接受并存储
+   - feed.logic.ts：buildFeedItems 把 timestampMs 注入 product
+   - video.ts：两个 GET 端点注入 timestampMs
+   - seed.ts：所有 seed 数据加 timestampMs: 0
+
+2. Android（7 个文件）：
+   - Product.java：加 timestampMs 字段 + getter/setter
+   - DotSeekBar.java（新建）：继承 AppCompatSeekBar，onDraw 画白色圆点
+   - fragment_video_page.xml：SeekBar → DotSeekBar
+   - item_product_card.xml：加"介绍"按钮（bg_intro_btn.xml 橙色背景）
+   - activity_video_edit.xml：加时间点输入（mm:ss 格式）
+   - VideoEditActivity.java：PendingProduct 加 timestampMs，
+     addProduct() 解析 mm:ss，save() 传给 bindVideoToProduct()
+   - VideoViewHolder.java：核心逻辑
+     - setupProductCards() 末尾调 updateProgressDots()
+     - ProductCardAdapter.VH 加 introButton，点击 → seekTo + Toast + 恢复播放
+     - onStopTrackingTouch 改为检测附近产品打点，吸附并 Toast
+     - 新增 findNearProduct()、getEffectiveTimestamp()（2 个重载）、updateProgressDots()
+     - Toast 用自定义 View（showPlainToast），纯文本无图标
+
+3. ApiService.bindVideoToProduct() 签名增加 timestampMs 参数
+
+【涉及文件】
+- backend/src/routes/product.ts, feed.logic.ts, video.ts, seed.ts
+- app/.../domain/model/Product.java
+- app/.../ui/feed/DotSeekBar.java（新建）
+- app/.../res/drawable/bg_intro_btn.xml（新建）
+- app/.../res/layout/fragment_video_page.xml, item_product_card.xml
+- app/.../res/layout/activity_video_edit.xml, item_edit_product.xml
+- app/.../ui/feed/VideoViewHolder.java
+- app/.../ui/profile/VideoEditActivity.java
+- app/.../data/remote/ApiService.java
+
+================================================================================
+附录 D: 第 7 迭代技术决策记录
+================================================================================
+
+1. DotSeekBar 圆点颜色选择
+   选择：白色（0xFFFFFFFF）
+   原因：用户反馈橙色圆点不美观，白色圆点在深色进度条背景上更协调
+
+2. Toast 自定义 View
+   选择：不使用 Toast.makeText()，改用自定义纯文本 View
+   原因：部分国产 ROM 会在 Toast 上显示 App 图标，自定义 View 完全可控
+
+3. 商品默认时间点分布算法
+   选择：duration × (index + 1) / (totalCount + 1)
+   原因：N 个商品均匀分布在视频的 N+1 等分点上，避免端点
+
+================================================================================
+  全文完 — 共计 39 个问题，覆盖 7 个开发迭代
 ================================================================================
