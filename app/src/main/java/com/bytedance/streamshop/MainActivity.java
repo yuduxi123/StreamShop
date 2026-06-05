@@ -8,9 +8,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
@@ -30,7 +27,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        applyStatusBarInset();
 
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
@@ -68,19 +64,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         selectTab(0);
-    }
-
-    private void applyStatusBarInset() {
-        final int initialLeft = binding.navHostFragment.getPaddingLeft();
-        final int initialTop = binding.navHostFragment.getPaddingTop();
-        final int initialRight = binding.navHostFragment.getPaddingRight();
-        final int initialBottom = binding.navHostFragment.getPaddingBottom();
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.navHostFragment, (view, insets) -> {
-            Insets statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
-            view.setPadding(initialLeft, initialTop + statusBars.top, initialRight, initialBottom);
-            return insets;
-        });
     }
 
     private void selectTab(int index) {
