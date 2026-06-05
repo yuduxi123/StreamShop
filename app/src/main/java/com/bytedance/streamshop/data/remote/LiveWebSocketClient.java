@@ -19,7 +19,7 @@ public class LiveWebSocketClient {
     private static final String TAG = "LiveWS";
     // 雷电模拟器不支持 10.0.2.2，用电脑局域网 IP
     // 如果换了 WiFi 导致 IP 变化，需要同步修改这里
-    private static final String WS_URL = "ws://10.208.69.9:3000/ws";
+    private static final String WS_URL = "ws://10.17.24.7:3000/ws";
     private static final int MAX_RETRY = 10;
 
     private final OkHttpClient client;
