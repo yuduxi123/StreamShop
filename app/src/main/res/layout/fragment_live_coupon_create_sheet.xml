@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1A1A1A"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/coupon_create_title"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:text="发布优惠券"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Coupon name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="优惠券名称"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/coupon_create_name"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_input_round"
+            android:hint="例如：全场满100减20"
+            android:textSize="13sp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#666"
+            android:paddingHorizontal="12dp"
+            android:maxLines="1" />
+
+        <!-- Type -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="优惠类型"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <RadioGroup
+            android:id="@+id/coupon_create_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+            <RadioButton
+                android:id="@+id/coupon_type_fixed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="固定金额"
+                android:textColor="@android:color/white"
+                android:checked="true" />
+            <RadioButton
+                android:id="@+id/coupon_type_percent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="百分比折扣"
+                android:textColor="@android:color/white" />
+        </RadioGroup>
+
+        <!-- Value -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="优惠值"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <EditText
+                android:id="@+id/coupon_create_value"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input_round"
+                android:hint="20"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:textColorHint="#666"
+                android:paddingHorizontal="12dp"
+                android:inputType="numberDecimal"
+                android:maxLines="1" />
+            <TextView
+                android:id="@+id/coupon_value_unit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="元"
+                android:textColor="#999"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Min purchase -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="最低消费金额"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <EditText
+            android:id="@+id/coupon_create_min_purchase"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_input_round"
+            android:hint="0（不限制）"
+            android:textSize="13sp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#666"
+            android:paddingHorizontal="12dp"
+            android:inputType="number"
+            android:maxLines="1" />
+
+        <!-- Quantity -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="发放数量"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <EditText
+            android:id="@+id/coupon_create_stock"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_input_round"
+            android:hint="100"
+            android:textSize="13sp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#666"
+            android:paddingHorizontal="12dp"
+            android:inputType="number"
+            android:maxLines="1" />
+
+        <!-- Valid duration -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="使用有效期"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <Spinner
+            android:id="@+id/coupon_create_valid_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_input_round"
+            android:paddingHorizontal="12dp" />
+
+        <!-- Claim deadline -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="领取时限（超时观众端自动消失）"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <Spinner
+            android:id="@+id/coupon_create_claim_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_input_round"
+            android:paddingHorizontal="12dp" />
+
+        <!-- Product scope -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="适用范围"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+        <RadioGroup
+            android:id="@+id/coupon_create_scope"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+            <RadioButton
+                android:id="@+id/coupon_scope_all"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="全部商品"
+                android:textColor="@android:color/white"
+                android:checked="true" />
+            <RadioButton
+                android:id="@+id/coupon_scope_specific"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="指定商品"
+                android:textColor="@android:color/white" />
+        </RadioGroup>
+
+        <!-- Product selection list (visible when "指定商品" is selected) -->
+        <LinearLayout
+            android:id="@+id/coupon_product_select_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <!-- Publish button -->
+        <Button
+            android:id="@+id/coupon_create_publish_btn"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="24dp"
+            android:text="发布优惠券"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            android:backgroundTint="#FF9500" />
+
+    </LinearLayout>
+</ScrollView>

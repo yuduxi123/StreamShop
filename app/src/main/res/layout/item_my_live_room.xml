@@ -1,104 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp">
+    android:clipChildren="false">
 
-    <LinearLayout
+    <!-- Delete button revealed on swipe -->
+    <TextView
+        android:id="@+id/liveroom_action_delete"
+        android:layout_width="72dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="#FF3B30"
+        android:gravity="center"
+        android:text="删除"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp" />
+
+    <!-- Foreground card (slides left to reveal delete) -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/liveroom_item_foreground"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@android:color/white"
-        android:padding="12dp">
-
-        <ImageView
-            android:id="@+id/liveroom_item_cover"
-            android:layout_width="100dp"
-            android:layout_height="70dp"
-            android:scaleType="centerCrop"
-            android:background="#DDDDDD" />
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical"
-            android:gravity="center_vertical">
+            android:orientation="horizontal"
+            android:background="@android:color/white"
+            android:padding="12dp">
 
-            <TextView
-                android:id="@+id/liveroom_item_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#333333"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/liveroom_item_cover"
+                android:layout_width="100dp"
+                android:layout_height="70dp"
+                android:scaleType="centerCrop"
+                android:background="#DDDDDD" />
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical"
                 android:gravity="center_vertical">
 
                 <TextView
-                    android:id="@+id/liveroom_item_status"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/liveroom_item_title"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_live_feed_badge"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:text="未开播"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp" />
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#333333"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/liveroom_item_online"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:textColor="#999999"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-            </LinearLayout>
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/liveroom_item_online"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/liveroom_item_start_btn"
-                    android:layout_width="64dp"
-                    android:layout_height="30dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="开播"
-                    android:textSize="11sp"
-                    android:textColor="#FFFFFF"
-                    app:cornerRadius="15dp"
-                    app:backgroundTint="#FF3B30"
-                    android:visibility="gone" />
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/liveroom_item_end_btn"
-                    android:layout_width="64dp"
-                    android:layout_height="30dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="结束"
-                    android:textSize="11sp"
-                    android:textColor="#FFFFFF"
-                    app:cornerRadius="15dp"
-                    app:backgroundTint="#999999"
-                    android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/liveroom_item_status"
+                        android:layout_width="64dp"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:background="@drawable/bg_status_ended"
+                        android:text="未开播"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/liveroom_item_start_btn"
+                        android:layout_width="64dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="开始"
+                        android:textSize="11sp"
+                        android:textColor="#FFFFFF"
+                        app:cornerRadius="15dp"
+                        app:backgroundTint="#FF3B30"
+                        android:visibility="gone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/liveroom_item_end_btn"
+                        android:layout_width="64dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="结束"
+                        android:textSize="11sp"
+                        android:textColor="#FFFFFF"
+                        app:cornerRadius="15dp"
+                        app:backgroundTint="#999999"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-</androidx.cardview.widget.CardView>
+    </androidx.cardview.widget.CardView>
+</FrameLayout>

@@ -11,6 +11,10 @@ interface CouponData {
   stock: number;
   validFrom: string;
   validTo: string;
+  liveRoomId?: string;
+  productScope?: 'all' | 'specific';
+  productIds?: string[];
+  claimDeadline?: string;
   createdAt: string;
 }
 

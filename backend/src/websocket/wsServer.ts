@@ -73,6 +73,9 @@ export class WebSocketServer {
       case 'AUTHENTICATE':
         this.handleAuthenticate(ws, msg.userId);
         break;
+      case 'GET_ROOM_USERS':
+        this.handleGetRoomUsers(ws, msg.roomId);
+        break;
     }
   }
 
@@ -90,14 +93,13 @@ export class WebSocketServer {
   }
 
   private handleDanmaku(ws: WebSocket, msg: any): void {
-    const colors = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#AF52DE', '#FF2D55'];
     const enriched = {
       type: 'NEW_DANMAKU',
       id: uuidv4(),
       userId: msg.userId,
       username: msg.username || '匿名用户',
       content: msg.content,
-      color: colors[Math.floor(Math.random() * colors.length)],
+      color: '#FFFFFF',
       timestamp: new Date().toISOString(),
     };
     this.broadcastToRoom(msg.roomId, enriched);
@@ -121,12 +123,13 @@ export class WebSocketServer {
 
   // --- Public API for REST routes to push events ---
 
-  pushProductChanged(roomId: string, productId: string, action: 'added' | 'removed' | 'explaining'): void {
+  pushProductChanged(roomId: string, productId: string, action: 'added' | 'removed' | 'explaining' | 'reordered', productIds?: string[]): void {
     this.broadcastToRoom(roomId, {
       type: 'PRODUCT_CHANGED',
       roomId,
       productId,
       action,
+      productIds: productIds || [],
     });
   }
 
@@ -152,6 +155,13 @@ export class WebSocketServer {
     });
   }
 
+  pushPurchase(roomId: string, purchase: { username: string; productTitle: string; quantity: number }): void {
+    this.broadcastToRoom(roomId, {
+      type: 'PURCHASE',
+      ...purchase,
+    });
+  }
+
   pushMessage(targetUserId: string, message: any): void {
     const ws = userSockets.get(targetUserId);
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -171,6 +181,7 @@ export class WebSocketServer {
 
     this.send(ws, { type: 'ROOM_JOINED', roomId, onlineCount: room.size, hotValue: hotValues.get(roomId) || 0 });
     this.broadcastToRoom(roomId, { type: 'ONLINE_COUNT_UPDATE', roomId, count: room.size }, ws);
+    this.broadcastToRoom(roomId, { type: 'USER_JOINED', userId, username });
   }
 
   private leaveRoom(ws: WebSocket, roomId: string): void {
@@ -190,6 +201,19 @@ export class WebSocketServer {
     if (!userId) return;
     userSockets.set(userId, ws);
     this.send(ws, { type: 'AUTHENTICATED', userId });
+  }
+
+  private handleGetRoomUsers(ws: WebSocket, roomId: string): void {
+    const room = rooms.get(roomId);
+    if (!room) {
+      this.send(ws, { type: 'ROOM_USERS', roomId, users: [] });
+      return;
+    }
+    const users: { userId: string; username: string }[] = [];
+    for (const member of room.values()) {
+      users.push({ userId: member.userId, username: member.username });
+    }
+    this.send(ws, { type: 'ROOM_USERS', roomId, users });
   }
 
   private handleDisconnect(ws: WebSocket): void {

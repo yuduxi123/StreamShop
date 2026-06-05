@@ -105,6 +105,9 @@ public class FeedFragment extends Fragment {
         });
 
         recyclerView = (RecyclerView) viewPager.getChildAt(0);
+        if (recyclerView != null) {
+            recyclerView.setClipChildren(true);
+        }
 
         if (errorView != null) errorView.setOnClickListener(v -> {
             if (viewModel != null) viewModel.retry();

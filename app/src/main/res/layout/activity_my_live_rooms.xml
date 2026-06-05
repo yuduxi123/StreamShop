@@ -31,16 +31,15 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
+        <ImageButton
             android:id="@+id/my_liverooms_create"
-            android:layout_width="wrap_content"
+            android:layout_width="36dp"
             android:layout_height="36dp"
-            android:layout_marginEnd="12dp"
-            android:text="创建直播间"
-            android:textSize="12sp"
-            android:textColor="#FFFFFF"
-            app:cornerRadius="18dp"
-            app:backgroundTint="#FF3B30" />
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_add_contact"
+            android:background="@drawable/bg_circle_overlay"
+            android:scaleType="center"
+            android:contentDescription="创建直播间" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

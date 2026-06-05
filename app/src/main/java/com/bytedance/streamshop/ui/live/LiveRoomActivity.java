@@ -1,11 +1,11 @@
 package com.bytedance.streamshop.ui.live;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,12 +28,15 @@ import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
 import com.bytedance.streamshop.domain.model.Product;
 import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
+import com.bytedance.streamshop.ui.profile.AuthorProfileActivity;
 import com.bumptech.glide.Glide;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.imageview.ShapeableImageView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.NumberFormat;
@@ -53,9 +56,17 @@ public class LiveRoomActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private DanmakuView danmakuView;
+    private ImageButton danmakuToggle;
+    private ImageButton exitBtn;
+    private boolean danmakuEnabled = true;
+    private ShapeableImageView anchorAvatar;
+    private TextView anchorName;
+    private String anchorId;
+    private RecyclerView activityFeedList;
+    private final List<String> activityFeedItems = new ArrayList<>();
     private LiveWebSocketClient wsClient;
     private ApiService apiService;
-    private TextView onlineCountText, hotValueText, roomTitle;
+    private TextView viewerCountText, hotValueText;
     private TextView streamPlaceholder;
     private EditText inputView;
     private RecyclerView productList;
@@ -92,21 +103,39 @@ public class LiveRoomActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        roomTitle = findViewById(R.id.live_room_title);
-        onlineCountText = findViewById(R.id.live_online_count);
+        anchorAvatar = findViewById(R.id.live_anchor_avatar);
+        anchorName = findViewById(R.id.live_anchor_name);
+        viewerCountText = findViewById(R.id.live_viewer_count);
+        danmakuToggle = findViewById(R.id.live_danmaku_toggle);
+        exitBtn = findViewById(R.id.live_exit_btn);
         hotValueText = findViewById(R.id.live_hot_value);
         streamPlaceholder = findViewById(R.id.live_stream_placeholder);
         inputView = findViewById(R.id.live_input);
         danmakuView = findViewById(R.id.live_danmaku_view);
         couponContainer = findViewById(R.id.live_coupon_container);
 
-        findViewById(R.id.live_back_btn).setOnClickListener(v -> finish());
-        findViewById(R.id.live_send_btn).setOnClickListener(v -> sendMessage());
-        findViewById(R.id.live_like_btn).setOnClickListener(v -> {
-            wsClient.sendLike();
-            findViewById(R.id.live_like_btn).animate().scaleX(1.3f).scaleY(1.3f).setDuration(150).withEndAction(
-                    () -> findViewById(R.id.live_like_btn).animate().scaleX(1f).scaleY(1f).setDuration(150));
+        findViewById(R.id.live_anchor_info).setOnClickListener(v -> {
+            if (anchorId != null) {
+                Intent intent = new Intent(LiveRoomActivity.this, AuthorProfileActivity.class);
+                intent.putExtra(AuthorProfileActivity.EXTRA_USER_ID, anchorId);
+                startActivity(intent);
+            }
         });
+
+        viewerCountText.setOnClickListener(v -> {
+            wsClient.sendGetRoomUsers();
+        });
+
+        exitBtn.setOnClickListener(v -> finish());
+
+        danmakuToggle.setOnClickListener(v -> {
+            danmakuEnabled = !danmakuEnabled;
+            danmakuToggle.setImageResource(danmakuEnabled
+                    ? R.drawable.ic_danmaku_on : R.drawable.ic_danmaku_off);
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        });
+
+        findViewById(R.id.live_send_btn).setOnClickListener(v -> sendMessage());
 
         inputView.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) { sendMessage(); return true; }
@@ -117,6 +146,22 @@ public class LiveRoomActivity extends AppCompatActivity {
         productList.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         productAdapter = new ProductAdapter();
         productList.setAdapter(productAdapter);
+
+        activityFeedList = findViewById(R.id.live_activity_feed);
+        activityFeedList.setLayoutManager(new LinearLayoutManager(this));
+        activityFeedList.setAdapter(new RecyclerView.Adapter<FeedVH>() {
+            @NonNull @Override
+            public FeedVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new FeedVH(LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_live_activity_feed, parent, false));
+            }
+            @Override
+            public void onBindViewHolder(@NonNull FeedVH holder, int position) {
+                ((TextView) holder.itemView).setText(activityFeedItems.get(position));
+            }
+            @Override
+            public int getItemCount() { return activityFeedItems.size(); }
+        });
     }
 
     private void setupPlayer() {
@@ -168,10 +213,26 @@ public class LiveRoomActivity extends AppCompatActivity {
                     products.clear();
                     products.addAll(roomProducts);
                 }
-                String title = (String) room.get("title");
                 String streamUrl = (String) room.get("streamUrl");
+                Map<String, Object> anchor = (Map<String, Object>) room.get("anchor");
+                String avatarUrl = null;
+                if (anchor != null) {
+                    anchorId = (String) anchor.get("id");
+                    avatarUrl = (String) anchor.get("avatarUrl");
+                    String name = (String) anchor.get("username");
+                    if (name != null) {
+                        runOnUiThread(() -> anchorName.setText(name));
+                    }
+                }
+                final String finalAvatarUrl = avatarUrl;
                 runOnUiThread(() -> {
-                    if (title != null) roomTitle.setText(title);
+                    if (finalAvatarUrl != null && !finalAvatarUrl.isEmpty()) {
+                        Glide.with(LiveRoomActivity.this)
+                                .load(finalAvatarUrl)
+                                .circleCrop()
+                                .placeholder(R.drawable.ic_avatar_placeholder)
+                                .into(anchorAvatar);
+                    }
                     playStream(streamUrl);
                     productAdapter.notifyDataSetChanged();
                     if (TextUtils.isEmpty(streamUrl)) {
@@ -217,27 +278,32 @@ public class LiveRoomActivity extends AppCompatActivity {
 
             @Override
             public void onRoomJoined(int onlineCount, int hotValue) {
-                onlineCountText.setText(onlineCount + "人在线");
-                hotValueText.setText("热度: " + hotValue);
+                runOnUiThread(() -> {
+                    viewerCountText.setText(onlineCount + "人在线");
+                    hotValueText.setText("热度: " + hotValue);
+                });
             }
 
             @Override
             public void onOnlineCount(int count) {
-                onlineCountText.setText(count + "人在线");
+                runOnUiThread(() -> viewerCountText.setText(count + "人在线"));
             }
 
             @Override
             public void onNewComment(JSONObject comment) {
                 String user = comment.optString("username", "匿名");
                 String content = comment.optString("content", "");
-                addSystemMessage(user + ": " + content);
+                runOnUiThread(() -> {
+                    danmakuView.addDanmaku(user + ": " + content, "#FFFFFF");
+                    addActivityFeedItem(user + ": " + content);
+                });
             }
 
             @Override
             public void onNewDanmaku(JSONObject danmaku) {
                 String content = danmaku.optString("content", "");
                 String color = danmaku.optString("color", "#FFFFFF");
-                danmakuView.addDanmaku(content, color);
+                runOnUiThread(() -> danmakuView.addDanmaku(content, color));
             }
 
             @Override
@@ -245,7 +311,7 @@ public class LiveRoomActivity extends AppCompatActivity {
 
             @Override
             public void onHotValueUpdate(int value) {
-                hotValueText.setText("热度: " + value);
+                runOnUiThread(() -> hotValueText.setText("热度: " + value));
             }
 
             @Override
@@ -253,6 +319,8 @@ public class LiveRoomActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if ("explaining".equals(action)) {
                         Toast.makeText(LiveRoomActivity.this, "主播正在讲解商品 #" + productId.substring(0, 6), Toast.LENGTH_SHORT).show();
+                    } else if ("added".equals(action) || "removed".equals(action) || "reordered".equals(action)) {
+                        loadRoomDetail();
                     }
                 });
             }
@@ -260,6 +328,24 @@ public class LiveRoomActivity extends AppCompatActivity {
             @Override
             public void onCouponPushed(JSONObject coupon) {
                 runOnUiThread(() -> showCouponNotification(coupon));
+            }
+
+            @Override
+            public void onUserJoined(String username, String userId) {
+                runOnUiThread(() -> addActivityFeedItem(username + " 进入了直播间"));
+            }
+
+            @Override
+            public void onPurchase(String username, String productTitle, int quantity) {
+                runOnUiThread(() -> addActivityFeedItem(username + "购买了" + productTitle + "×" + quantity));
+            }
+
+            @Override
+            public void onRoomUsers(JSONArray users) {
+                runOnUiThread(() -> {
+                    LiveUserListBottomSheet sheet = LiveUserListBottomSheet.newInstance(users);
+                    sheet.show(getSupportFragmentManager(), "user_list_sheet");
+                });
             }
 
             @Override
@@ -278,37 +364,57 @@ public class LiveRoomActivity extends AppCompatActivity {
         String text = inputView.getText().toString().trim();
         if (TextUtils.isEmpty(text)) return;
         inputView.setText("");
-
-        // Send as danmaku if short, comment if long
-        if (text.length() <= 10) {
-            wsClient.sendDanmaku(text);
-        } else {
-            wsClient.sendComment(text);
-            addSystemMessage(username + ": " + text);
-        }
+        wsClient.sendComment(text);
+        danmakuView.addDanmaku(username + ": " + text, "#FFFFFF");
+        addActivityFeedItem(username + ": " + text);
     }
 
-    private void addSystemMessage(String msg) {
+    private void addActivityFeedItem(String msg) {
         runOnUiThread(() -> {
-            Toast.makeText(LiveRoomActivity.this, msg, Toast.LENGTH_SHORT).show();
+            activityFeedItems.add(msg);
+            if (activityFeedItems.size() > 50) {
+                activityFeedItems.remove(0);
+            }
+            if (activityFeedList.getAdapter() != null) {
+                activityFeedList.getAdapter().notifyItemInserted(activityFeedItems.size() - 1);
+                activityFeedList.scrollToPosition(activityFeedItems.size() - 1);
+            }
         });
+    }
+
+    private static class FeedVH extends RecyclerView.ViewHolder {
+        FeedVH(View v) { super(v); }
     }
 
     private void showCouponNotification(JSONObject coupon) {
         String title = coupon.optString("title", "优惠券");
         String type = coupon.optString("type", "fixed");
         double value = coupon.optDouble("value", 0);
-        String desc = "fixed".equals(type) ? "¥" + (int) value + " 优惠券" : (int) value + " 折优惠券";
+        int stock = coupon.optInt("stock", 0);
+        String claimDeadline = coupon.optString("claimDeadline", null);
+
+        StringBuilder descBuilder = new StringBuilder();
+        if ("fixed".equals(type)) {
+            descBuilder.append("¥").append((int) value).append(" 优惠券");
+        } else {
+            descBuilder.append((int) value).append("% 折扣券");
+        }
+        descBuilder.append("  |  剩余").append(stock).append("张");
 
         couponContainer.removeAllViews();
         couponContainer.setVisibility(View.VISIBLE);
 
         View card = LayoutInflater.from(this).inflate(R.layout.item_coupon_card, couponContainer, false);
         ((TextView) card.findViewById(R.id.coupon_title)).setText(title);
-        ((TextView) card.findViewById(R.id.coupon_desc)).setText(desc);
+        ((TextView) card.findViewById(R.id.coupon_desc)).setText(descBuilder.toString());
+
+        // Countdown timer text
+        TextView countdownText = card.findViewById(R.id.coupon_claim_btn);
+        // Use coupon_claim_btn for claim; find or add a timer display
+        // The card already has coupon_claim_btn for claiming
 
         MaterialButton claimBtn = card.findViewById(R.id.coupon_claim_btn);
-            claimBtn.setOnClickListener(v -> {
+        claimBtn.setOnClickListener(v -> {
             if (!ApiClient.getInstance().isAuthenticated()) {
                 Toast.makeText(this, "请先登录后领券", Toast.LENGTH_SHORT).show();
                 return;
@@ -331,8 +437,43 @@ public class LiveRoomActivity extends AppCompatActivity {
 
         couponContainer.addView(card);
 
-        // Auto-hide after 10s
-        couponContainer.postDelayed(() -> couponContainer.setVisibility(View.GONE), 10000);
+        // Auto-hide based on claimDeadline
+        if (claimDeadline != null) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(
+                        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US);
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                long deadlineMs = sdf.parse(claimDeadline).getTime();
+                long remainingMs = deadlineMs - System.currentTimeMillis();
+                if (remainingMs > 0) {
+                    // Update button text with countdown every second
+                    final MaterialButton btnRef = claimBtn;
+                    Runnable countdownUpdater = new Runnable() {
+                        @Override
+                        public void run() {
+                            long left = deadlineMs - System.currentTimeMillis();
+                            if (left <= 0 || couponContainer.getVisibility() != View.VISIBLE) {
+                                couponContainer.setVisibility(View.GONE);
+                                return;
+                            }
+                            long mins = left / 60000;
+                            long secs = (left % 60000) / 1000;
+                            btnRef.setText("领取 (" + mins + ":" + String.format("%02d", secs) + ")");
+                            btnRef.postDelayed(this, 1000);
+                        }
+                    };
+                    claimBtn.post(countdownUpdater);
+                } else {
+                    couponContainer.setVisibility(View.GONE);
+                }
+            } catch (Exception e) {
+                // Fallback: hide after 10s
+                couponContainer.postDelayed(() -> couponContainer.setVisibility(View.GONE), 10000);
+            }
+        } else {
+            // No deadline set, hide after 10s
+            couponContainer.postDelayed(() -> couponContainer.setVisibility(View.GONE), 10000);
+        }
     }
 
     @Override

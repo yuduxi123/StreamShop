@@ -31,6 +31,8 @@ const liveStorage = new StorageService<LiveRoomData>('live_rooms.json');
 const lrpStorage = new StorageService<LiveRoomProduct>('live_room_products.json');
 const productStorage = new StorageService<any>('products.json');
 const userStorage = new StorageService<any>('users.json');
+const couponStorage = new StorageService<any>('coupons.json');
+const userCouponStorage = new StorageService<any>('user_coupons.json');
 
 const router = Router();
 
@@ -250,6 +252,95 @@ router.post('/rooms/:id/products', authMiddleware, (req: AuthRequest, res: Respo
   lrpStorage.create(binding);
   getWss(req).pushProductChanged(roomId, productId, 'added');
   res.status(201).json(binding);
+});
+
+// DELETE /api/live/rooms/:id/products/:productId
+router.delete('/rooms/:id/products/:productId', authMiddleware, (req: AuthRequest, res: Response) => {
+  const roomId = req.params.id as string;
+  const productId = req.params.productId as string;
+  const room = liveStorage.findById(roomId);
+  if (!room) {
+    res.status(404).json({ error: 'Live room not found' });
+    return;
+  }
+  if (room.anchorId !== req.user!.id && req.user!.role !== 'admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  const bindingId = roomId + '_' + productId;
+  if (!lrpStorage.findById(bindingId)) {
+    res.status(404).json({ error: 'Product not bound to this room' });
+    return;
+  }
+  lrpStorage.delete(bindingId);
+  getWss(req).pushProductChanged(roomId, productId, 'removed');
+  res.json({ success: true });
+});
+
+// PATCH /api/live/rooms/:id/products
+router.patch('/rooms/:id/products', authMiddleware, (req: AuthRequest, res: Response) => {
+  const roomId = req.params.id as string;
+  const { productIds } = req.body;
+  if (!productIds || !Array.isArray(productIds)) {
+    res.status(400).json({ error: 'productIds array required' });
+    return;
+  }
+  const room = liveStorage.findById(roomId);
+  if (!room) {
+    res.status(404).json({ error: 'Live room not found' });
+    return;
+  }
+  if (room.anchorId !== req.user!.id && req.user!.role !== 'admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  productIds.forEach((pid: string, index: number) => {
+    const bindingId = roomId + '_' + pid;
+    if (lrpStorage.findById(bindingId)) {
+      lrpStorage.update(bindingId, { displayOrder: index });
+    }
+  });
+  getWss(req).pushProductChanged(roomId, '', 'reordered', productIds);
+  res.json({ success: true });
+});
+
+// POST /api/live/rooms/:id/coupons
+router.post('/rooms/:id/coupons', authMiddleware, (req: AuthRequest, res: Response) => {
+  const roomId = req.params.id as string;
+  const { title, type, value, minPurchase, stock, validTo, claimDeadlineMinutes, productScope, productIds } = req.body;
+  if (!title || !type || value == null) {
+    res.status(400).json({ error: 'title, type, value required' });
+    return;
+  }
+  const room = liveStorage.findById(roomId);
+  if (!room) {
+    res.status(404).json({ error: 'Live room not found' });
+    return;
+  }
+  if (room.anchorId !== req.user!.id && req.user!.role !== 'admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  const now = new Date();
+  const claimMinutes = Number(claimDeadlineMinutes) || 5;
+  const coupon: any = {
+    id: uuidv4(),
+    title,
+    type,
+    value: Number(value),
+    minPurchase: Number(minPurchase) || 0,
+    stock: Number(stock) || 100,
+    validFrom: now.toISOString(),
+    validTo: validTo || new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    liveRoomId: roomId,
+    productScope: productScope || 'all',
+    productIds: productIds || [],
+    claimDeadline: new Date(now.getTime() + claimMinutes * 60 * 1000).toISOString(),
+    createdAt: now.toISOString(),
+  };
+  couponStorage.create(coupon);
+  getWss(req).pushCoupon(roomId, coupon);
+  res.status(201).json(coupon);
 });
 
 export default router;

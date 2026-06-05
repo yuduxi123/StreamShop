@@ -19,7 +19,9 @@ public final class SystemBarInsets {
         content.post(() -> {
             if (content.getChildCount() == 0) return;
             View target = content.findViewWithTag(STATUS_BAR_INSET_TAG);
-            applyStatusBarPadding(target != null ? target : content.getChildAt(0));
+            if (target != null) {
+                applyStatusBarPadding(target);
+            }
         });
     }
 

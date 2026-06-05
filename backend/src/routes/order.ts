@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { WebSocketServer } from '../websocket/wsServer';
 
 interface OrderData {
   id: string;
@@ -27,6 +28,10 @@ const orderStorage = new StorageService<OrderData>('orders.json');
 const orderItemStorage = new StorageService<OrderItemData>('order_items.json');
 const cartStorage = new StorageService<any>('carts.json');
 const productStorage = new StorageService<any>('products.json');
+const liveStorage = new StorageService<any>('live_rooms.json');
+const lrpStorage = new StorageService<any>('live_room_products.json');
+const couponStorage = new StorageService<any>('coupons.json');
+const userCouponStorage = new StorageService<any>('user_coupons.json');
 
 const router = Router();
 router.use(authMiddleware);
@@ -44,6 +49,10 @@ router.post('/', (req: AuthRequest, res: Response) => {
     res.status(400).json({ error: 'Invalid couponDiscount' });
     return;
   }
+
+  // Support new couponId-based discount
+  const couponId = req.body.couponId as string | undefined;
+  let discountAmount = requestedDiscount;
 
   let totalAmount = 0;
   const orderItems: OrderItemData[] = [];
@@ -117,14 +126,49 @@ router.post('/', (req: AuthRequest, res: Response) => {
     cartItems.forEach(item => cartStorage.delete(item.id));
   }
 
+  // Validate and calculate coupon discount from couponId
+  if (couponId) {
+    const coupon = couponStorage.findById(couponId);
+    if (!coupon) {
+      res.status(400).json({ error: 'Coupon not found' });
+      return;
+    }
+    const userCoupons = userCouponStorage.query(uc => uc.userId === req.user!.id && uc.couponId === couponId);
+    if (userCoupons.length === 0) {
+      res.status(400).json({ error: 'You have not claimed this coupon' });
+      return;
+    }
+    const userCoupon = userCoupons[0];
+    if (userCoupon.used) {
+      res.status(400).json({ error: 'Coupon already used' });
+      return;
+    }
+    if (new Date(coupon.validTo) < new Date()) {
+      res.status(400).json({ error: 'Coupon has expired' });
+      return;
+    }
+    if (totalAmount < (coupon.minPurchase || 0)) {
+      res.status(400).json({ error: `Minimum purchase ¥${coupon.minPurchase} required` });
+      return;
+    }
+    // Calculate discount
+    if (coupon.type === 'percentage') {
+      discountAmount = Math.round(totalAmount * coupon.value / 100);
+    } else {
+      discountAmount = Math.min(coupon.value, totalAmount);
+    }
+    // Mark coupon as used
+    userCouponStorage.update(userCoupon.id, { used: true });
+  }
+
   const now = new Date().toISOString();
   const order: OrderData = {
     id: uuidv4(),
     userId: req.user!.id,
     status: 'pending',
     totalAmount,
-    discountAmount: requestedDiscount,
-    finalAmount: Math.max(0, totalAmount - requestedDiscount),
+    discountAmount,
+    finalAmount: Math.max(0, totalAmount - discountAmount),
     shippingAddress,
     createdAt: now,
   };
@@ -147,6 +191,29 @@ router.post('/', (req: AuthRequest, res: Response) => {
       });
     }
   });
+
+  // Broadcast purchase events to active live rooms
+  try {
+    const wss = req.app.locals.wss as WebSocketServer | undefined;
+    if (wss) {
+      const activeRooms = liveStorage.query(r => r.status === 'live');
+      for (const item of orderItems) {
+        const product = productStorage.findById(item.productId);
+        if (!product) continue;
+        const bindings = lrpStorage.query(b => b.productId === item.productId);
+        for (const binding of bindings) {
+          const room = activeRooms.find(r => r.id === binding.roomId);
+          if (room) {
+            wss.pushPurchase(room.id, {
+              username: req.user!.username || '匿名用户',
+              productTitle: product.title,
+              quantity: item.quantity,
+            });
+          }
+        }
+      }
+    }
+  } catch { /* ignore ws errors */ }
 
   res.status(201).json({ ...order, items: orderItems });
 });

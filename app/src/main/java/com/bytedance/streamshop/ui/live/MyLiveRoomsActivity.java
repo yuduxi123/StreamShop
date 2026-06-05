@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -23,10 +24,8 @@ import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bumptech.glide.Glide;
 
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class MyLiveRoomsActivity extends AppCompatActivity {
@@ -116,11 +115,15 @@ public class MyLiveRoomsActivity extends AppCompatActivity {
     }
 
     private class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
+        private int openPosition = -1;
+        private float buttonPanelWidth;
+
         @NonNull
         @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_my_live_room, parent, false);
+            buttonPanelWidth = 72 * parent.getContext().getResources().getDisplayMetrics().density;
             return new VH(v);
         }
 
@@ -146,18 +149,19 @@ public class MyLiveRoomsActivity extends AppCompatActivity {
             h.onlineText.setText(online + "人在线");
             h.onlineText.setVisibility("live".equals(status) ? View.VISIBLE : View.GONE);
 
-            // Start/End buttons visibility
             boolean isLive = "live".equals(status);
             boolean canStart = "offline".equals(status) || "ended".equals(status);
             h.startBtn.setVisibility(canStart ? View.VISIBLE : View.GONE);
             h.endBtn.setVisibility(isLive ? View.VISIBLE : View.GONE);
 
             h.startBtn.setOnClickListener(v -> {
+                closeOpenItem();
                 String roomId = (String) room.get("id");
                 launchLiveRoom(roomId, title);
             });
 
             h.endBtn.setOnClickListener(v -> {
+                closeOpenItem();
                 String roomId = (String) room.get("id");
                 new Thread(() -> {
                     try {
@@ -169,24 +173,78 @@ public class MyLiveRoomsActivity extends AppCompatActivity {
                 }).start();
             });
 
-            // Click card to edit
-            h.itemView.setOnClickListener(v -> {
-                Intent intent = new Intent(MyLiveRoomsActivity.this, LiveRoomEditActivity.class);
-                intent.putExtra("room_id", (String) room.get("id"));
-                intent.putExtra("room_title", title);
-                intent.putExtra("room_cover", coverUrl);
-                startActivity(intent);
+            // --- Swipe touch handling ---
+            h.foreground.setTranslationX(0f);
+            h.swipeStartX = 0;
+            h.swipeStartTrans = 0;
+
+            h.foreground.setOnTouchListener((v, event) -> {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (openPosition != -1 && openPosition != position) {
+                        closeOpenItem();
+                    }
+                    h.swipeStartX = event.getRawX();
+                    h.swipeStartTrans = v.getTranslationX();
+                    return true;
+                }
+
+                float dx = event.getRawX() - h.swipeStartX;
+                float newTrans = h.swipeStartTrans + dx;
+
+                if (newTrans > 0) newTrans = 0;
+                if (newTrans < -buttonPanelWidth) newTrans = -buttonPanelWidth;
+
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    if (Math.abs(dx) > 5) {
+                        listView.requestDisallowInterceptTouchEvent(true);
+                    }
+                    v.setTranslationX(newTrans);
+                    return true;
+                }
+
+                if (event.getAction() == MotionEvent.ACTION_UP
+                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    listView.requestDisallowInterceptTouchEvent(false);
+                    float currentTrans = v.getTranslationX();
+                    float threshold = -buttonPanelWidth * 0.4f;
+
+                    if (Math.abs(currentTrans - h.swipeStartTrans) < 10) {
+                        v.animate().translationX(0).setDuration(100).start();
+                        openPosition = -1;
+                        Intent intent = new Intent(MyLiveRoomsActivity.this, LiveRoomEditActivity.class);
+                        intent.putExtra("room_id", (String) room.get("id"));
+                        intent.putExtra("room_title", title);
+                        intent.putExtra("room_cover", coverUrl);
+                        startActivity(intent);
+                    } else if (currentTrans < threshold) {
+                        v.animate().translationX(-buttonPanelWidth).setDuration(150).start();
+                        openPosition = position;
+                    } else {
+                        v.animate().translationX(0).setDuration(150).start();
+                        openPosition = -1;
+                    }
+                    return true;
+                }
+                return false;
             });
 
-            h.itemView.setOnLongClickListener(v -> {
+            h.actionDelete.setOnClickListener(v -> {
+                openPosition = -1;
                 new androidx.appcompat.app.AlertDialog.Builder(MyLiveRoomsActivity.this)
                         .setTitle("确认删除")
                         .setMessage("确定要删除直播间 \"" + title + "\" 吗？")
                         .setPositiveButton("删除", (d, w) -> deleteRoom(h.getBindingAdapterPosition()))
                         .setNegativeButton("取消", null)
                         .show();
-                return true;
             });
+        }
+
+        private void closeOpenItem() {
+            if (openPosition != -1) {
+                int old = openPosition;
+                openPosition = -1;
+                notifyItemChanged(old);
+            }
         }
 
         @Override
@@ -195,18 +253,23 @@ public class MyLiveRoomsActivity extends AppCompatActivity {
         }
 
         class VH extends RecyclerView.ViewHolder {
+            View foreground;
             ImageView coverView;
             TextView titleText, statusText, onlineText;
             TextView startBtn, endBtn;
+            TextView actionDelete;
+            float swipeStartX, swipeStartTrans;
 
             VH(View v) {
                 super(v);
+                foreground = v.findViewById(R.id.liveroom_item_foreground);
                 coverView = v.findViewById(R.id.liveroom_item_cover);
                 titleText = v.findViewById(R.id.liveroom_item_title);
                 statusText = v.findViewById(R.id.liveroom_item_status);
                 onlineText = v.findViewById(R.id.liveroom_item_online);
                 startBtn = v.findViewById(R.id.liveroom_item_start_btn);
                 endBtn = v.findViewById(R.id.liveroom_item_end_btn);
+                actionDelete = v.findViewById(R.id.liveroom_action_delete);
             }
         }
     }
@@ -220,8 +283,7 @@ public class MyLiveRoomsActivity extends AppCompatActivity {
 
     private int statusBg(String status) {
         if ("live".equals(status)) return R.drawable.bg_live_feed_button;
-        if ("ended".equals(status)) return R.drawable.bg_circle_black_transparent;
-        return R.drawable.bg_circle_black_transparent;
+        return R.drawable.bg_status_ended;
     }
 
     private void launchLiveRoom(String roomId, String roomTitle) {

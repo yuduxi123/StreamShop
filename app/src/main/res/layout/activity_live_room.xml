@@ -39,7 +39,7 @@
         android:layout_gravity="bottom"
         android:background="@drawable/bg_live_bottom_gradient" />
 
-    <!-- Top bar -->
+    <!-- Top bar: anchor info + viewer count + exit -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -49,48 +49,83 @@
         android:paddingHorizontal="12dp"
         android:paddingTop="24dp">
 
-        <ImageButton
-            android:id="@+id/live_back_btn"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_back"
-            android:background="@drawable/bg_circle_overlay"
-            android:scaleType="center"
-            android:contentDescription="返回" />
-
-        <TextView
-            android:id="@+id/live_room_title"
+        <LinearLayout
+            android:id="@+id/live_anchor_info"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="直播间" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/live_anchor_avatar"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/ic_avatar_placeholder"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/CircleImageView" />
+
+            <TextView
+                android:id="@+id/live_anchor_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="主播" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/live_online_count"
+            android:id="@+id/live_viewer_count"
             android:layout_width="wrap_content"
             android:layout_height="28dp"
             android:gravity="center"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="10dp"
             android:background="@drawable/bg_circle_overlay"
             android:textColor="@android:color/white"
             android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
             android:text="0人在线" />
+
+        <ImageButton
+            android:id="@+id/live_exit_btn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:src="@drawable/ic_live_exit"
+            android:background="@drawable/bg_circle_overlay"
+            android:scaleType="center"
+            android:contentDescription="退出" />
     </LinearLayout>
 
     <!-- Danmaku area -->
     <com.bytedance.streamshop.ui.live.DanmakuView
         android:id="@+id/live_danmaku_view"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
         android:layout_gravity="top"
         android:layout_marginTop="72dp"
         android:layout_marginBottom="200dp" />
+
+    <!-- Activity feed -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/live_activity_feed"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="190dp"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never" />
 
     <!-- Bottom area -->
     <LinearLayout
@@ -120,13 +155,23 @@
             android:textSize="12sp"
             android:text="热度: 0" />
 
-        <!-- Action row -->
+        <!-- Action row: danmaku toggle + input + send -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="44dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingHorizontal="8dp">
+
+            <ImageButton
+                android:id="@+id/live_danmaku_toggle"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_danmaku_on"
+                android:background="@drawable/bg_circle_overlay"
+                android:scaleType="center"
+                android:contentDescription="弹幕开关" />
 
             <EditText
                 android:id="@+id/live_input"
@@ -148,21 +193,11 @@
                 android:id="@+id/live_send_btn"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:layout_marginHorizontal="4dp"
+                android:layout_marginStart="6dp"
                 android:src="@drawable/ic_send"
                 android:background="@drawable/bg_circle_orange"
                 android:scaleType="center"
                 android:contentDescription="发送" />
-
-            <ImageButton
-                android:id="@+id/live_like_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_marginEnd="4dp"
-                android:src="@drawable/ic_like_fill"
-                android:background="@drawable/bg_circle_overlay"
-                android:scaleType="center"
-                android:contentDescription="点赞" />
         </LinearLayout>
     </LinearLayout>
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/feed_item_text"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:textColor="#CCFFFFFF"
+    android:textSize="11sp"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="3dp"
+    android:layout_marginBottom="2dp"
+    android:background="@drawable/bg_circle_overlay"
+    android:maxLines="1"
+    android:ellipsize="end" />

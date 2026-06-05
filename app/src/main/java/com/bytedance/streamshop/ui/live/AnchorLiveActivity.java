@@ -1,5 +1,6 @@
 package com.bytedance.streamshop.ui.live;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,6 +9,7 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -17,16 +19,28 @@ import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
+import com.bytedance.streamshop.domain.model.Product;
+import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
+import com.bytedance.streamshop.ui.profile.AuthorProfileActivity;
+import com.bytedance.streamshop.util.SystemBarInsets;
+import com.bumptech.glide.Glide;
 
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.ImageButton;
 
-import com.google.android.material.button.MaterialButton;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.util.DisplayMetrics;
 import android.util.Log;
 
 import java.net.InetAddress;
@@ -51,13 +65,23 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     private LiveWebSocketClient wsClient;
     private ApiService apiService;
 
-    private TextView roomTitleView, onlineCountText, hotValueText, statusBadge;
+    private TextView hotValueText;
+    private ShapeableImageView selfAvatar;
+    private TextView selfName;
+    private TextView viewerCountText;
+    private ImageButton exitBtn;
     private TextView connectingText;
     private View connectingOverlay;
-    private MaterialButton endLiveBtn;
     private RecyclerView productList;
     private ProductAdapter productAdapter;
     private DanmakuView danmakuView;
+    private EditText inputView;
+    private ImageButton danmakuToggle;
+    private ImageButton manageProductsBtn;
+    private ImageButton couponBtn;
+    private boolean danmakuEnabled = true;
+    private RecyclerView activityFeedList;
+    private final List<String> activityFeedItems = new ArrayList<>();
 
     private final List<Map<String, Object>> products = new ArrayList<>();
     private final NumberFormat priceFmt = NumberFormat.getNumberInstance(Locale.CHINA);
@@ -71,6 +95,9 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         setContentView(R.layout.activity_anchor_live);
 
         roomId = getIntent().getStringExtra("room_id");
@@ -92,6 +119,9 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     }
 
     private void initViews() {
+        View topBar = findViewById(R.id.anchor_top_bar);
+        SystemBarInsets.applyStatusBarPadding(topBar);
+
         cameraPreview = findViewById(R.id.anchor_camera_preview);
         cameraPreview.setZOrderMediaOverlay(true);
         cameraPreview.getHolder().addCallback(new SurfaceHolder.Callback() {
@@ -103,40 +133,107 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
             @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {}
-        });
-        roomTitleView = findViewById(R.id.anchor_room_title);
-        onlineCountText = findViewById(R.id.anchor_online_count);
-        hotValueText = findViewById(R.id.anchor_hot_value);
-        statusBadge = findViewById(R.id.anchor_status_badge);
-        endLiveBtn = findViewById(R.id.anchor_end_live_btn);
-        connectingOverlay = findViewById(R.id.anchor_connecting_overlay);
-        connectingText = findViewById(R.id.anchor_connecting_text);
-        danmakuView = findViewById(R.id.anchor_danmaku_view);
-
-        if (roomTitle != null && !roomTitle.isEmpty()) {
-            roomTitleView.setText(roomTitle);
-        }
-        statusBadge.setText("连接中");
-
-        findViewById(R.id.anchor_back_btn).setOnClickListener(v -> showEndConfirmDialog());
-
-        findViewById(R.id.anchor_switch_camera_btn).setOnClickListener(v -> {
-            if (rtmpCamera1 != null && isStreaming) {
-                try {
-                    rtmpCamera1.switchCamera();
-                } catch (Exception e) {
-                    Toast.makeText(this, "切换摄像头失败", Toast.LENGTH_SHORT).show();
-                }
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                surfaceReady = false;
+                startAttempted = false;
             }
         });
 
-        endLiveBtn.setOnClickListener(v -> showEndConfirmDialog());
+        selfAvatar = findViewById(R.id.anchor_self_avatar);
+        selfName = findViewById(R.id.anchor_self_name);
+        viewerCountText = findViewById(R.id.anchor_viewer_count);
+        exitBtn = findViewById(R.id.anchor_exit_btn);
+        hotValueText = findViewById(R.id.anchor_hot_value);
+        connectingOverlay = findViewById(R.id.anchor_connecting_overlay);
+        connectingText = findViewById(R.id.anchor_connecting_text);
+        danmakuView = findViewById(R.id.anchor_danmaku_view);
+        inputView = findViewById(R.id.anchor_chat_input);
+        danmakuToggle = findViewById(R.id.anchor_danmaku_toggle);
+
+        // Load own avatar + username
+        ApiClient client = ApiClient.getInstance();
+        String currentUsername = client.getCurrentUsername();
+        String currentAvatar = client.getCurrentAvatarUrl();
+        String currentUserId = client.getCurrentUserId();
+        if (currentUsername != null && !currentUsername.isEmpty()) {
+            selfName.setText(currentUsername);
+        } else if (roomTitle != null && !roomTitle.isEmpty()) {
+            selfName.setText(roomTitle);
+        }
+        if (currentAvatar != null && !currentAvatar.isEmpty()) {
+            Glide.with(this).load(currentAvatar).circleCrop()
+                    .placeholder(R.drawable.ic_avatar_placeholder).into(selfAvatar);
+        }
+
+        findViewById(R.id.anchor_self_info).setOnClickListener(v -> {
+            if (currentUserId != null) {
+                Intent intent = new Intent(AnchorLiveActivity.this, AuthorProfileActivity.class);
+                intent.putExtra(AuthorProfileActivity.EXTRA_USER_ID, currentUserId);
+                startActivity(intent);
+            }
+        });
+
+        viewerCountText.setOnClickListener(v -> wsClient.sendGetRoomUsers());
+
+        exitBtn.setOnClickListener(v -> showEndConfirmDialog());
+
+        danmakuToggle.setOnClickListener(v -> {
+            danmakuEnabled = !danmakuEnabled;
+            danmakuToggle.setImageResource(danmakuEnabled
+                    ? R.drawable.ic_danmaku_on : R.drawable.ic_danmaku_off);
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        });
 
         productList = findViewById(R.id.anchor_product_list);
         productList.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         productAdapter = new ProductAdapter();
         productList.setAdapter(productAdapter);
+
+        manageProductsBtn = findViewById(R.id.anchor_manage_products_btn);
+        manageProductsBtn.setOnClickListener(v -> {
+            LiveProductManageBottomSheet sheet = LiveProductManageBottomSheet.newInstance(roomId, products);
+            sheet.setOnProductsChangedListener(this::loadRoomProducts);
+            sheet.show(getSupportFragmentManager(), "manage_products_sheet");
+        });
+
+        couponBtn = findViewById(R.id.anchor_coupon_btn);
+        couponBtn.setOnClickListener(v -> {
+            LiveCouponCreateBottomSheet sheet = LiveCouponCreateBottomSheet.newInstance(roomId, products);
+            sheet.show(getSupportFragmentManager(), "coupon_create_sheet");
+        });
+
+        findViewById(R.id.anchor_send_btn).setOnClickListener(v -> {
+            String text = inputView.getText().toString().trim();
+            if (text.isEmpty()) return;
+            inputView.setText("");
+            wsClient.sendComment(text);
+            danmakuView.addDanmaku("主播: " + text, "#FFFFFF");
+            addActivityFeedItem("主播: " + text);
+        });
+
+        inputView.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                findViewById(R.id.anchor_send_btn).performClick();
+                return true;
+            }
+            return false;
+        });
+
+        activityFeedList = findViewById(R.id.anchor_activity_feed);
+        activityFeedList.setLayoutManager(new LinearLayoutManager(this));
+        activityFeedList.setAdapter(new RecyclerView.Adapter<FeedVH>() {
+            @NonNull @Override
+            public FeedVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new FeedVH(LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_live_activity_feed, parent, false));
+            }
+            @Override
+            public void onBindViewHolder(@NonNull FeedVH holder, int position) {
+                ((TextView) holder.itemView).setText(activityFeedItems.get(position));
+            }
+            @Override
+            public int getItemCount() { return activityFeedItems.size(); }
+        });
     }
 
     private void tryStartStreaming() {
@@ -154,13 +251,19 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
 
         connectingOverlay.setVisibility(View.VISIBLE);
         connectingText.setText("正在准备摄像头...");
-        statusBadge.setText("连接中");
+        // statusBadge removed:("连接中");
 
         try {
             rtmpCamera1 = new RtmpCamera1(cameraPreview, this);
             rtmpCamera1.setReTries(10);
 
-            if (rtmpCamera1.prepareVideo(1280, 720, 30, 1200 * 1024, 270)) {
+            // Match video aspect ratio to screen so preview fills the display
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int baseW = 720;
+            int encodeW = (int) (baseW * ((float) dm.heightPixels / dm.widthPixels));
+            encodeW = (encodeW / 2) * 2; // round to even
+            int bitrate = (int) (1200 * 1024 * ((float) (encodeW * baseW) / (1280 * 720)));
+            if (rtmpCamera1.prepareVideo(encodeW, baseW, 30, bitrate, 270)) {
                 rtmpCamera1.prepareAudio();
                 connectingText.setText("正在连接直播服务器...");
                 rtmpCamera1.startStream(rtmpUrl);
@@ -186,7 +289,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         Log.d(TAG, "RTMP connection success");
         runOnUiThread(() -> {
             connectingOverlay.setVisibility(View.GONE);
-            statusBadge.setText("推流中");
+            // statusBadge removed:("推流中");
             isStreaming = true;
             Toast.makeText(this, "直播已开始", Toast.LENGTH_SHORT).show();
         });
@@ -197,7 +300,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     public void onConnectionFailedRtmp(String reason) {
         Log.e(TAG, "RTMP connection failed: " + reason);
         runOnUiThread(() -> {
-            statusBadge.setText("连接失败");
+            // statusBadge removed:("连接失败");
             connectingText.setText("连接失败，重试中...");
             Toast.makeText(this, "推流连接失败: " + reason, Toast.LENGTH_LONG).show();
         });
@@ -218,7 +321,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         Log.d(TAG, "RTMP disconnected");
         runOnUiThread(() -> {
             isStreaming = false;
-            statusBadge.setText("已断开");
+            // statusBadge removed:("已断开");
             Toast.makeText(this, "推流已断开", Toast.LENGTH_SHORT).show();
         });
     }
@@ -250,11 +353,11 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 Map<String, Object> room = apiService.startLiveRoom(roomId);
                 Object streamUrl = room != null ? room.get("streamUrl") : null;
                 Log.d(TAG, "Live room start synced, streamUrl=" + streamUrl);
-                runOnUiThread(() -> statusBadge.setText("直播中"));
+                // live started
             } catch (Exception e) {
                 Log.e(TAG, "Start live room failed", e);
                 runOnUiThread(() -> {
-                    statusBadge.setText("同步失败");
+                    // statusBadge removed:("同步失败");
                     Toast.makeText(this, "直播状态同步失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
             }
@@ -274,21 +377,24 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
             @Override
             public void onRoomJoined(int onlineCount, int hotValue) {
                 runOnUiThread(() -> {
-                    onlineCountText.setText(onlineCount + "人在线");
+                    viewerCountText.setText(onlineCount + "人在线");
                     hotValueText.setText("热度: " + hotValue);
                 });
             }
 
             @Override
             public void onOnlineCount(int count) {
-                runOnUiThread(() -> onlineCountText.setText(count + "人在线"));
+                runOnUiThread(() -> viewerCountText.setText(count + "人在线"));
             }
 
             @Override
             public void onNewComment(JSONObject comment) {
                 String user = comment.optString("username", "匿名");
                 String content = comment.optString("content", "");
-                runOnUiThread(() -> danmakuView.addDanmaku(user + ": " + content, "#FFFFFF"));
+                runOnUiThread(() -> {
+                    danmakuView.addDanmaku(user + ": " + content, "#FFFFFF");
+                    addActivityFeedItem(user + ": " + content);
+                });
             }
 
             @Override
@@ -310,10 +416,32 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
             }
 
             @Override
-            public void onProductChanged(String productId, String action) {}
+            public void onProductChanged(String productId, String action) {
+                if ("added".equals(action) || "removed".equals(action) || "reordered".equals(action)) {
+                    loadRoomProducts();
+                }
+            }
 
             @Override
             public void onCouponPushed(JSONObject coupon) {}
+
+            @Override
+            public void onUserJoined(String username, String userId) {
+                runOnUiThread(() -> addActivityFeedItem(username + " 进入了直播间"));
+            }
+
+            @Override
+            public void onPurchase(String username, String productTitle, int quantity) {
+                runOnUiThread(() -> addActivityFeedItem(username + "购买了" + productTitle + "×" + quantity));
+            }
+
+            @Override
+            public void onRoomUsers(JSONArray users) {
+                runOnUiThread(() -> {
+                    LiveUserListBottomSheet sheet = LiveUserListBottomSheet.newInstance(users);
+                    sheet.show(getSupportFragmentManager(), "user_list_sheet");
+                });
+            }
 
             @Override
             public void onDisconnected() {}
@@ -433,6 +561,9 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 if (productId != null) {
                     explainProduct(productId);
                 }
+                Product product = mapToProduct(p);
+                ProductDetailBottomSheetFragment sheet = ProductDetailBottomSheetFragment.newInstance(product);
+                sheet.show(getSupportFragmentManager(), "product_detail");
             });
         }
 
@@ -448,6 +579,43 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 price = v.findViewById(R.id.live_product_price);
             }
         }
+    }
+
+    private void addActivityFeedItem(String msg) {
+        runOnUiThread(() -> {
+            activityFeedItems.add(msg);
+            if (activityFeedItems.size() > 50) {
+                activityFeedItems.remove(0);
+            }
+            if (activityFeedList.getAdapter() != null) {
+                activityFeedList.getAdapter().notifyItemInserted(activityFeedItems.size() - 1);
+                activityFeedList.scrollToPosition(activityFeedItems.size() - 1);
+            }
+        });
+    }
+
+    private static class FeedVH extends RecyclerView.ViewHolder {
+        FeedVH(View v) { super(v); }
+    }
+
+    private Product mapToProduct(Map<String, Object> map) {
+        Product p = new Product();
+        p.setId((String) map.get("id"));
+        p.setTitle((String) map.get("title"));
+        p.setDescription((String) map.get("description"));
+        Object price = map.get("price");
+        p.setPrice(price instanceof Number ? ((Number) price).doubleValue() : 0);
+        Object originalPrice = map.get("originalPrice");
+        p.setOriginalPrice(originalPrice instanceof Number ? ((Number) originalPrice).doubleValue() : 0);
+        p.setCoverUrl((String) map.get("coverUrl"));
+        Object stock = map.get("stock");
+        p.setStock(stock instanceof Number ? ((Number) stock).intValue() : 0);
+        Object salesCount = map.get("salesCount");
+        p.setSalesCount(salesCount instanceof Number ? ((Number) salesCount).intValue() : 0);
+        p.setStatus((String) map.get("status"));
+        p.setCategory((String) map.get("category"));
+        p.setCreatedAt((String) map.get("createdAt"));
+        return p;
     }
 
     private void explainProduct(String productId) {

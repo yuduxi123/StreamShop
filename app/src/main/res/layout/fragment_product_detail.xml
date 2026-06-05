@@ -104,6 +104,37 @@
             android:text="库存 0 件" />
     </LinearLayout>
 
+    <!-- Coupon selection -->
+    <LinearLayout
+        android:id="@+id/product_coupon_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_comment_input"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="选择优惠券"
+            android:textSize="13sp"
+            android:textColor="#666666" />
+
+        <TextView
+            android:id="@+id/product_coupon_discount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="未选择"
+            android:textSize="13sp"
+            android:textColor="#FF6B35" />
+    </LinearLayout>
+
     <!-- Collect button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/product_collect_btn"

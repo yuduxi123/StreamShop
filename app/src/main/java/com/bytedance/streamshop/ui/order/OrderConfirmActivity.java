@@ -30,6 +30,8 @@ public class OrderConfirmActivity extends AppCompatActivity {
     private TextView subtotalText, discountText, totalText, finalAmountText;
     private MaterialButton submitBtn;
     private double totalAmount = 0;
+    private String couponId;
+    private double couponDiscount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,9 +42,32 @@ public class OrderConfirmActivity extends AppCompatActivity {
         items = (List<Map<String, Object>>) getIntent().getSerializableExtra("items");
         if (items == null) items = new ArrayList<>();
 
+        couponId = getIntent().getStringExtra("couponId");
+        if (couponId != null) {
+            String couponType = getIntent().getStringExtra("couponType");
+            double couponValue = getIntent().getDoubleExtra("couponValue", 0);
+            calculateDiscount(couponType, couponValue);
+        }
+
         initViews();
         calculateTotal();
         renderItems();
+    }
+
+    private void calculateDiscount(String type, double value) {
+        double tempTotal = 0;
+        for (Map<String, Object> item : items) {
+            int qty = ((Number) item.get("quantity")).intValue();
+            Map<String, Object> product = (Map<String, Object>) item.get("product");
+            if (product != null && product.get("price") != null) {
+                tempTotal += ((Number) product.get("price")).doubleValue() * qty;
+            }
+        }
+        if ("fixed".equals(type)) {
+            couponDiscount = Math.min(value, tempTotal);
+        } else {
+            couponDiscount = Math.round(tempTotal * value / 100.0);
+        }
     }
 
     private void initViews() {
@@ -67,7 +92,7 @@ public class OrderConfirmActivity extends AppCompatActivity {
                 totalAmount += ((Number) product.get("price")).doubleValue() * qty;
             }
         }
-        updateAmounts(0);
+        updateAmounts(couponDiscount);
     }
 
     private void updateAmounts(double discount) {
@@ -114,7 +139,7 @@ public class OrderConfirmActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
-                Map<String, Object> order = apiService.createOrder(address, items);
+                Map<String, Object> order = apiService.createOrder(address, items, couponId);
                 runOnUiThread(() -> {
                     Intent intent = new Intent(this, PaymentActivity.class);
                     intent.putExtra("order_id", (String) order.get("id"));

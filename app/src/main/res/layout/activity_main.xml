@@ -8,9 +8,10 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
-        android:tag="status_bar_inset"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:tag="status_bar_inset"
+        android:clipChildren="true"
         app:defaultNavHost="true"
         app:layout_constraintBottom_toTopOf="@id/bottom_nav_bar"
         app:layout_constraintEnd_toEndOf="parent"

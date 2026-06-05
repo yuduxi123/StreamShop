@@ -208,6 +208,14 @@ public class ApiService {
         }
     }
 
+    public ApiResponse<Map<String, Object>> getAllProducts() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "products?limit=1000")
+                .get()
+                .build();
+        return executePaginatedMap(request);
+    }
+
     public boolean bindVideoToProduct(String productId, String videoId, long timestampMs) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("videoId", videoId);
@@ -375,14 +383,22 @@ public class ApiService {
     // ---- Orders ----
 
     public Map<String, Object> createOrder(String shippingAddress) throws IOException {
-        return createOrder(shippingAddress, null);
+        return createOrder(shippingAddress, null, null);
     }
 
     public Map<String, Object> createOrder(String shippingAddress, List<Map<String, Object>> items) throws IOException {
+        return createOrder(shippingAddress, items, null);
+    }
+
+    public Map<String, Object> createOrder(String shippingAddress, List<Map<String, Object>> items,
+                                           String couponId) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("shippingAddress", shippingAddress);
         if (items != null && !items.isEmpty()) {
             body.put("items", items);
+        }
+        if (couponId != null && !couponId.isEmpty()) {
+            body.put("couponId", couponId);
         }
         String json = client.getGson().toJson(body);
         Request request = new Request.Builder()
@@ -668,7 +684,67 @@ public class ApiService {
         }
     }
 
+    public boolean unbindProductFromLiveRoom(String roomId, String productId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/products/" + productId)
+                .delete()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
+    public boolean reorderLiveRoomProducts(String roomId, List<String> productIds) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("productIds", productIds);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/products")
+                .patch(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
+    public boolean updateProductStock(String productId, int stock) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("stock", stock);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "products/" + productId)
+                .patch(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
     // ---- Coupons ----
+
+    public boolean createLiveCoupon(String roomId, Map<String, Object> params) throws IOException {
+        String json = client.getGson().toJson(params);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "live/rooms/" + roomId + "/coupons")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful();
+        }
+    }
+
+    public String getMyCouponsJson() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "coupons/my")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            if (resp.isSuccessful() && resp.body() != null) {
+                return resp.body().string();
+            }
+            return "[]";
+        }
+    }
 
     public boolean claimCoupon(String couponId) throws IOException {
         Map<String, Object> body = new HashMap<>();

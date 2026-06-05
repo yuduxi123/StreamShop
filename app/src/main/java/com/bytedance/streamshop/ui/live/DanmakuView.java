@@ -19,7 +19,8 @@ import java.util.Random;
 public class DanmakuView extends View {
     private static final int MAX_VISIBLE = 20;
     private static final int TEXT_SIZE = 28;
-    private static final float SPEED = 2.5f;
+    private static final float SPEED = 3.5f;
+    private static final int FRAME_INTERVAL = 33; // ~30fps, enough for danmaku
 
     private final List<DanmakuItem> items = new ArrayList<>();
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -27,14 +28,21 @@ public class DanmakuView extends View {
     private final Random random = new Random();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
+    private boolean frameScheduled = false;
 
     private final Runnable frameCallback = new Runnable() {
         @Override
         public void run() {
+            frameScheduled = false;
             if (!running) return;
+            int oldSize = items.size();
             updatePositions();
-            invalidate();
-            handler.postDelayed(this, 16); // ~60fps
+            if (oldSize > 0 || items.size() > 0) {
+                invalidate();
+            }
+            if (items.size() > 0) {
+                scheduleFrame();
+            }
         }
     };
 
@@ -62,7 +70,6 @@ public class DanmakuView extends View {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         running = true;
-        handler.post(frameCallback);
     }
 
     @Override
@@ -70,15 +77,27 @@ public class DanmakuView extends View {
         super.onDetachedFromWindow();
         running = false;
         handler.removeCallbacks(frameCallback);
+        frameScheduled = false;
     }
 
     public void addDanmaku(String text, String colorHex) {
         if (items.size() > MAX_VISIBLE) return;
-        int color = 0xFFFFFFFF;
-
         float y = 40 + random.nextInt(Math.max(1, getHeight() - 80));
-        DanmakuItem item = new DanmakuItem(text, getWidth(), y, color);
-        items.add(item);
+        items.add(new DanmakuItem(text, getWidth(), y, 0xFFFFFFFF));
+        if (!frameScheduled) {
+            scheduleFrame();
+        }
+    }
+
+    public void clearDanmaku() {
+        items.clear();
+    }
+
+    private void scheduleFrame() {
+        if (!frameScheduled && running) {
+            frameScheduled = true;
+            handler.postDelayed(frameCallback, FRAME_INTERVAL);
+        }
     }
 
     private void updatePositions() {
@@ -96,17 +115,14 @@ public class DanmakuView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         for (DanmakuItem item : items) {
-            // Measure width if not yet
             if (item.width <= 0) {
                 item.width = textPaint.measureText(item.text);
             }
-            // Draw stroke
             strokePaint.setColor(0xCC000000);
             canvas.drawText(item.text, item.x - 1, item.y, strokePaint);
             canvas.drawText(item.text, item.x + 1, item.y, strokePaint);
             canvas.drawText(item.text, item.x, item.y - 1, strokePaint);
             canvas.drawText(item.text, item.x, item.y + 1, strokePaint);
-            // Draw text
             textPaint.setColor(item.color);
             canvas.drawText(item.text, item.x, item.y, textPaint);
         }

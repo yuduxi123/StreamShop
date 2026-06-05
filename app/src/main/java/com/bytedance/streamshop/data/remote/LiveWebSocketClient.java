@@ -115,6 +115,25 @@ public class LiveWebSocketClient {
                                 if (callback != null) callback.onCouponPushed(msg.optJSONObject("coupon"));
                             });
                             break;
+                        case "USER_JOINED":
+                            handler.post(() -> {
+                                if (callback != null) callback.onUserJoined(
+                                        msg.optString("username"), msg.optString("userId"));
+                            });
+                            break;
+                        case "PURCHASE":
+                            handler.post(() -> {
+                                if (callback != null) callback.onPurchase(
+                                        msg.optString("username"),
+                                        msg.optString("productTitle"),
+                                        msg.optInt("quantity"));
+                            });
+                            break;
+                        case "ROOM_USERS":
+                            handler.post(() -> {
+                                if (callback != null) callback.onRoomUsers(msg.optJSONArray("users"));
+                            });
+                            break;
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Parse error: " + e.getMessage());
@@ -169,6 +188,16 @@ public class LiveWebSocketClient {
             msg.put("userId", userId);
             msg.put("username", username);
             msg.put("content", content);
+            websocket.send(msg.toString());
+        } catch (Exception ignored) {}
+    }
+
+    public void sendGetRoomUsers() {
+        if (!connected) return;
+        try {
+            JSONObject msg = new JSONObject();
+            msg.put("type", "GET_ROOM_USERS");
+            msg.put("roomId", roomId);
             websocket.send(msg.toString());
         } catch (Exception ignored) {}
     }
@@ -240,6 +269,9 @@ public class LiveWebSocketClient {
         default void onHotValueUpdate(int value) {}
         default void onProductChanged(String productId, String action) {}
         default void onCouponPushed(JSONObject coupon) {}
+        default void onUserJoined(String username, String userId) {}
+        default void onPurchase(String username, String productTitle, int quantity) {}
+        default void onRoomUsers(JSONArray users) {}
         default void onDisconnected() {}
         default void onError(String message) {}
     }

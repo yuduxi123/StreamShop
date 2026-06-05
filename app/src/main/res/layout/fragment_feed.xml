@@ -9,7 +9,8 @@
         android:id="@+id/feed_viewpager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical" />
+        android:orientation="vertical"
+        android:clipChildren="true" />
 
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/feed_loading"
