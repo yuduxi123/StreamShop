@@ -15,7 +15,7 @@
         <ImageView
             android:id="@+id/live_product_thumb"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="54dp"
             android:scaleType="centerCrop"
             android:background="#f5f5f5" />
 
@@ -26,9 +26,21 @@
             android:layout_weight="1"
             android:gravity="center"
             android:textColor="#FF3B30"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:text="¥0" />
+
+        <TextView
+            android:id="@+id/live_product_reviews_btn"
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:gravity="center"
+            android:text="★ 评价"
+            android:textSize="8sp"
+            android:textColor="#FF9500"
+            android:background="#FFF8E1"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

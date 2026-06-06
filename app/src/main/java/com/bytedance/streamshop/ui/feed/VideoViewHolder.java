@@ -75,6 +75,8 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private final ImageView followButton;
     private VideoDanmakuView danmakuView;
     private ImageButton danmakuButton;
+    private ImageButton muteButton;
+    private static boolean globalMuted = false;
 
     private Video video;
     private ApiService apiService;
@@ -121,6 +123,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         followButton = itemView.findViewById(R.id.video_follow_btn);
         danmakuView = itemView.findViewById(R.id.video_danmaku_view);
         danmakuButton = itemView.findViewById(R.id.video_danmaku_btn);
+        muteButton = itemView.findViewById(R.id.video_mute_btn);
 
         // Product card RecyclerView one-time setup
         if (productContainer != null) {
@@ -143,6 +146,16 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         }
 
         if (danmakuButton != null) danmakuButton.setOnClickListener(v -> showDanmakuInput());
+        if (muteButton != null) {
+            muteButton.setImageResource(globalMuted ? R.drawable.ic_mute_on : R.drawable.ic_mute_off);
+            muteButton.setOnClickListener(v -> {
+                globalMuted = !globalMuted;
+                muteButton.setImageResource(globalMuted ? R.drawable.ic_mute_on : R.drawable.ic_mute_off);
+                if (player != null) {
+                    player.setVolume(globalMuted ? 0f : 1f);
+                }
+            });
+        }
         if (avatarContainer != null) avatarContainer.setOnClickListener(v -> openAuthorProfile());
         if (usernameText != null) usernameText.setOnClickListener(v -> openAuthorProfile());
         if (followButton != null) followButton.setOnClickListener(v -> toggleFollow());
@@ -324,6 +337,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
         playerView.setPlayer(player);
         playerView.setUseController(false);
+        player.setVolume(globalMuted ? 0f : 1f);
 
         prepareAndPlay(video.getVideoUrl());
 
@@ -480,6 +494,15 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 });
             }
 
+            if (holder.reviewsButton != null) {
+                holder.reviewsButton.setOnClickListener(v -> {
+                    if (fragmentManager != null && context != null) {
+                        ProductReviewsBottomSheet.newInstance(product.getId())
+                                .show(fragmentManager, "product_reviews");
+                    }
+                });
+            }
+
             holder.itemView.setOnClickListener(v -> showProductDetail(product));
         }
 
@@ -490,7 +513,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
         class VH extends RecyclerView.ViewHolder {
             ImageView thumb;
-            TextView titleText, priceText, originalPriceText, discountText, stockInfoText, introButton;
+            TextView titleText, priceText, originalPriceText, discountText, stockInfoText, introButton, reviewsButton;
 
             VH(View v) {
                 super(v);
@@ -501,6 +524,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                 discountText = v.findViewById(R.id.product_discount);
                 stockInfoText = v.findViewById(R.id.product_stock_info);
                 introButton = v.findViewById(R.id.product_intro_btn);
+                reviewsButton = v.findViewById(R.id.product_reviews_btn);
             }
         }
     }
@@ -827,6 +851,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         this.player = existingPlayer;
         playerView.setPlayer(existingPlayer);
         playerView.setUseController(false);
+        existingPlayer.setVolume(globalMuted ? 0f : 1f);
         hasExternalPlayer = true;
         playerIsExternal = true;
         if (positionMs > 0) {

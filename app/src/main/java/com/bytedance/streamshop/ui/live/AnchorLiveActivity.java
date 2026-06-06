@@ -1,9 +1,14 @@
 package com.bytedance.streamshop.ui.live;
 
+import android.app.PictureInPictureParams;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
+import android.util.Rational;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -21,6 +26,7 @@ import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
 import com.bytedance.streamshop.domain.model.Product;
 import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
+import com.bytedance.streamshop.ui.feed.ProductReviewsBottomSheet;
 import com.bytedance.streamshop.ui.profile.AuthorProfileActivity;
 import com.bumptech.glide.Glide;
 
@@ -86,6 +92,8 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     private boolean danmakuEnabled = true;
     private RecyclerView activityFeedList;
     private final List<String> activityFeedItems = new ArrayList<>();
+    private View overlayContainer;
+    private ViewGroup rootLayout;
 
     private final List<Map<String, Object>> products = new ArrayList<>();
     private final NumberFormat priceFmt = NumberFormat.getNumberInstance(Locale.CHINA);
@@ -145,10 +153,25 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         viewerCountText = findViewById(R.id.anchor_viewer_count);
         exitBtn = findViewById(R.id.anchor_exit_btn);
         hotValueText = findViewById(R.id.anchor_hot_value);
+
+        overlayContainer = findViewById(R.id.anchor_overlay_container);
+        rootLayout = (ViewGroup) overlayContainer.getParent();
+
+        findViewById(R.id.anchor_pip_btn).setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                rootLayout.removeView(overlayContainer);
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                PictureInPictureParams params = new PictureInPictureParams.Builder()
+                        .setAspectRatio(new Rational(dm.widthPixels, dm.heightPixels))
+                        .build();
+                enterPictureInPictureMode(params);
+            }
+        });
         connectingOverlay = findViewById(R.id.anchor_connecting_overlay);
         connectingText = findViewById(R.id.anchor_connecting_text);
         danmakuView = findViewById(R.id.anchor_danmaku_view);
         inputView = findViewById(R.id.anchor_chat_input);
+
         danmakuToggle = findViewById(R.id.anchor_danmaku_toggle);
 
         // Load own avatar + username
@@ -298,6 +321,36 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         if (camera == null) return;
         try { camera.stopStream(); } catch (Exception ignored) {}
         try { camera.stopPreview(); } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode);
+        if (isInPictureInPictureMode) {
+            if (overlayContainer.getParent() != null) {
+                rootLayout.removeView(overlayContainer);
+            }
+        } else {
+            if (overlayContainer.getParent() == null) {
+                rootLayout.addView(overlayContainer);
+            }
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (isInPictureInPictureMode) {
+            if (overlayContainer.getParent() != null) {
+                rootLayout.removeView(overlayContainer);
+            }
+        } else {
+            if (overlayContainer.getParent() == null) {
+                rootLayout.addView(overlayContainer);
+            }
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
@@ -534,7 +587,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 }
             }
         } catch (Exception ignored) {}
-        return "10.208.69.9";
+        return "10.17.24.7";
     }
 
     @Override
@@ -587,6 +640,16 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 ProductDetailBottomSheetFragment sheet = ProductDetailBottomSheetFragment.newInstance(product);
                 sheet.show(getSupportFragmentManager(), "product_detail");
             });
+
+            if (h.reviewsBtn != null) {
+                h.reviewsBtn.setOnClickListener(v -> {
+                    String productId = (String) p.get("id");
+                    if (productId != null) {
+                        ProductReviewsBottomSheet.newInstance(productId)
+                                .show(getSupportFragmentManager(), "product_reviews");
+                    }
+                });
+            }
         }
 
         @Override
@@ -595,10 +658,12 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         class VH extends RecyclerView.ViewHolder {
             android.widget.ImageView thumb;
             TextView price;
+            TextView reviewsBtn;
             VH(View v) {
                 super(v);
                 thumb = v.findViewById(R.id.live_product_thumb);
                 price = v.findViewById(R.id.live_product_price);
+                reviewsBtn = v.findViewById(R.id.live_product_reviews_btn);
             }
         }
     }

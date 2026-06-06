@@ -220,6 +220,18 @@
                     android:singleLine="true" />
 
                 <EditText
+                    android:id="@+id/video_edit_product_original_price"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F5F5F5"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp"
+                    android:hint="原价/划线价（选填）"
+                    android:inputType="numberDecimal"
+                    android:singleLine="true" />
+
+                <EditText
                     android:id="@+id/video_edit_product_stock"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"

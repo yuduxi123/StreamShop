@@ -39,6 +39,7 @@ interface VideoProduct {
   videoId: string;
   productId: string;
   displayOrder: number;
+  timestampMs?: number;
 }
 
 const videoStorage = new StorageService<VideoData>('videos.json');
@@ -257,6 +258,29 @@ router.post('/:id/share', authMiddleware, (req: AuthRequest, res: Response) => {
   }
 
   res.json({ shareCount: newShareCount });
+});
+
+// GET /api/videos/:id/products - get products bound to a video
+router.get('/:id/products', (req: Request, res: Response) => {
+  const bindings = vpStorage.query(vp => vp.videoId === req.params.id);
+  const products = bindings.map(b => {
+    const product = productStorage.findById(b.productId);
+    if (!product) return null;
+    return { ...product, bindingId: b.id, timestampMs: b.timestampMs || 0, displayOrder: b.displayOrder };
+  }).filter(Boolean);
+  res.json(products);
+});
+
+// DELETE /api/videos/:id/products/:productId - unbind product from video
+router.delete('/:id/products/:productId', authMiddleware, (req: AuthRequest, res: Response) => {
+  const bindingId = req.params.id + '_' + req.params.productId;
+  const binding = vpStorage.findById(bindingId);
+  if (!binding) {
+    res.status(404).json({ error: 'Binding not found' });
+    return;
+  }
+  vpStorage.delete(bindingId);
+  res.status(204).send();
 });
 
 export default router;

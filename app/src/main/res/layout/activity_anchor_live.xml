@@ -6,248 +6,261 @@
     android:background="#000000"
     android:keepScreenOn="true">
 
-    <!-- Camera preview -->
+    <!-- Camera preview (stays outside overlay container for PIP) -->
     <SurfaceView
         android:id="@+id/anchor_camera_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Gradient overlays -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_gravity="top"
-        android:background="@drawable/bg_live_top_gradient" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="160dp"
-        android:layout_gravity="bottom"
-        android:background="@drawable/bg_live_bottom_gradient" />
-
-    <!-- Top bar: anchor info + viewer count + exit -->
-    <LinearLayout
-        android:id="@+id/anchor_top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:layout_gravity="top"
-        android:tag="status_bar_inset"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="12dp">
-
-        <LinearLayout
-            android:id="@+id/anchor_self_info"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground">
-
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/anchor_self_avatar"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_avatar_placeholder"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/CircleImageView" />
-
-            <TextView
-                android:id="@+id/anchor_self_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="主播" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/anchor_hot_value"
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:gravity="center"
-            android:paddingHorizontal="8dp"
-            android:textColor="#FF9500"
-            android:textSize="11sp"
-            android:text="热度: 0" />
-
-        <TextView
-            android:id="@+id/anchor_viewer_count"
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:gravity="center"
-            android:paddingHorizontal="10dp"
-            android:background="@drawable/bg_circle_overlay"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:clickable="true"
-            android:focusable="true"
-            android:text="0人在线" />
-
-        <ImageButton
-            android:id="@+id/anchor_exit_btn"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="6dp"
-            android:src="@drawable/ic_live_exit"
-            android:background="@drawable/bg_circle_overlay"
-            android:scaleType="center"
-            android:contentDescription="退出" />
-    </LinearLayout>
-
-    <!-- Danmaku overlay -->
-    <com.bytedance.streamshop.ui.live.DanmakuView
-        android:id="@+id/anchor_danmaku_view"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_gravity="top"
-        android:layout_marginTop="80dp"
-        android:layout_marginBottom="195dp" />
-
-    <!-- Activity feed -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/anchor_activity_feed"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_gravity="bottom"
-        android:layout_marginBottom="160dp"
-        android:orientation="vertical"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:clipToPadding="false"
-        android:overScrollMode="never" />
-
-    <!-- Bottom controls -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical"
-        android:paddingBottom="16dp"
-        android:paddingHorizontal="12dp">
-
-        <!-- Product carousel with manage button -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/anchor_product_list"
-                android:layout_width="0dp"
-                android:layout_height="80dp"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:clipToPadding="false" />
-
-            <ImageButton
-                android:id="@+id/anchor_manage_products_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_marginStart="4dp"
-                android:src="@drawable/ic_manage"
-                android:background="@drawable/bg_circle_overlay"
-                android:scaleType="center"
-                android:contentDescription="管理商品" />
-
-            <ImageButton
-                android:id="@+id/anchor_coupon_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_marginStart="4dp"
-                android:src="@drawable/ic_coupon"
-                android:background="@drawable/bg_circle_overlay"
-                android:scaleType="center"
-                android:contentDescription="发布优惠券" />
-        </LinearLayout>
-
-        <!-- Chat input row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <ImageButton
-                android:id="@+id/anchor_danmaku_toggle"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:src="@drawable/ic_danmaku_on"
-                android:background="@drawable/bg_circle_overlay"
-                android:scaleType="center"
-                android:contentDescription="弹幕开关" />
-
-            <EditText
-                android:id="@+id/anchor_chat_input"
-                android:layout_width="0dp"
-                android:layout_height="34dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="6dp"
-                android:background="@drawable/bg_input_round"
-                android:hint="说点什么..."
-                android:textSize="13sp"
-                android:textColor="@android:color/white"
-                android:textColorHint="#999"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="0dp"
-                android:maxLines="1"
-                android:imeOptions="actionSend"
-                android:inputType="text" />
-
-            <ImageButton
-                android:id="@+id/anchor_send_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:src="@drawable/ic_send"
-                android:background="@drawable/bg_circle_orange"
-                android:scaleType="center"
-                android:contentDescription="发送" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- Connecting indicator -->
-    <LinearLayout
-        android:id="@+id/anchor_connecting_overlay"
+    <!-- All UI overlays in one container — hidden in PIP mode -->
+    <FrameLayout
+        android:id="@+id/anchor_overlay_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:clickable="false"
-        android:focusable="false"
-        android:visibility="gone">
+        android:clipChildren="false">
+
+        <View
+            android:id="@+id/anchor_top_gradient"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_gravity="top"
+            android:background="@drawable/bg_live_top_gradient" />
+
+        <View
+            android:id="@+id/anchor_bottom_gradient"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_live_bottom_gradient" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/anchor_top_bar"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/bg_connecting_toast"
-            android:padding="24dp">
+            android:minHeight="48dp"
+            android:layout_gravity="top"
+            android:tag="status_bar_inset"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp">
 
-            <ProgressBar
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:indeterminateTint="#FFFFFF" />
+            <LinearLayout
+                android:id="@+id/anchor_self_info"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/anchor_self_avatar"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:src="@drawable/ic_avatar_placeholder"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/CircleImageView" />
+
+                <TextView
+                    android:id="@+id/anchor_self_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="主播" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/anchor_connecting_text"
+                android:id="@+id/anchor_hot_value"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:paddingHorizontal="8dp"
+                android:textColor="#FF9500"
+                android:textSize="11sp"
+                android:text="热度: 0" />
+
+            <TextView
+                android:id="@+id/anchor_viewer_count"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:background="@drawable/bg_circle_overlay"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:text="0人在线" />
+
+            <ImageButton
+                android:id="@+id/anchor_pip_btn"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:src="@drawable/ic_pip"
+                android:background="@drawable/bg_circle_overlay"
+                android:scaleType="center"
+                android:contentDescription="小窗" />
+
+            <ImageButton
+                android:id="@+id/anchor_exit_btn"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:src="@drawable/ic_live_exit"
+                android:background="@drawable/bg_circle_overlay"
+                android:scaleType="center"
+                android:contentDescription="退出" />
+        </LinearLayout>
+
+        <com.bytedance.streamshop.ui.live.DanmakuView
+            android:id="@+id/anchor_danmaku_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="top"
+            android:layout_marginTop="80dp"
+            android:layout_marginBottom="195dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/anchor_activity_feed"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="160dp"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:clipToPadding="false"
+            android:overScrollMode="never" />
+
+        <LinearLayout
+            android:id="@+id/anchor_bottom_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/anchor_product_list"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:clipToPadding="false" />
+
+                <ImageButton
+                    android:id="@+id/anchor_manage_products_btn"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_manage"
+                    android:background="@drawable/bg_circle_overlay"
+                    android:scaleType="center"
+                    android:contentDescription="管理商品" />
+
+                <ImageButton
+                    android:id="@+id/anchor_coupon_btn"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_coupon"
+                    android:background="@drawable/bg_circle_overlay"
+                    android:scaleType="center"
+                    android:contentDescription="发布优惠券" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/anchor_danmaku_toggle"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_danmaku_on"
+                    android:background="@drawable/bg_circle_overlay"
+                    android:scaleType="center"
+                    android:contentDescription="弹幕开关" />
+
+                <EditText
+                    android:id="@+id/anchor_chat_input"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="6dp"
+                    android:background="@drawable/bg_input_round"
+                    android:hint="说点什么..."
+                    android:textSize="13sp"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="#999"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="0dp"
+                    android:maxLines="1"
+                    android:imeOptions="actionSend"
+                    android:inputType="text" />
+
+                <ImageButton
+                    android:id="@+id/anchor_send_btn"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_send"
+                    android:background="@drawable/bg_circle_orange"
+                    android:scaleType="center"
+                    android:contentDescription="发送" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/anchor_connecting_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:text="正在准备摄像头..." />
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_connecting_toast"
+                android:padding="24dp">
+
+                <ProgressBar
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:indeterminateTint="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/anchor_connecting_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:text="正在准备摄像头..." />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </FrameLayout>
 
 </FrameLayout>

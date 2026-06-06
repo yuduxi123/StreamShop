@@ -1,5 +1,6 @@
 package com.bytedance.streamshop.ui.profile;
 
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.net.Uri;
 import android.os.Bundle;
@@ -39,7 +40,8 @@ import java.util.List;
 import java.util.Map;
 
 public class VideoEditActivity extends AppCompatActivity {
-    private EditText titleInput, tagsInput, productNameInput, productPriceInput, productStockInput, timestampInput;
+    private EditText titleInput, tagsInput, productNameInput, productPriceInput, productOriginalPriceInput,
+            productStockInput, timestampInput;
     private Spinner statusSpinner;
     private TextView headerTitle, videoInfoText, productHint;
     private ImageView coverPreview, productPreview;
@@ -55,6 +57,7 @@ public class VideoEditActivity extends AppCompatActivity {
     private File videoFile;
     private File coverFile;
 
+    private String editingProductId; // non-null when editing an existing product (inline form mode)
     private final List<PendingProduct> pendingProducts = new ArrayList<>();
     private ProductListAdapter productListAdapter;
 
@@ -101,6 +104,7 @@ public class VideoEditActivity extends AppCompatActivity {
         addProductBtn = findViewById(R.id.video_edit_add_product);
         productNameInput = findViewById(R.id.video_edit_product_name);
         productPriceInput = findViewById(R.id.video_edit_product_price);
+        productOriginalPriceInput = findViewById(R.id.video_edit_product_original_price);
         productStockInput = findViewById(R.id.video_edit_product_stock);
         timestampInput = findViewById(R.id.video_edit_product_timestamp);
         productPreview = findViewById(R.id.video_edit_product_preview);
@@ -120,7 +124,7 @@ public class VideoEditActivity extends AppCompatActivity {
         pickVideoBtn.setOnClickListener(v -> pickVideoLauncher.launch("video/*"));
         pickCoverBtn.setOnClickListener(v -> pickCoverLauncher.launch("image/*"));
         pickProductImageBtn.setOnClickListener(v -> pickProductImageLauncher.launch("image/*"));
-        addProductBtn.setOnClickListener(v -> addProduct());
+        addProductBtn.setOnClickListener(v -> addOrUpdateProduct());
 
         // Product list
         productListAdapter = new ProductListAdapter();
@@ -154,7 +158,42 @@ public class VideoEditActivity extends AppCompatActivity {
                 videoInfoText.setVisibility(View.VISIBLE);
                 videoInfoText.setText("已有视频（重新选择覆盖）");
             }
+            // Load existing products
+            loadExistingProducts();
         }
+    }
+
+    // ---- Load existing products for editing ----
+
+    private void loadExistingProducts() {
+        if (editingVideoId == null) return;
+        new Thread(() -> {
+            try {
+                List<Map<String, Object>> products = new ApiService().getVideoProducts(editingVideoId);
+                runOnUiThread(() -> {
+                    for (Map<String, Object> p : products) {
+                        String productId = (String) p.get("id");
+                        String title = (String) p.get("title");
+                        String coverUrl = (String) p.get("coverUrl");
+                        double price = ((Number) p.get("price")).doubleValue();
+                        double originalPrice = 0;
+                        Object op = p.get("originalPrice");
+                        if (op instanceof Number) originalPrice = ((Number) op).doubleValue();
+                        int stock = p.get("stock") instanceof Number ? ((Number) p.get("stock")).intValue() : 9999;
+                        long timestampMs = p.get("timestampMs") instanceof Number
+                                ? ((Number) p.get("timestampMs")).longValue() : 0;
+
+                        PendingProduct pp = new PendingProduct(title, coverUrl, price, stock, timestampMs);
+                        pp.productId = productId;
+                        pp.originalPrice = originalPrice;
+                        pp.isExisting = true;
+                        pendingProducts.add(pp);
+                    }
+                    productListAdapter.notifyDataSetChanged();
+                    updateProductListVisibility();
+                });
+            } catch (Exception ignored) {}
+        }).start();
     }
 
     // ---- File picking and upload ----
@@ -281,7 +320,7 @@ public class VideoEditActivity extends AppCompatActivity {
 
     // ---- Product management ----
 
-    private void addProduct() {
+    private void addOrUpdateProduct() {
         String name = productNameInput.getText().toString().trim();
         String priceStr = productPriceInput.getText().toString().trim();
         String stockStr = productStockInput.getText().toString().trim();
@@ -298,10 +337,6 @@ public class VideoEditActivity extends AppCompatActivity {
             Toast.makeText(this, "请输入库存数量", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (uploadedProductImageUrl == null || uploadedProductImageUrl.isEmpty()) {
-            Toast.makeText(this, "请选择商品图片", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         double price;
         int stock;
@@ -313,8 +348,16 @@ public class VideoEditActivity extends AppCompatActivity {
             return;
         }
         if (stock < 0) {
-            Toast.makeText(this, "库存不能为负数，请输入正确的数字", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "库存不能为负数", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        double originalPrice = 0;
+        String opStr = productOriginalPriceInput.getText().toString().trim();
+        if (!opStr.isEmpty()) {
+            try {
+                originalPrice = Double.parseDouble(opStr);
+            } catch (NumberFormatException ignored) {}
         }
 
         long timestampMs = 0;
@@ -328,13 +371,42 @@ public class VideoEditActivity extends AppCompatActivity {
             } catch (NumberFormatException ignored) {}
         }
 
-        PendingProduct pp = new PendingProduct(name, uploadedProductImageUrl, price, stock, timestampMs);
-        pendingProducts.add(pp);
-        productListAdapter.notifyItemInserted(pendingProducts.size() - 1);
+        if (editingProductId != null) {
+            // Updating an existing product from the inline form
+            for (PendingProduct pp : pendingProducts) {
+                if (editingProductId.equals(pp.productId)) {
+                    pp.title = name;
+                    pp.price = price;
+                    pp.originalPrice = originalPrice;
+                    pp.stock = stock;
+                    pp.timestampMs = timestampMs;
+                    if (uploadedProductImageUrl != null && !uploadedProductImageUrl.isEmpty()) {
+                        pp.coverUrl = uploadedProductImageUrl;
+                    }
+                    pp.modified = true;
+                    productListAdapter.notifyDataSetChanged();
+                    break;
+                }
+            }
+            addProductBtn.setText("+ 添加到此视频");
+            editingProductId = null;
+        } else {
+            // Adding a new product
+            String coverUrl = uploadedProductImageUrl != null ? uploadedProductImageUrl : "";
+            if (coverUrl.isEmpty()) {
+                Toast.makeText(this, "请选择商品图片", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            PendingProduct pp = new PendingProduct(name, coverUrl, price, stock, timestampMs);
+            pp.originalPrice = originalPrice;
+            pendingProducts.add(pp);
+            productListAdapter.notifyItemInserted(pendingProducts.size() - 1);
+        }
 
         // Reset product form
         productNameInput.setText("");
         productPriceInput.setText("");
+        productOriginalPriceInput.setText("");
         productStockInput.setText("");
         timestampInput.setText("");
         uploadedProductImageUrl = null;
@@ -343,9 +415,97 @@ public class VideoEditActivity extends AppCompatActivity {
         updateProductListVisibility();
     }
 
+    private void editProduct(int position) {
+        PendingProduct pp = pendingProducts.get(position);
+        if (pp.isExisting) {
+            // Edit via dialog for existing products
+            showEditProductDialog(pp, position);
+        } else {
+            // Load into inline form for new products
+            productNameInput.setText(pp.title);
+            productPriceInput.setText(String.valueOf((int) pp.price));
+            if (pp.originalPrice > 0) {
+                productOriginalPriceInput.setText(String.valueOf((int) pp.originalPrice));
+            }
+            productStockInput.setText(String.valueOf(pp.stock));
+            if (pp.timestampMs > 0) {
+                long mins = pp.timestampMs / 60000;
+                long secs = (pp.timestampMs / 1000) % 60;
+                timestampInput.setText(String.format("%d:%02d", mins, secs));
+            }
+            uploadedProductImageUrl = pp.coverUrl;
+            productPreview.setVisibility(View.VISIBLE);
+            Glide.with(this).load(pp.coverUrl).into(productPreview);
+            if (pp.productId != null) {
+                editingProductId = pp.productId;
+                addProductBtn.setText("更新商品");
+            }
+        }
+    }
+
+    private void showEditProductDialog(PendingProduct pp, int position) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_product, null);
+        EditText nameEt = dialogView.findViewById(R.id.dialog_product_name);
+        EditText priceEt = dialogView.findViewById(R.id.dialog_product_price);
+        EditText originalPriceEt = dialogView.findViewById(R.id.dialog_product_original_price);
+        EditText stockEt = dialogView.findViewById(R.id.dialog_product_stock);
+        EditText timestampEt = dialogView.findViewById(R.id.dialog_product_timestamp);
+
+        nameEt.setText(pp.title);
+        priceEt.setText(String.valueOf((int) pp.price));
+        if (pp.originalPrice > 0) originalPriceEt.setText(String.valueOf((int) pp.originalPrice));
+        stockEt.setText(String.valueOf(pp.stock));
+        if (pp.timestampMs > 0) {
+            long mins = pp.timestampMs / 60000;
+            long secs = (pp.timestampMs / 1000) % 60;
+            timestampEt.setText(String.format("%d:%02d", mins, secs));
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("编辑商品")
+                .setView(dialogView)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String name = nameEt.getText().toString().trim();
+                    String priceStr = priceEt.getText().toString().trim();
+                    String stockStr = stockEt.getText().toString().trim();
+
+                    if (name.isEmpty() || priceStr.isEmpty() || stockStr.isEmpty()) {
+                        Toast.makeText(this, "请填写完整信息", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    try {
+                        pp.title = name;
+                        pp.price = Double.parseDouble(priceStr);
+                        pp.stock = Integer.parseInt(stockStr);
+                        String opStr = originalPriceEt.getText().toString().trim();
+                        if (!opStr.isEmpty()) pp.originalPrice = Double.parseDouble(opStr);
+
+                        String tsStr = timestampEt.getText().toString().trim();
+                        if (!tsStr.isEmpty() && tsStr.contains(":")) {
+                            String[] parts = tsStr.split(":");
+                            pp.timestampMs = (Long.parseLong(parts[0]) * 60 + Long.parseLong(parts[1])) * 1000;
+                        }
+                        pp.modified = true;
+                        productListAdapter.notifyItemChanged(position);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "价格或库存格式不正确", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
     private void removeProduct(int position) {
-        pendingProducts.remove(position);
-        productListAdapter.notifyItemRemoved(position);
+        PendingProduct pp = pendingProducts.get(position);
+        if (pp.isExisting && pp.productId != null) {
+            pp.deleted = true;
+            pendingProducts.remove(position);
+            productListAdapter.notifyItemRemoved(position);
+        } else {
+            pendingProducts.remove(position);
+            productListAdapter.notifyItemRemoved(position);
+        }
         updateProductListVisibility();
     }
 
@@ -401,15 +561,24 @@ public class VideoEditActivity extends AppCompatActivity {
                     videoId = created.getId();
                 }
 
-                // Step 2: Create and bind each pending product
+                // Step 2: Handle each pending product
                 for (PendingProduct pp : pendingProducts) {
                     try {
-                        Product product = api.createProduct(pp.title, pp.coverUrl, pp.price, pp.stock);
-                        api.bindVideoToProduct(product.getId(), videoId, pp.timestampMs);
+                        if (pp.isExisting && pp.productId != null) {
+                            // Existing product — update if modified
+                            if (pp.modified) {
+                                api.updateProduct(pp.productId, pp.title, pp.coverUrl,
+                                        pp.price, pp.originalPrice, pp.stock);
+                            }
+                        } else {
+                            // New product — create and bind
+                            Product product = api.createProduct(pp.title, pp.coverUrl,
+                                    pp.price, pp.originalPrice, pp.stock);
+                            api.bindVideoToProduct(product.getId(), videoId, pp.timestampMs);
+                        }
                     } catch (Exception e) {
-                        // Log but continue — don't fail the whole save for one product
                         runOnUiThread(() -> Toast.makeText(VideoEditActivity.this,
-                                "商品 " + pp.title + " 关联失败", Toast.LENGTH_SHORT).show());
+                                "商品 " + pp.title + " 保存失败", Toast.LENGTH_SHORT).show());
                     }
                 }
 
@@ -453,8 +622,13 @@ public class VideoEditActivity extends AppCompatActivity {
         String title;
         String coverUrl;
         double price;
+        double originalPrice;
         int stock;
         long timestampMs;
+        String productId;
+        boolean isExisting;
+        boolean modified;
+        boolean deleted;
 
         PendingProduct(String title, String coverUrl, double price, int stock, long timestampMs) {
             this.title = title;
@@ -462,6 +636,7 @@ public class VideoEditActivity extends AppCompatActivity {
             this.price = price;
             this.stock = stock;
             this.timestampMs = timestampMs;
+            this.originalPrice = 0;
         }
     }
 
@@ -481,12 +656,20 @@ public class VideoEditActivity extends AppCompatActivity {
             PendingProduct pp = pendingProducts.get(position);
             h.nameText.setText(pp.title);
             h.priceText.setText("¥" + (int) pp.price);
+            if (pp.originalPrice > 0) {
+                h.originalPriceText.setVisibility(View.VISIBLE);
+                h.originalPriceText.setText("¥" + (int) pp.originalPrice);
+            } else {
+                h.originalPriceText.setVisibility(View.GONE);
+            }
             if (h.timestampText != null) {
                 long mins = pp.timestampMs / 60000;
                 long secs = (pp.timestampMs / 1000) % 60;
                 h.timestampText.setText(String.format("%d:%02d", mins, secs));
             }
             Glide.with(h.thumbView).load(pp.coverUrl).into(h.thumbView);
+
+            h.itemView.setOnClickListener(v -> editProduct(h.getBindingAdapterPosition()));
             h.removeBtn.setOnClickListener(v -> removeProduct(h.getBindingAdapterPosition()));
         }
 
@@ -497,7 +680,7 @@ public class VideoEditActivity extends AppCompatActivity {
 
         class VH extends RecyclerView.ViewHolder {
             ImageView thumbView;
-            TextView nameText, priceText, timestampText;
+            TextView nameText, priceText, originalPriceText, timestampText;
             Button removeBtn;
 
             VH(View v) {
@@ -505,6 +688,7 @@ public class VideoEditActivity extends AppCompatActivity {
                 thumbView = v.findViewById(R.id.edit_product_thumb);
                 nameText = v.findViewById(R.id.edit_product_name);
                 priceText = v.findViewById(R.id.edit_product_price);
+                originalPriceText = v.findViewById(R.id.edit_product_original_price);
                 timestampText = v.findViewById(R.id.edit_product_timestamp);
                 removeBtn = v.findViewById(R.id.edit_product_remove);
             }

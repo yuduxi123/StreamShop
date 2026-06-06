@@ -191,10 +191,15 @@ public class ApiService {
     // ---- Products ----
 
     public Product createProduct(String title, String coverUrl, double price, int stock) throws IOException {
+        return createProduct(title, coverUrl, price, price, stock);
+    }
+
+    public Product createProduct(String title, String coverUrl, double price, double originalPrice, int stock) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("title", title);
         body.put("coverUrl", coverUrl);
         body.put("price", price);
+        body.put("originalPrice", originalPrice);
         body.put("stock", stock);
         String json = client.getGson().toJson(body);
         Request request = new Request.Builder()
@@ -204,6 +209,26 @@ public class ApiService {
         try (Response resp = client.getHttpClient().newCall(request).execute()) {
             String respBody = resp.body() != null ? resp.body().string() : "{}";
             if (!resp.isSuccessful()) throw new IOException("Create product failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Product.class);
+        }
+    }
+
+    public Product updateProduct(String productId, String title, String coverUrl, double price,
+                                  double originalPrice, int stock) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("title", title);
+        if (coverUrl != null && !coverUrl.isEmpty()) body.put("coverUrl", coverUrl);
+        body.put("price", price);
+        body.put("originalPrice", originalPrice);
+        body.put("stock", stock);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "products/" + productId)
+                .patch(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Update product failed: " + resp.code());
             return client.getGson().fromJson(respBody, Product.class);
         }
     }
@@ -525,6 +550,92 @@ public class ApiService {
             }
             return client.getGson().fromJson(respBody, Map.class);
         }
+    }
+
+    // ---- Video Products ----
+
+    public List<Map<String, Object>> getVideoProducts(String videoId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "videos/" + videoId + "/products")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String body = resp.body() != null ? resp.body().string() : "[]";
+            if (!resp.isSuccessful()) throw new IOException("Get video products failed: " + resp.code());
+            return client.getGson().fromJson(body, List.class);
+        }
+    }
+
+    public boolean unbindVideoProduct(String videoId, String productId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "videos/" + videoId + "/products/" + productId)
+                .delete()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            return resp.isSuccessful() || resp.code() == 204;
+        }
+    }
+
+    // ---- Order actions ----
+
+    public Map<String, Object> receiveOrder(String orderId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "orders/" + orderId + "/receive")
+                .patch(RequestBody.create("{}", JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Receive failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    public Map<String, Object> remindOrder(String orderId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "orders/" + orderId + "/remind")
+                .post(RequestBody.create("{}", JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Remind failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
+    // ---- Reviews ----
+
+    public Comment postReview(String targetType, String targetId, String content, int rating, String orderId) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("targetType", targetType);
+        body.put("targetId", targetId);
+        body.put("content", content);
+        body.put("rating", rating);
+        if (orderId != null) body.put("orderId", orderId);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "comments")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Post review failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Comment.class);
+        }
+    }
+
+    public ApiResponse<Comment> getProductReviews(String productId, int page, int limit) throws IOException {
+        String url = client.getBaseUrl() + "comments?targetType=product&targetId=" + productId
+                + "&hasRating=true&page=" + page + "&limit=" + limit;
+        Request request = new Request.Builder().url(url).get().build();
+        return executePaginated(request, Comment.class);
+    }
+
+    public Map<String, Object> getProductReviewSummary(String productId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "products/" + productId + "/reviews/summary")
+                .get()
+                .build();
+        return executeGetMap(request);
     }
 
     // ---- Upload ----

@@ -78,6 +78,7 @@ public class ProductDetailBottomSheetFragment extends BottomSheetDialogFragment 
         MaterialButton buyNowBtn = view.findViewById(R.id.product_buy_now_btn);
         MaterialButton addCartBtn = view.findViewById(R.id.product_add_cart_btn);
         MaterialButton collectBtn = view.findViewById(R.id.product_collect_btn);
+        MaterialButton reviewsBtn = view.findViewById(R.id.product_reviews_btn);
 
         Glide.with(this).load(product.getCoverUrl()).into(imageView);
         priceText.setText("¥" + (int) product.getPrice());
@@ -138,6 +139,11 @@ public class ProductDetailBottomSheetFragment extends BottomSheetDialogFragment 
                     }
                 }
             }).start();
+        });
+
+        reviewsBtn.setOnClickListener(v -> {
+            ProductReviewsBottomSheet.newInstance(product.getId())
+                    .show(getParentFragmentManager(), "product_reviews");
         });
 
         loadCollectStatus(collectBtn);

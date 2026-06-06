@@ -177,4 +177,32 @@ router.post('/:id/bind-video', authMiddleware, (req: AuthRequest, res: Response)
   res.status(201).json(binding);
 });
 
+// GET /api/products/:id/reviews/summary - product review stats
+router.get('/:id/reviews/summary', (req: Request, res: Response) => {
+  const productId = req.params.id as string;
+  const commentStorage = new StorageService<any>('comments.json');
+  const reviews = commentStorage.query(
+    (c: any) => c.targetType === 'product' && c.targetId === productId && (c.rating ?? 0) > 0
+  );
+
+  if (reviews.length === 0) {
+    res.json({ averageRating: 0, totalReviews: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+    return;
+  }
+
+  let sum = 0;
+  const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const r of reviews) {
+    const rating = r.rating ?? 0;
+    sum += rating;
+    if (rating >= 1 && rating <= 5) dist[rating] = (dist[rating] || 0) + 1;
+  }
+
+  res.json({
+    averageRating: Math.round((sum / reviews.length) * 10) / 10,
+    totalReviews: reviews.length,
+    distribution: dist,
+  });
+});
+
 export default router;

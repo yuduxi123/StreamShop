@@ -77,14 +77,14 @@ router.get('/conversations', authMiddleware, (req: AuthRequest, res: Response) =
     }
   }
 
-  // Also track the latest message metadata (type, videoId) per conversation
-  const latestMsgMeta = new Map<string, { type?: string; videoId?: string }>();
+  // Also track the latest message metadata (type, videoId, orderId) per conversation
+  const latestMsgMeta = new Map<string, { type?: string; videoId?: string; orderId?: string }>();
   for (const msg of allMessages) {
     if (msg.senderId !== userId && msg.receiverId !== userId) continue;
     if (msg.receiverId === 'group') continue;
     const existing = latestMsgMeta.get(msg.conversationId);
     if (!existing || msg.createdAt > (conversationMap.get(msg.conversationId)?.lastMessageAt || '')) {
-      latestMsgMeta.set(msg.conversationId, { type: msg.type, videoId: msg.videoId });
+      latestMsgMeta.set(msg.conversationId, { type: msg.type, videoId: msg.videoId, orderId: (msg as any).orderId });
     }
   }
 
@@ -101,6 +101,7 @@ router.get('/conversations', authMiddleware, (req: AuthRequest, res: Response) =
       lastMessageAt: data.lastMessageAt,
       lastMessageType: meta.type || 'text',
       lastMessageVideoId: meta.videoId || null,
+      lastMessageOrderId: meta.orderId || null,
       unreadCount: data.unreadCount,
     };
     if (meta.type === 'forward' && meta.videoId) {
@@ -188,6 +189,9 @@ router.get('/conversations/:id', authMiddleware, (req: AuthRequest, res: Respons
         result.videoTitle = video.title;
         result.videoCoverUrl = video.coverUrl;
       }
+    }
+    if (msg.type === 'order_remind' && (msg as any).orderId) {
+      result.orderId = (msg as any).orderId;
     }
     const sender = AuthService.getUserById(msg.senderId);
     if (sender) {

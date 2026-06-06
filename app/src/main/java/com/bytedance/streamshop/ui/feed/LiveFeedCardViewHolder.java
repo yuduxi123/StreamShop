@@ -26,9 +26,11 @@ public class LiveFeedCardViewHolder extends RecyclerView.ViewHolder {
     private final ViewGroup productContainer;
 
     private Map<String, Object> room;
+    private OnLiveCardClickListener clickListener;
 
     public interface OnLiveCardClickListener {
         void onLiveCardClick(Map<String, Object> room);
+        void onProductReviewClick(String productId);
     }
 
     public LiveFeedCardViewHolder(@NonNull View itemView) {
@@ -45,6 +47,7 @@ public class LiveFeedCardViewHolder extends RecyclerView.ViewHolder {
 
     public void bind(Map<String, Object> room, OnLiveCardClickListener clickListener) {
         this.room = room;
+        this.clickListener = clickListener;
 
         String coverUrl = stringValue(room.get("coverUrl"));
         if (!coverUrl.isEmpty()) {
@@ -107,12 +110,23 @@ public class LiveFeedCardViewHolder extends RecyclerView.ViewHolder {
                     .inflate(R.layout.item_live_product_card, productContainer, false);
             ImageView thumb = card.findViewById(R.id.live_product_thumb);
             TextView price = card.findViewById(R.id.live_product_price);
+            TextView reviewsBtn = card.findViewById(R.id.live_product_reviews_btn);
 
             String coverUrl = stringValue(product.get("coverUrl"));
             if (!coverUrl.isEmpty()) {
                 Glide.with(card).load(coverUrl).centerCrop().into(thumb);
             }
             price.setText("¥" + intValue(product.get("price")));
+
+            String productId = stringValue(product.get("id"));
+            if (reviewsBtn != null && !productId.isEmpty()) {
+                reviewsBtn.setOnClickListener(v -> {
+                    if (clickListener != null) {
+                        clickListener.onProductReviewClick(productId);
+                    }
+                });
+            }
+
             productContainer.addView(card);
         }
     }

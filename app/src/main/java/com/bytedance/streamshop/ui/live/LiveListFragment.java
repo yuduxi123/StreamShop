@@ -129,12 +129,23 @@ public class LiveListFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull LiveFeedCardViewHolder holder, int position) {
             Map<String, Object> room = rooms.get(position);
-            holder.bind(room, r -> {
-                String roomId = r.get("id") != null ? String.valueOf(r.get("id")) : "";
-                if (!roomId.isEmpty() && getActivity() != null) {
-                    Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
-                    intent.putExtra("room_id", roomId);
-                    startActivity(intent);
+            holder.bind(room, new LiveFeedCardViewHolder.OnLiveCardClickListener() {
+                @Override
+                public void onLiveCardClick(Map<String, Object> r) {
+                    String roomId = r.get("id") != null ? String.valueOf(r.get("id")) : "";
+                    if (!roomId.isEmpty() && getActivity() != null) {
+                        Intent intent = new Intent(getActivity(), LiveRoomActivity.class);
+                        intent.putExtra("room_id", roomId);
+                        startActivity(intent);
+                    }
+                }
+
+                @Override
+                public void onProductReviewClick(String productId) {
+                    if (getActivity() != null) {
+                        com.bytedance.streamshop.ui.feed.ProductReviewsBottomSheet.newInstance(productId)
+                                .show(getParentFragmentManager(), "product_reviews");
+                    }
                 }
             });
         }

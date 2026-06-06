@@ -4,9 +4,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.AttributeSet;
+import android.view.Choreographer;
 import android.view.View;
 
 import com.bytedance.streamshop.domain.model.Danmaku;
@@ -19,12 +18,11 @@ import java.util.Random;
 public class VideoDanmakuView extends View {
     private static final int MAX_VISIBLE = 20;
     private static final int TEXT_SIZE = 28;
-    private static final float SPEED = 2.5f;
+    private static final float SPEED_PX_PER_SEC = 150f;
 
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Random random = new Random();
-    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final List<DanmakuItem> activeItems = new ArrayList<>();
     private final List<Danmaku> pendingDanmaku = new ArrayList<>();
@@ -33,21 +31,33 @@ public class VideoDanmakuView extends View {
     private long lastFrameTime = 0;
     private boolean playing = false;
     private boolean running = false;
+    private boolean frameScheduled = false;
 
-    private final Runnable frameCallback = new Runnable() {
+    private final Choreographer.FrameCallback frameCallback = new Choreographer.FrameCallback() {
         @Override
-        public void run() {
+        public void doFrame(long frameTimeNanos) {
+            frameScheduled = false;
             if (!running) return;
-            long now = System.currentTimeMillis();
-            if (lastFrameTime > 0 && playing) {
-                long deltaMs = now - lastFrameTime;
-                playbackPositionMs += deltaMs;
-                releasePendingDanmaku();
+
+            long now = System.nanoTime();
+            if (lastFrameTime == 0) lastFrameTime = now;
+            float deltaMs = (now - lastFrameTime) / 1_000_000f;
+
+            if (deltaMs >= 8f) { // throttle tiny deltas
+                lastFrameTime = now;
+                if (playing) {
+                    playbackPositionMs += (long) deltaMs;
+                    releasePendingDanmaku();
+                }
+                updatePositions(deltaMs);
+                if (!activeItems.isEmpty()) {
+                    invalidate();
+                }
             }
-            lastFrameTime = now;
-            updatePositions();
-            invalidate();
-            handler.postDelayed(this, 16);
+
+            if (running) {
+                scheduleFrame();
+            }
         }
     };
 
@@ -64,36 +74,40 @@ public class VideoDanmakuView extends View {
     private void init() {
         textPaint.setTextSize(TEXT_SIZE);
         textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+        textPaint.setAntiAlias(true);
         strokePaint.setTextSize(TEXT_SIZE);
         strokePaint.setTypeface(Typeface.DEFAULT_BOLD);
         strokePaint.setStyle(Paint.Style.STROKE);
         strokePaint.setStrokeWidth(4);
+        strokePaint.setColor(0xCC000000);
+        strokePaint.setAntiAlias(true);
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         running = true;
-        lastFrameTime = System.currentTimeMillis();
-        handler.post(frameCallback);
+        lastFrameTime = System.nanoTime();
+        scheduleFrame();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         running = false;
-        handler.removeCallbacks(frameCallback);
+        Choreographer.getInstance().removeFrameCallback(frameCallback);
+        frameScheduled = false;
     }
 
     public void loadDanmaku(List<Danmaku> list) {
         pendingDanmaku.clear();
-        pendingDanmaku.addAll(list);
+        if (list != null) {
+            pendingDanmaku.addAll(list);
+        }
         pendingIndex = 0;
     }
 
     public void addRealtimeDanmaku(Danmaku danmaku) {
-        // Only add to active items for immediate display.
-        // Historical replay is handled by loadDanmaku() from backend.
         addActiveDanmaku(danmaku.getContent(), danmaku.getColor());
     }
 
@@ -104,7 +118,7 @@ public class VideoDanmakuView extends View {
 
     public void play() {
         playing = true;
-        lastFrameTime = System.currentTimeMillis();
+        lastFrameTime = System.nanoTime();
     }
 
     public void pause() {
@@ -121,7 +135,8 @@ public class VideoDanmakuView extends View {
     public void release() {
         running = false;
         playing = false;
-        handler.removeCallbacks(frameCallback);
+        Choreographer.getInstance().removeFrameCallback(frameCallback);
+        frameScheduled = false;
         activeItems.clear();
         pendingDanmaku.clear();
         pendingIndex = 0;
@@ -142,21 +157,28 @@ public class VideoDanmakuView extends View {
     private void addActiveDanmaku(String text, String colorHex) {
         if (activeItems.size() > MAX_VISIBLE) return;
         int color = 0xFFFFFFFF;
-
         float y = 40 + random.nextInt(Math.max(1, getHeight() - 80));
         DanmakuItem item = new DanmakuItem(text, getWidth(), y, color);
         item.width = textPaint.measureText(item.text);
         activeItems.add(item);
     }
 
-    private void updatePositions() {
+    private void updatePositions(float deltaMs) {
+        float deltaSeconds = deltaMs / 1000f;
         Iterator<DanmakuItem> it = activeItems.iterator();
         while (it.hasNext()) {
             DanmakuItem item = it.next();
-            item.x -= SPEED;
+            item.x -= SPEED_PX_PER_SEC * deltaSeconds;
             if (item.x + item.width < 0) {
                 it.remove();
             }
+        }
+    }
+
+    private void scheduleFrame() {
+        if (!frameScheduled && running) {
+            frameScheduled = true;
+            Choreographer.getInstance().postFrameCallback(frameCallback);
         }
     }
 
@@ -164,7 +186,12 @@ public class VideoDanmakuView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         for (DanmakuItem item : activeItems) {
-            textPaint.setColor(0xFFFFFFFF);
+            strokePaint.setColor(0xCC000000);
+            canvas.drawText(item.text, item.x - 1, item.y, strokePaint);
+            canvas.drawText(item.text, item.x + 1, item.y, strokePaint);
+            canvas.drawText(item.text, item.x, item.y - 1, strokePaint);
+            canvas.drawText(item.text, item.x, item.y + 1, strokePaint);
+            textPaint.setColor(item.color);
             canvas.drawText(item.text, item.x, item.y, textPaint);
         }
     }

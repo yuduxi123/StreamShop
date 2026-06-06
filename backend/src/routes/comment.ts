@@ -10,6 +10,8 @@ interface CommentData {
   targetId: string;
   content: string;
   likeCount: number;
+  rating?: number;
+  orderId?: string;
   createdAt: string;
 }
 
@@ -20,18 +22,29 @@ const productStorage = new StorageService<any>('products.json');
 
 const router = Router();
 
-// GET /api/comments?targetType=video&targetId=xxx&page=1
+// GET /api/comments?targetType=video&targetId=xxx&page=1&hasRating=true
 router.get('/', (req: Request, res: Response) => {
   const { targetType, targetId } = req.query;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
+  const hasRating = req.query.hasRating === 'true';
 
-  if (!targetType || !targetId) {
+  if (!targetType && !hasRating) {
     res.status(400).json({ error: 'targetType and targetId required' });
     return;
   }
 
-  let comments = commentStorage.query(c => c.targetType === targetType && c.targetId === targetId);
+  let comments: CommentData[];
+  if (targetType && targetId) {
+    comments = commentStorage.query(c => c.targetType === targetType && c.targetId === targetId);
+  } else {
+    comments = commentStorage.findAll();
+  }
+
+  if (hasRating) {
+    comments = comments.filter(c => (c.rating ?? 0) > 0);
+  }
+
   comments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const total = comments.length;
@@ -49,7 +62,7 @@ router.get('/', (req: Request, res: Response) => {
 
 // POST /api/comments
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
-  const { targetType, targetId, content } = req.body;
+  const { targetType, targetId, content, rating, orderId } = req.body;
   if (!targetType || !targetId || !content) {
     res.status(400).json({ error: 'targetType, targetId, content required' });
     return;
@@ -62,6 +75,8 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     targetId,
     content,
     likeCount: 0,
+    rating: rating ?? 0,
+    orderId: orderId ?? undefined,
     createdAt: new Date().toISOString(),
   };
   commentStorage.create(comment);

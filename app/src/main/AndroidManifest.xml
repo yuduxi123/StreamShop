@@ -35,7 +35,8 @@
         <activity android:name=".ui.order.PaymentActivity" android:exported="false" />
         <activity android:name=".ui.order.OrderListActivity" android:exported="false" />
         <activity android:name=".ui.order.OrderDetailActivity" android:exported="false" />
-        <activity android:name=".ui.live.LiveRoomActivity" android:exported="false" />
+        <activity android:name=".ui.live.LiveRoomActivity" android:exported="false"
+            android:supportsPictureInPicture="true" />
         <activity android:name=".ui.messages.ChatActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.messages.AddFriendSearchActivity" android:exported="false" />
@@ -54,6 +55,7 @@
         <activity android:name=".ui.analytics.AnalyticsDashboardActivity" android:exported="false" />
         <activity android:name=".ui.live.MyLiveRoomsActivity" android:exported="false" />
         <activity android:name=".ui.live.AnchorLiveActivity" android:exported="false"
+            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize" />
         <activity android:name=".ui.live.LiveRoomEditActivity" android:exported="false" />
         <activity android:name=".ui.feed.ForwardedVideoActivity" android:exported="false" />

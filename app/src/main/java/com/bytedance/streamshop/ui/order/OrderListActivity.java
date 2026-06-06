@@ -1,11 +1,14 @@
 package com.bytedance.streamshop.ui.order;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -80,11 +83,16 @@ public class OrderListActivity extends AppCompatActivity {
     }
 
     private class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.ViewHolder> {
+        private int openPosition = -1;
+        private float buttonPanelWidth;
+
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_order, parent, false));
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_order, parent, false);
+            buttonPanelWidth = 120 * parent.getContext().getResources().getDisplayMetrics().density;
+            return new ViewHolder(v);
         }
 
         @Override
@@ -96,9 +104,13 @@ public class OrderListActivity extends AppCompatActivity {
             h.orderId.setText("订单号: " + orderId.substring(0, 8) + "...");
             h.statusText.setText(getStatusText(status));
 
+            // Store order data on views for swipe actions
+            h.foreground.setTag(order);
+
             // Products
             h.productsContainer.removeAllViews();
             List<Map<String, Object>> items = (List<Map<String, Object>>) order.get("items");
+            String productId = null;
             if (items != null) {
                 for (Map<String, Object> item : items) {
                     Map<String, Object> product = (Map<String, Object>) item.get("product");
@@ -108,6 +120,7 @@ public class OrderListActivity extends AppCompatActivity {
                     TextView spec = row.findViewById(R.id.order_product_spec);
                     if (product != null) {
                         name.setText((String) product.get("title"));
+                        productId = (String) product.get("id");
                     }
                     spec.setText("x" + item.get("quantity"));
                     h.productsContainer.addView(row);
@@ -119,6 +132,8 @@ public class OrderListActivity extends AppCompatActivity {
             NumberFormat fmt = NumberFormat.getNumberInstance(Locale.CHINA);
             fmt.setMinimumFractionDigits(2);
             h.amountText.setText("合计：¥" + fmt.format(amount));
+
+            final String fProductId = productId;
 
             // Actions
             h.actionsContainer.removeAllViews();
@@ -153,11 +168,160 @@ public class OrderListActivity extends AppCompatActivity {
                 });
             }
 
-            h.itemView.setOnClickListener(v -> {
-                Intent intent = new Intent(OrderListActivity.this, OrderDetailActivity.class);
-                intent.putExtra("order_id", orderId);
-                startActivity(intent);
+            // Reset swipe position on rebind
+            h.foreground.setTranslationX(0f);
+
+            // --- Swipe configuration based on status ---
+            String finalProductId = fProductId;
+
+            if ("paid".equals(status) || "shipped".equals(status)) {
+                // Paid/shipped: show 已收货 + 催单
+                h.actionBtn1.setText("已收货");
+                h.actionBtn1.setBackgroundColor(0xFF4CAF50);
+                h.actionBtn2.setText("催单");
+                h.actionBtn2.setBackgroundColor(0xFFFF9500);
+                h.actionBtn2.setVisibility(View.VISIBLE);
+                h.actionBtn1.setOnClickListener(v -> {
+                    closeOpenItem();
+                    confirmReceive(orderId);
+                });
+                h.actionBtn2.setOnClickListener(v -> {
+                    closeOpenItem();
+                    remindOrder(orderId);
+                });
+            } else if ("completed".equals(status)) {
+                // Completed: show 评价 only
+                h.actionBtn1.setText("评价");
+                h.actionBtn1.setBackgroundColor(0xFFFF9500);
+                h.actionBtn2.setVisibility(View.GONE);
+                h.actionBtn1.setOnClickListener(v -> {
+                    closeOpenItem();
+                    showReviewSheet(orderId, finalProductId);
+                });
+            }
+
+            // Only enable swipe for paid/shipped/completed
+            boolean swipeable = "paid".equals(status) || "shipped".equals(status) || "completed".equals(status);
+
+            h.foreground.setOnTouchListener((v, event) -> {
+                if (!swipeable) return false;
+
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (openPosition != -1 && openPosition != position) {
+                        closeOpenItem();
+                    }
+                    h.swipeStartX = event.getRawX();
+                    h.swipeStartTrans = v.getTranslationX();
+                    return true;
+                }
+
+                float dx = event.getRawX() - h.swipeStartX;
+                float newTrans = h.swipeStartTrans + dx;
+
+                if (newTrans > 0) newTrans = 0;
+                float maxSwipe = "completed".equals(status) ? -buttonPanelWidth / 2 : -buttonPanelWidth;
+                if (newTrans < maxSwipe) newTrans = maxSwipe;
+
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    if (Math.abs(dx) > 5) {
+                        recyclerView.requestDisallowInterceptTouchEvent(true);
+                    }
+                    v.setTranslationX(newTrans);
+                    return true;
+                }
+
+                if (event.getAction() == MotionEvent.ACTION_UP
+                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    recyclerView.requestDisallowInterceptTouchEvent(false);
+                    float currentTrans = v.getTranslationX();
+                    float threshold = maxSwipe * 0.4f;
+
+                    if (Math.abs(currentTrans - h.swipeStartTrans) < 10) {
+                        // It was a tap, not a swipe
+                        v.animate().translationX(0).setDuration(150).start();
+                        openPosition = -1;
+                        openOrderDetail(orderId);
+                    } else if (currentTrans < threshold) {
+                        v.animate().translationX(maxSwipe).setDuration(150).start();
+                        openPosition = position;
+                    } else {
+                        v.animate().translationX(0).setDuration(150).start();
+                        openPosition = -1;
+                    }
+                    return true;
+                }
+                return false;
             });
+
+            // Fallback click on whole item (when not swipeable)
+            if (!swipeable) {
+                h.foreground.setOnClickListener(v -> openOrderDetail(orderId));
+            }
+        }
+
+        private void closeOpenItem() {
+            if (openPosition != -1) {
+                int old = openPosition;
+                openPosition = -1;
+                notifyItemChanged(old);
+            }
+        }
+
+        private void openOrderDetail(String orderId) {
+            Intent intent = new Intent(OrderListActivity.this, OrderDetailActivity.class);
+            intent.putExtra("order_id", orderId);
+            startActivity(intent);
+        }
+
+        private void confirmReceive(String orderId) {
+            new AlertDialog.Builder(OrderListActivity.this)
+                    .setTitle("确认收货")
+                    .setMessage("确定已收到商品？确认后订单将变为已完成状态。")
+                    .setPositiveButton("确定", (d, w) -> {
+                        new Thread(() -> {
+                            try {
+                                apiService.receiveOrder(orderId);
+                                runOnUiThread(() -> {
+                                    Toast.makeText(OrderListActivity.this, "已确认收货", Toast.LENGTH_SHORT).show();
+                                    loadOrders();
+                                });
+                            } catch (Exception e) {
+                                runOnUiThread(() ->
+                                        Toast.makeText(OrderListActivity.this, "操作失败", Toast.LENGTH_SHORT).show());
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        }
+
+        private void remindOrder(String orderId) {
+            new AlertDialog.Builder(OrderListActivity.this)
+                    .setTitle("催单")
+                    .setMessage("将向商家发送催单提醒，确定要催单吗？")
+                    .setPositiveButton("确定", (d, w) -> {
+                        new Thread(() -> {
+                            try {
+                                apiService.remindOrder(orderId);
+                                runOnUiThread(() ->
+                                        Toast.makeText(OrderListActivity.this, "已发送催单提醒", Toast.LENGTH_SHORT).show());
+                            } catch (Exception e) {
+                                runOnUiThread(() ->
+                                        Toast.makeText(OrderListActivity.this, "催单失败", Toast.LENGTH_SHORT).show());
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        }
+
+        private void showReviewSheet(String orderId, String productId) {
+            if (productId == null) {
+                Toast.makeText(OrderListActivity.this, "无法获取商品信息", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            ReviewBottomSheetFragment sheet = ReviewBottomSheetFragment.newInstance(productId, orderId);
+            sheet.show(getSupportFragmentManager(), "review_sheet");
         }
 
         @Override
@@ -166,9 +330,15 @@ public class OrderListActivity extends AppCompatActivity {
         class ViewHolder extends RecyclerView.ViewHolder {
             TextView orderId, statusText, amountText;
             ViewGroup productsContainer, actionsContainer;
+            View foreground;
+            TextView actionBtn1, actionBtn2;
+            float swipeStartX, swipeStartTrans;
 
             ViewHolder(View v) {
                 super(v);
+                foreground = v.findViewById(R.id.order_foreground);
+                actionBtn1 = v.findViewById(R.id.order_action_btn1);
+                actionBtn2 = v.findViewById(R.id.order_action_btn2);
                 orderId = v.findViewById(R.id.order_item_id);
                 statusText = v.findViewById(R.id.order_item_status);
                 amountText = v.findViewById(R.id.order_item_amount);

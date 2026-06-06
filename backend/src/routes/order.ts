@@ -297,4 +297,86 @@ router.patch('/:id/cancel', (req: AuthRequest, res: Response) => {
   res.json(updated);
 });
 
+// PATCH /api/orders/:id/receive - mark paid order as completed
+router.patch('/:id/receive', (req: AuthRequest, res: Response) => {
+  const order = orderStorage.findById(req.params.id as string);
+  if (!order || order.userId !== req.user!.id) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  if (order.status !== 'paid' && order.status !== 'shipped') {
+    res.status(400).json({ error: 'Can only confirm receipt for paid/shipped orders' });
+    return;
+  }
+  const updated = orderStorage.update(req.params.id as string, { status: 'completed' as const });
+  res.json(updated);
+});
+
+// POST /api/orders/:id/remind - send reminder message to merchant
+router.post('/:id/remind', (req: AuthRequest, res: Response) => {
+  const order = orderStorage.findById(req.params.id as string);
+  if (!order || order.userId !== req.user!.id) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  if (order.status !== 'paid') {
+    res.status(400).json({ error: 'Can only remind for paid orders' });
+    return;
+  }
+
+  // Find the merchant - get the order's product owner
+  const orderItems = orderItemStorage.query((i: OrderItemData) => i.orderId === order.id);
+  let merchantId: string | null = null;
+  for (const item of orderItems) {
+    const product = productStorage.findById(item.productId);
+    if (product && product.ownerId) {
+      merchantId = product.ownerId;
+      break;
+    }
+  }
+
+  if (!merchantId) {
+    res.status(400).json({ error: 'Could not find merchant for this order' });
+    return;
+  }
+
+  // Save message via the messages system
+  try {
+    const messageStorage = new StorageService<any>('messages.json');
+
+    // Conversation ID follows the same convention as message.ts: sorted user IDs joined by _
+    const conversationId = [req.user!.id, merchantId].sort().join('_');
+
+    const shortId = order.id.substring(0, 8);
+    const messageContent = `订单催单提醒\n订单号：${shortId}\n金额：¥${order.finalAmount.toFixed(2)}\n点击查看订单详情`;
+
+    const msg = {
+      id: uuidv4(),
+      conversationId,
+      senderId: req.user!.id,
+      receiverId: merchantId,
+      content: messageContent,
+      type: 'order_remind',
+      orderId: order.id,
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+    };
+
+    messageStorage.create(msg);
+
+    // Push via WebSocket to merchant if online
+    const wss = (req.app as any).locals?.wss;
+    if (wss?.pushMessage) {
+      wss.pushMessage(merchantId, {
+        type: 'NEW_MESSAGE',
+        message: { ...msg, senderUsername: req.user!.username },
+      });
+    }
+  } catch (e) {
+    // Non-fatal
+  }
+
+  res.json({ success: true, message: 'Reminder sent' });
+});
+
 export default router;

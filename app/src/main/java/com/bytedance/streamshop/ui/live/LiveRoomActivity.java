@@ -1,9 +1,14 @@
 package com.bytedance.streamshop.ui.live;
 
+import android.app.PictureInPictureParams;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
+import android.util.Rational;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -28,6 +33,7 @@ import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
 import com.bytedance.streamshop.domain.model.Product;
 import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
+import com.bytedance.streamshop.ui.feed.ProductReviewsBottomSheet;
 import com.bytedance.streamshop.ui.profile.AuthorProfileActivity;
 import com.bumptech.glide.Glide;
 import androidx.media3.common.MediaItem;
@@ -72,6 +78,8 @@ public class LiveRoomActivity extends AppCompatActivity {
     private RecyclerView productList;
     private ProductAdapter productAdapter;
     private FrameLayout couponContainer;
+    private View overlayContainer;
+    private ViewGroup rootLayout;
 
     private final List<Map<String, Object>> products = new ArrayList<>();
     private NumberFormat priceFmt = NumberFormat.getNumberInstance(Locale.CHINA);
@@ -111,6 +119,20 @@ public class LiveRoomActivity extends AppCompatActivity {
         danmakuToggle = findViewById(R.id.live_danmaku_toggle);
         exitBtn = findViewById(R.id.live_exit_btn);
         hotValueText = findViewById(R.id.live_hot_value);
+
+        overlayContainer = findViewById(R.id.live_overlay_container);
+        rootLayout = (ViewGroup) overlayContainer.getParent();
+
+        findViewById(R.id.live_pip_btn).setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                rootLayout.removeView(overlayContainer);
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                PictureInPictureParams params = new PictureInPictureParams.Builder()
+                        .setAspectRatio(new Rational(dm.widthPixels, dm.heightPixels))
+                        .build();
+                enterPictureInPictureMode(params);
+            }
+        });
         streamPlaceholder = findViewById(R.id.live_stream_placeholder);
         inputView = findViewById(R.id.live_input);
         danmakuView = findViewById(R.id.live_danmaku_view);
@@ -418,6 +440,36 @@ public class LiveRoomActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode);
+        if (isInPictureInPictureMode) {
+            if (overlayContainer.getParent() != null) {
+                rootLayout.removeView(overlayContainer);
+            }
+        } else {
+            if (overlayContainer.getParent() == null) {
+                rootLayout.addView(overlayContainer);
+            }
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (isInPictureInPictureMode) {
+            if (overlayContainer.getParent() != null) {
+                rootLayout.removeView(overlayContainer);
+            }
+        } else {
+            if (overlayContainer.getParent() == null) {
+                rootLayout.addView(overlayContainer);
+            }
+            danmakuView.setVisibility(danmakuEnabled ? View.VISIBLE : View.GONE);
+        }
+    }
+
     private void sendMessage() {
         String text = inputView.getText().toString().trim();
         if (TextUtils.isEmpty(text)) return;
@@ -564,6 +616,16 @@ public class LiveRoomActivity extends AppCompatActivity {
                 ProductDetailBottomSheetFragment sheet = ProductDetailBottomSheetFragment.newInstance(product);
                 sheet.show(getSupportFragmentManager(), "product_detail");
             });
+
+            if (h.reviewsBtn != null) {
+                h.reviewsBtn.setOnClickListener(v -> {
+                    String productId = (String) p.get("id");
+                    if (productId != null) {
+                        ProductReviewsBottomSheet.newInstance(productId)
+                                .show(getSupportFragmentManager(), "product_reviews");
+                    }
+                });
+            }
         }
 
         @Override public int getItemCount() { return products.size(); }
@@ -571,7 +633,13 @@ public class LiveRoomActivity extends AppCompatActivity {
         class VH extends RecyclerView.ViewHolder {
             ImageView thumb;
             TextView price;
-            VH(View v) { super(v); thumb = v.findViewById(R.id.live_product_thumb); price = v.findViewById(R.id.live_product_price); }
+            TextView reviewsBtn;
+            VH(View v) {
+                super(v);
+                thumb = v.findViewById(R.id.live_product_thumb);
+                price = v.findViewById(R.id.live_product_price);
+                reviewsBtn = v.findViewById(R.id.live_product_reviews_btn);
+            }
         }
     }
 

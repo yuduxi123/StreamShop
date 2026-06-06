@@ -128,7 +128,18 @@ public class FeedFragment extends Fragment {
                         viewPager.setCurrentItem(nextPos, true);
                     }
                 });
-                adapter.setLiveCardClickListener(this::openLiveRoom);
+                adapter.setLiveCardClickListener(new LiveFeedCardViewHolder.OnLiveCardClickListener() {
+                    @Override
+                    public void onLiveCardClick(Map<String, Object> room) {
+                        openLiveRoom(room);
+                    }
+
+                    @Override
+                    public void onProductReviewClick(String productId) {
+                        ProductReviewsBottomSheet.newInstance(productId)
+                                .show(getChildFragmentManager(), "product_reviews");
+                    }
+                });
                 viewPager.setAdapter(adapter);
 
                 // Wire restore info from ViewModel before binding

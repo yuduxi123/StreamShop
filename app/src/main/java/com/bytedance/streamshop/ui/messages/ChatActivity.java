@@ -24,6 +24,7 @@ import com.bytedance.streamshop.R;
 import com.bytedance.streamshop.data.remote.ApiClient;
 import com.bytedance.streamshop.data.remote.ApiService;
 import com.bytedance.streamshop.ui.feed.ForwardedVideoActivity;
+import com.bytedance.streamshop.ui.order.OrderDetailActivity;
 import com.google.android.material.imageview.ShapeableImageView;
 
 import java.text.SimpleDateFormat;
@@ -38,6 +39,8 @@ public class ChatActivity extends AppCompatActivity {
     private static final int VIEW_TYPE_RECEIVED = 1;
     private static final int VIEW_TYPE_SENT_FORWARD = 2;
     private static final int VIEW_TYPE_RECEIVED_FORWARD = 3;
+    private static final int VIEW_TYPE_SENT_ORDER = 4;
+    private static final int VIEW_TYPE_RECEIVED_ORDER = 5;
 
     private String conversationId;
     private String otherUserId;
@@ -181,6 +184,9 @@ public class ChatActivity extends AppCompatActivity {
             if ("forward".equals(type)) {
                 return isSent ? VIEW_TYPE_SENT_FORWARD : VIEW_TYPE_RECEIVED_FORWARD;
             }
+            if ("order_remind".equals(type)) {
+                return isSent ? VIEW_TYPE_SENT_ORDER : VIEW_TYPE_RECEIVED_ORDER;
+            }
             return isSent ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
         }
 
@@ -189,6 +195,8 @@ public class ChatActivity extends AppCompatActivity {
             int layout;
             if (type == VIEW_TYPE_SENT_FORWARD || type == VIEW_TYPE_RECEIVED_FORWARD) {
                 layout = R.layout.item_message_forward;
+            } else if (type == VIEW_TYPE_SENT_ORDER || type == VIEW_TYPE_RECEIVED_ORDER) {
+                layout = R.layout.item_message_order;
             } else if (type == VIEW_TYPE_SENT) {
                 layout = R.layout.item_message_sent;
             } else {
@@ -223,6 +231,17 @@ public class ChatActivity extends AppCompatActivity {
                         startActivity(intent);
                     }
                 });
+            } else if ("order_remind".equals(type)) {
+                String content = (String) msg.get("content");
+                if (h.orderContent != null) h.orderContent.setText(content != null ? content : "");
+                h.itemView.setOnClickListener(v -> {
+                    String orderId = (String) msg.get("orderId");
+                    if (orderId != null) {
+                        Intent intent = new Intent(ChatActivity.this, OrderDetailActivity.class);
+                        intent.putExtra("order_id", orderId);
+                        startActivity(intent);
+                    }
+                });
             } else {
                 String text = (String) msg.get("content");
                 if (isGroup && h.senderName != null) {
@@ -247,12 +266,14 @@ public class ChatActivity extends AppCompatActivity {
             TextView forwardTitle;
             ImageView forwardCover;
             TextView senderName;
+            TextView orderContent;
             VH(View v) {
                 super(v);
                 content = v.findViewById(R.id.msg_content);
                 forwardTitle = v.findViewById(R.id.msg_forward_title);
                 forwardCover = v.findViewById(R.id.msg_forward_cover);
                 senderName = v.findViewById(R.id.msg_sender_name);
+                orderContent = v.findViewById(R.id.msg_order_content);
             }
         }
     }
