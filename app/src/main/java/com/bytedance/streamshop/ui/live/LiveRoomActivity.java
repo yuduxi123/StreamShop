@@ -79,6 +79,7 @@ public class LiveRoomActivity extends AppCompatActivity {
     private int streamRetryCount = 0;
     private boolean streamLoaded = false;
     private String currentStreamUrl;
+    private boolean liveEnded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -175,6 +176,7 @@ public class LiveRoomActivity extends AppCompatActivity {
         player.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(androidx.media3.common.PlaybackException error) {
+                if (liveEnded) return;
                 Log.e(TAG, "Live stream playback failed", error);
                 runOnUiThread(() -> {
                     showStreamPlaceholder("直播画面加载失败");
@@ -184,14 +186,21 @@ public class LiveRoomActivity extends AppCompatActivity {
 
             @Override
             public void onPlaybackStateChanged(int playbackState) {
+                if (playbackState == Player.STATE_ENDED) {
+                    runOnUiThread(() -> showLiveEnded());
+                    return;
+                }
                 if (playbackState == Player.STATE_READY) {
-                    runOnUiThread(() -> hideStreamPlaceholder());
+                    runOnUiThread(() -> {
+                        if (!liveEnded) hideStreamPlaceholder();
+                    });
                 }
             }
         });
     }
 
     private void playStream(String streamUrl) {
+        if (liveEnded) return;
         if (streamUrl == null || streamUrl.isEmpty()) {
             showStreamPlaceholder("直播画面未接入");
             return;
@@ -216,6 +225,7 @@ public class LiveRoomActivity extends AppCompatActivity {
                 if (room == null) return;
                 List<Map<String, Object>> roomProducts = (List<Map<String, Object>>) room.get("products");
                 String streamUrl = (String) room.get("streamUrl");
+                String roomStatus = (String) room.get("status");
                 Map<String, Object> anchor = (Map<String, Object>) room.get("anchor");
                 String avatarUrl = null;
                 if (anchor != null) {
@@ -236,8 +246,14 @@ public class LiveRoomActivity extends AppCompatActivity {
                                 .into(anchorAvatar);
                     }
                     updateProducts(roomProducts);
+                    if (LiveStreamRefreshPolicy.isLiveEnded(roomStatus)) {
+                        showLiveEnded();
+                        return;
+                    }
                     playStream(streamUrl);
-                    if (TextUtils.isEmpty(streamUrl)) {
+                    if (TextUtils.isEmpty(streamUrl)
+                            && LiveStreamRefreshPolicy.shouldWaitForStream(
+                            roomStatus, streamLoaded, streamRetryCount, MAX_STREAM_RETRY_COUNT)) {
                         scheduleStreamRetry();
                     }
                 });
@@ -276,6 +292,19 @@ public class LiveRoomActivity extends AppCompatActivity {
                 loadRoomDetail();
             }
         }, STREAM_RETRY_DELAY_MS);
+    }
+
+    private void showLiveEnded() {
+        liveEnded = true;
+        streamLoaded = false;
+        currentStreamUrl = null;
+        streamRetryCount = MAX_STREAM_RETRY_COUNT;
+        mainHandler.removeCallbacksAndMessages(null);
+        if (player != null) {
+            player.stop();
+            player.clearMediaItems();
+        }
+        showStreamPlaceholder("主播已关播");
     }
 
     private void showStreamPlaceholder(String message) {
@@ -368,6 +397,13 @@ public class LiveRoomActivity extends AppCompatActivity {
                     LiveUserListBottomSheet sheet = LiveUserListBottomSheet.newInstance(users);
                     sheet.show(getSupportFragmentManager(), "user_list_sheet");
                 });
+            }
+
+            @Override
+            public void onLiveEnded(String endedRoomId) {
+                if (roomId.equals(endedRoomId)) {
+                    runOnUiThread(() -> showLiveEnded());
+                }
             }
 
             @Override

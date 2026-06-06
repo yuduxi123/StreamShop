@@ -134,6 +134,11 @@ public class LiveWebSocketClient {
                                 if (callback != null) callback.onRoomUsers(msg.optJSONArray("users"));
                             });
                             break;
+                        case "LIVE_ENDED":
+                            handler.post(() -> {
+                                if (callback != null) callback.onLiveEnded(msg.optString("roomId"));
+                            });
+                            break;
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Parse error: " + e.getMessage());
@@ -272,6 +277,7 @@ public class LiveWebSocketClient {
         default void onUserJoined(String username, String userId) {}
         default void onPurchase(String username, String productTitle, int quantity) {}
         default void onRoomUsers(JSONArray users) {}
+        default void onLiveEnded(String roomId) {}
         default void onDisconnected() {}
         default void onError(String message) {}
     }

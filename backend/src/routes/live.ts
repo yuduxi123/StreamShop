@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from '../websocket/wsServer';
 import {
   getNextLiveRoomProductDisplayOrder,
+  resolveLiveEndUpdates,
   resolveLiveStartUpdates,
   sortLiveRoomProductBindings,
 } from './live.logic';
@@ -165,11 +166,12 @@ router.post('/rooms/:id/end', authMiddleware, (req: AuthRequest, res: Response) 
     res.status(403).json({ error: 'Forbidden' });
     return;
   }
-  const updated = liveStorage.update(id, { status: 'ended', streamUrl: undefined });
+  const updated = liveStorage.update(id, resolveLiveEndUpdates());
   if (!updated) {
     res.status(404).json({ error: 'Live room not found' });
     return;
   }
+  getWss(req).pushLiveEnded(id);
   res.json(updated);
 });
 

@@ -1,7 +1,9 @@
 import assert from 'assert';
 import {
+  buildLiveEndedEvent,
   buildLiveStreamUrl,
   getNextLiveRoomProductDisplayOrder,
+  resolveLiveEndUpdates,
   resolveLiveStartUpdates,
   sortLiveRoomProductBindings,
 } from './live.logic';
@@ -41,6 +43,16 @@ assert.deepEqual(
     likeCount: 0,
   }
 );
+
+assert.deepEqual(resolveLiveEndUpdates(), {
+  status: 'ended',
+  streamUrl: undefined,
+});
+
+assert.deepEqual(buildLiveEndedEvent('room-123'), {
+  type: 'LIVE_ENDED',
+  roomId: 'room-123',
+});
 
 assert.deepEqual(
   sortLiveRoomProductBindings([

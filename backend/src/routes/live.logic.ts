@@ -14,6 +14,11 @@ export interface LiveRoomProductBinding {
   isExplaining?: boolean;
 }
 
+export interface LiveEndedEvent {
+  type: 'LIVE_ENDED';
+  roomId: string;
+}
+
 export function buildLiveStreamUrl(serverIp: string, roomId: string): string {
   return `http://${serverIp}:8000/live/${roomId}.flv`;
 }
@@ -24,6 +29,20 @@ export function resolveLiveStartUpdates(serverIp: string, room: LiveStartRoom): 
     streamUrl: buildLiveStreamUrl(serverIp, room.id),
     onlineCount: 0,
     likeCount: 0,
+  };
+}
+
+export function resolveLiveEndUpdates(): Partial<LiveStartRoom> {
+  return {
+    status: 'ended',
+    streamUrl: undefined,
+  };
+}
+
+export function buildLiveEndedEvent(roomId: string): LiveEndedEvent {
+  return {
+    type: 'LIVE_ENDED',
+    roomId,
   };
 }
 

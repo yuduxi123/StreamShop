@@ -1,6 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { WebSocketServer as WSS, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import { buildLiveEndedEvent } from '../routes/live.logic';
 
 interface RoomMember {
   ws: WebSocket;
@@ -153,6 +154,10 @@ export class WebSocketServer {
       type: 'LIVE_STARTED',
       roomId,
     });
+  }
+
+  pushLiveEnded(roomId: string): void {
+    this.broadcastToRoom(roomId, buildLiveEndedEvent(roomId));
   }
 
   pushPurchase(roomId: string, purchase: { username: string; productTitle: string; quantity: number }): void {

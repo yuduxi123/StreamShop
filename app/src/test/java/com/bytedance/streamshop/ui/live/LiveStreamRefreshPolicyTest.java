@@ -32,4 +32,16 @@ public class LiveStreamRefreshPolicyTest {
         assertFalse(LiveStreamRefreshPolicy.shouldPrepareStream(null, false, ""));
         assertFalse(LiveStreamRefreshPolicy.shouldPrepareStream(null, false, null));
     }
+
+    @Test
+    public void endedStatusStopsWaitingForStream() {
+        assertTrue(LiveStreamRefreshPolicy.isLiveEnded("ended"));
+        assertFalse(LiveStreamRefreshPolicy.shouldWaitForStream("ended", false, 0, 5));
+    }
+
+    @Test
+    public void liveStatusCanWaitForMissingStream() {
+        assertFalse(LiveStreamRefreshPolicy.isLiveEnded("live"));
+        assertTrue(LiveStreamRefreshPolicy.shouldWaitForStream("live", false, 0, 5));
+    }
 }
