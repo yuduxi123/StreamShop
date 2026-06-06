@@ -62,7 +62,7 @@ StreamShop/
 | Android | Java 11, Gradle Kotlin DSL, ExoPlayer (Media3), Glide, OkHttp, Gson, Android-Image-Cropper |
 | 后端 | Node.js, Express, TypeScript, JWT (jsonwebtoken), bcryptjs, WebSocket (ws), multer |
 | 管理后台 | React 19, TypeScript, Vite, React Router |
-| 数据存储 | JSON 文件持久化（可替换为 MySQL/MongoDB） |
+| 数据存储 | 本地 JSON 文件持久化 + 可选 MongoDB Atlas 云端同步 |
 
 ## 快速开始
 
@@ -71,9 +71,17 @@ StreamShop/
 ```bash
 cd backend
 npm install
-npm run seed      # 初始化种子数据（首次必运行）
+npm run seed      # 初始化本地种子数据（仅本地首次需要，日常不要反复运行）
 npm run dev       # 启动开发服务器，默认端口 3000
 ```
+
+如果需要和队友同步云端数据，在 `backend/.env` 中配置：
+
+```bash
+MONGODB_URI=你的 MongoDB Atlas 连接串
+```
+
+配置后启动后端会自动连接 `streamshop` 数据库：云端已有集合时会先拉取到本地 JSON；云端为空但本地 JSON 有数据时会把本地数据推到云端。后续通过接口新增、修改、删除的数据也会同步到 MongoDB。
 
 ### 2. 启动管理后台
 
@@ -91,9 +99,10 @@ npm run dev       # 启动 Vite 开发服务器
 
 ### 注意事项
 
-- Android 模拟器连接电脑后端需要使用局域网 IP（雷电模拟器等不支持 `10.0.2.2`）
-- `npm run seed` 会**重置所有数据**，日常重启不需要运行，直接 `npm run dev` 即可
-- 后端 JSON 数据存储在 `backend/src/data/`，首次运行 `npm run seed` 会自动生成
+- Android 模拟器连接电脑后端需要使用局域网 IP（雷电模拟器等不支持 `10.0.2.2`）；当前客户端配置指向 `10.208.69.9:3000`，如果换电脑或网络，需要同步调整 API/WebSocket/直播推流地址
+- `npm run seed` 会**重置本地 JSON 数据**，日常重启不需要运行，直接 `npm run dev` 即可
+- 后端 JSON 数据存储在 `backend/src/data/`，首次运行 `npm run seed` 会自动生成；配置 MongoDB 后，本地 JSON 仍作为运行时数据文件，并与云端集合双向同步
+- MongoDB 只同步 JSON 元数据，不同步 `backend/uploads/` 里的视频、封面、商品图和头像文件；从云端拉到的旧 IP 媒体链接会按当前后端地址重写，缺少本地视频文件的内容会在视频流、搜索、点赞/收藏列表中隐藏
 
 ## 已完成迭代
 

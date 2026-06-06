@@ -2,6 +2,11 @@ import { Router, Request, Response } from 'express';
 import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  filterAvailableVideos,
+  getRequestMediaContext,
+  shouldExposeVideo,
+} from '../services/media-url.service';
 
 interface MessageData {
   id: string;
@@ -55,14 +60,21 @@ router.get('/', (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const authorId = req.query.authorId as string | undefined;
+  const mediaContext = getRequestMediaContext(req);
+  let all = authorId
+    ? videoStorage.query(v => v.authorId === authorId)
+    : videoStorage.findAll();
+  all = filterAvailableVideos(all, mediaContext);
+
   let result;
   if (authorId) {
-    const filtered = videoStorage.query(v => v.authorId === authorId);
-    const total = filtered.length;
+    const total = all.length;
     const start = (page - 1) * limit;
-    result = { data: filtered.slice(start, start + limit), total, page, limit };
+    result = { data: all.slice(start, start + limit), total, page, limit };
   } else {
-    result = videoStorage.paginate(page, limit);
+    const total = all.length;
+    const start = (page - 1) * limit;
+    result = { data: all.slice(start, start + limit), total, page, limit };
   }
 
   // Enrich with author and products
@@ -89,9 +101,10 @@ router.get('/search', (req: Request, res: Response) => {
   const results = videoStorage.query(v => {
     const title = (v.title || '').toLowerCase();
     return keywords.some(kw => title.includes(kw));
-  }).slice(0, 30);
+  });
+  const availableResults = filterAvailableVideos(results, getRequestMediaContext(req)).slice(0, 30);
   // Enrich with author
-  const enriched = results.map(video => {
+  const enriched = availableResults.map(video => {
     const users = userStorage.query(u => u.id === video.authorId);
     const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
     return { ...video, author };
@@ -102,7 +115,7 @@ router.get('/search', (req: Request, res: Response) => {
 // GET /api/videos/:id
 router.get('/:id', (req: Request, res: Response) => {
   const video = videoStorage.findById(req.params.id as string);
-  if (!video) {
+  if (!video || !shouldExposeVideo(video, getRequestMediaContext(req))) {
     res.status(404).json({ error: 'Video not found' });
     return;
   }

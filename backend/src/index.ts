@@ -8,6 +8,7 @@ import os from 'os';
 import { WebSocketServer } from './websocket/wsServer';
 import { connectDB, getDB, disconnectDB } from './services/database';
 import { StorageService } from './services/storage.service';
+import { normalizeJsonResponseMedia } from './services/media-url.service';
 
 // Route imports
 import authRoutes from './routes/auth';
@@ -35,6 +36,7 @@ const server = http.createServer(app);
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(normalizeJsonResponseMedia);
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

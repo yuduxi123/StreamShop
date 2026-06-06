@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { getRequestMediaContext, shouldExposeVideo } from '../services/media-url.service';
 
 interface LikeData {
   id: string;
@@ -81,7 +82,7 @@ router.get('/likes', authMiddleware, (req: AuthRequest, res: Response) => {
     let target: any = null;
     if (item.targetType === 'video') {
       const video = videoStorage.findById(item.targetId);
-      if (video) {
+      if (video && shouldExposeVideo(video, getRequestMediaContext(req))) {
         const users = userStorage.query(u => u.id === video.authorId);
         const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
         const bindings = vpStorage.query((vp: any) => vp.videoId === video.id);
@@ -91,8 +92,8 @@ router.get('/likes', authMiddleware, (req: AuthRequest, res: Response) => {
     } else if (item.targetType === 'product') {
       target = productStorage.findById(item.targetId);
     }
-    return { ...item, target };
-  });
+    return target ? { ...item, target } : null;
+  }).filter(Boolean);
   res.json(enriched);
 });
 
@@ -170,7 +171,7 @@ router.get('/collections', authMiddleware, (req: AuthRequest, res: Response) => 
     let target: any = null;
     if (item.targetType === 'video') {
       const video = videoStorage.findById(item.targetId);
-      if (video) {
+      if (video && shouldExposeVideo(video, getRequestMediaContext(req))) {
         const users = userStorage.query(u => u.id === video.authorId);
         const author = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
         const bindings = vpStorage.query((vp: any) => vp.videoId === video.id);
@@ -180,8 +181,8 @@ router.get('/collections', authMiddleware, (req: AuthRequest, res: Response) => 
     } else if (item.targetType === 'product') {
       target = productStorage.findById(item.targetId);
     }
-    return { ...item, target };
-  });
+    return target ? { ...item, target } : null;
+  }).filter(Boolean);
   res.json(enriched);
 });
 

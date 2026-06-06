@@ -28,7 +28,7 @@ const videos = [
 ];
 
 const videoProducts = [
-  { id: 'video-1_product-1', videoId: 'video-1', productId: 'product-1', displayOrder: 0 },
+  { id: 'video-1_product-1', videoId: 'video-1', productId: 'product-1', displayOrder: 0, timestampMs: 0 },
 ];
 
 const liveRooms = [
@@ -121,5 +121,52 @@ assert.equal(legacyLiveItem?.liveRoom.startedAt, '2026-05-30T09:00:00Z');
 
 const reusedVideoLiveItem = items.find(item => item.type === 'live' && item.id === 'reused-video-live-room');
 assert.equal(reusedVideoLiveItem?.liveRoom.streamUrl, undefined);
+
+const syncedItems: any[] = buildFeedItems({
+  videos: [
+    {
+      id: 'synced-video',
+      title: 'synced upload video',
+      coverUrl: 'http://10.17.24.7:3000/uploads/synced-cover.jpg',
+      videoUrl: 'http://10.17.24.7:3000/uploads/synced-video.mp4',
+      authorId: 'author-1',
+      status: 'published',
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      shareCount: 0,
+      tags: [],
+      createdAt: '2026-05-31T10:00:00Z',
+    },
+    {
+      id: 'missing-video',
+      title: 'missing upload video',
+      coverUrl: 'http://10.17.24.7:3000/uploads/missing-cover.jpg',
+      videoUrl: 'http://10.17.24.7:3000/uploads/missing-video.mp4',
+      authorId: 'author-1',
+      status: 'published',
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      shareCount: 0,
+      tags: [],
+      createdAt: '2026-05-31T11:00:00Z',
+    },
+  ],
+  liveRooms: [],
+  videoProducts: [],
+  liveRoomProducts: [],
+  products: [],
+  users,
+  mediaBaseUrl: 'http://10.208.69.9:3000',
+  uploadFileExists: (filename: string) => filename !== 'missing-video.mp4',
+} as any);
+
+assert(syncedItems.some(item => item.type === 'video' && item.id === 'synced-video'));
+assert(!syncedItems.some(item => item.type === 'video' && item.id === 'missing-video'));
+
+const syncedVideo = syncedItems.find(item => item.type === 'video' && item.id === 'synced-video');
+assert.equal(syncedVideo?.video.videoUrl, 'http://10.208.69.9:3000/uploads/synced-video.mp4');
+assert.equal(syncedVideo?.video.coverUrl, 'http://10.208.69.9:3000/uploads/synced-cover.jpg');
 
 console.log('feed.logic tests passed');

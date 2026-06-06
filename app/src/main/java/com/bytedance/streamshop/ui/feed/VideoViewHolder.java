@@ -86,7 +86,6 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
     private boolean hasExternalPlayer = false;
     private boolean playerIsExternal = false;
     private boolean viewReported;
-    private boolean fallbackTried;
     private boolean isUserSeeking;
     private boolean loopMode;
     private boolean danmakuEnabled = true;
@@ -215,7 +214,6 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         this.apiService = new ApiService();
         this.isPlaying = false;
         this.viewReported = false;
-        this.fallbackTried = false;
         this.isUserSeeking = false;
         this.loopMode = false;
         updatePlayModeButton();
@@ -376,7 +374,10 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
             @Override
             public void onPlayerError(@Nullable PlaybackException error) {
-                tryFallbackSource();
+                if (VideoPlaybackErrorPolicy.shouldUseDemoFallbackOnSourceError()) {
+                    return;
+                }
+                showPlaybackError();
             }
         });
 
@@ -393,11 +394,18 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
         isPlaying = false;
     }
 
-    private void tryFallbackSource() {
-        if (player == null || fallbackTried) return;
-        fallbackTried = true;
-        String fallbackUrl = "https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4";
-        prepareAndPlay(fallbackUrl);
+    private void showPlaybackError() {
+        isPlaying = false;
+        stopProgressUpdates();
+        if (player != null) {
+            player.setPlayWhenReady(false);
+        }
+        if (coverView != null) {
+            coverView.setVisibility(View.VISIBLE);
+        }
+        if (playIndicator != null) {
+            playIndicator.setVisibility(View.VISIBLE);
+        }
     }
 
     private void reportViewIfNeeded() {

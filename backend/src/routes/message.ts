@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { getRequestMediaContext, shouldExposeVideo } from '../services/media-url.service';
 
 interface MessageData {
   id: string;
@@ -106,7 +107,7 @@ router.get('/conversations', authMiddleware, (req: AuthRequest, res: Response) =
     };
     if (meta.type === 'forward' && meta.videoId) {
       const video = videoStorage.findById(meta.videoId);
-      if (video) {
+      if (video && shouldExposeVideo(video, getRequestMediaContext(req))) {
         entry.lastMessageVideoTitle = video.title;
         entry.lastMessageVideoCover = video.coverUrl;
       }
@@ -139,7 +140,7 @@ router.get('/conversations', authMiddleware, (req: AuthRequest, res: Response) =
     };
     if (lastMsg?.type === 'forward' && lastMsg.videoId) {
       const video = videoStorage.findById(lastMsg.videoId);
-      if (video) {
+      if (video && shouldExposeVideo(video, getRequestMediaContext(req))) {
         entry.lastMessageVideoTitle = video.title;
         entry.lastMessageVideoCover = video.coverUrl;
       }
@@ -185,7 +186,7 @@ router.get('/conversations/:id', authMiddleware, (req: AuthRequest, res: Respons
     let result: any = { ...msg };
     if (msg.type === 'forward' && msg.videoId) {
       const video = videoStorage.findById(msg.videoId);
-      if (video) {
+      if (video && shouldExposeVideo(video, getRequestMediaContext(req))) {
         result.videoTitle = video.title;
         result.videoCoverUrl = video.coverUrl;
       }

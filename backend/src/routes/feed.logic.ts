@@ -1,3 +1,11 @@
+import {
+  MediaUrlContext,
+  normalizeProduct,
+  normalizeUser,
+  normalizeVideo,
+  shouldExposeVideo,
+} from '../services/media-url.service';
+
 export interface VideoData {
   id: string;
   title: string;
@@ -55,11 +63,9 @@ interface BuildFeedInput {
   liveRoomProducts: LiveRoomProduct[];
   products: any[];
   users: any[];
-}
-
-function publicUser(user: any): any {
-  if (!user) return null;
-  return { id: user.id, username: user.username, avatarUrl: user.avatarUrl };
+  mediaBaseUrl?: string;
+  streamBaseUrl?: string;
+  uploadFileExists?: (filename: string) => boolean;
 }
 
 function createdAtMs(item: FeedItem): number {
@@ -72,14 +78,31 @@ function livePriority(item: FeedItem): number {
   return item.liveRoom?.status === 'live' ? 1 : 0;
 }
 
+function publicUser(user: any, mediaContext: MediaUrlContext): any {
+  if (!user) return null;
+  return normalizeUser({ id: user.id, username: user.username, avatarUrl: user.avatarUrl }, mediaContext);
+}
+
 export function buildFeedItems(input: BuildFeedInput): FeedItem[] {
-  const { videos, liveRooms, videoProducts, liveRoomProducts, products, users } = input;
+  const {
+    videos,
+    liveRooms,
+    videoProducts,
+    liveRoomProducts,
+    products,
+    users,
+    mediaBaseUrl,
+    streamBaseUrl,
+    uploadFileExists,
+  } = input;
+  const mediaContext: MediaUrlContext = { mediaBaseUrl: mediaBaseUrl || '', streamBaseUrl, uploadFileExists };
   const videoUrlSet = new Set(videos.map(video => video.videoUrl).filter(Boolean));
 
   const videoItems: FeedItem[] = videos
     .filter(video => video.status === 'published')
+    .filter(video => shouldExposeVideo(video, mediaContext))
     .map(video => {
-      const author = publicUser(users.find(user => user.id === video.authorId));
+      const author = publicUser(users.find(user => user.id === video.authorId), mediaContext);
       const bindings = videoProducts
         .filter(binding => binding.videoId === video.id)
         .sort((a, b) => a.displayOrder - b.displayOrder);
@@ -87,29 +110,29 @@ export function buildFeedItems(input: BuildFeedInput): FeedItem[] {
         .map(binding => {
           const product = products.find(p => p.id === binding.productId);
           if (!product) return null;
-          return { ...product, timestampMs: binding.timestampMs || 0 };
+          return { ...normalizeProduct(product, mediaContext), timestampMs: binding.timestampMs || 0 };
         })
         .filter(Boolean);
       return {
         type: 'video',
         id: video.id,
         createdAt: video.createdAt,
-        video: { ...video, author, products: boundProducts },
+        video: normalizeVideo({ ...video, author, products: boundProducts }, mediaContext),
       };
     });
 
   const liveItems: FeedItem[] = liveRooms
     .filter(room => room.status === 'live')
     .map(room => {
-      const anchor = publicUser(users.find(user => user.id === room.anchorId));
+      const anchor = publicUser(users.find(user => user.id === room.anchorId), mediaContext);
       const productBindings = liveRoomProducts
         .filter(binding => binding.liveRoomId === room.id)
         .sort((a, b) => a.displayOrder - b.displayOrder);
       const boundProducts = productBindings
-        .map(binding => products.find(product => product.id === binding.productId))
+        .map(binding => normalizeProduct(products.find(product => product.id === binding.productId), mediaContext))
         .filter(Boolean);
       const currentProduct = room.currentProductId
-        ? products.find(product => product.id === room.currentProductId) || null
+        ? normalizeProduct(products.find(product => product.id === room.currentProductId), mediaContext) || null
         : null;
       const streamUrl = room.streamUrl && !videoUrlSet.has(room.streamUrl)
         ? room.streamUrl

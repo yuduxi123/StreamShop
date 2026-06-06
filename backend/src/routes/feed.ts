@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { StorageService } from '../services/storage.service';
+import { getRequestMediaContext } from '../services/media-url.service';
 import {
   buildFeedItems,
   LiveRoomData,
@@ -21,6 +22,7 @@ const router = Router();
 router.get('/', (_req: Request, res: Response) => {
   const page = Math.max(parseInt(_req.query.page as string) || 1, 1);
   const limit = Math.max(parseInt(_req.query.limit as string) || 10, 1);
+  const mediaContext = getRequestMediaContext(_req);
 
   const items = buildFeedItems({
     videos: videoStorage.findAll(),
@@ -29,6 +31,9 @@ router.get('/', (_req: Request, res: Response) => {
     liveRoomProducts: liveRoomProductStorage.findAll(),
     products: productStorage.findAll(),
     users: userStorage.findAll(),
+    mediaBaseUrl: mediaContext.mediaBaseUrl,
+    streamBaseUrl: mediaContext.streamBaseUrl,
+    uploadFileExists: mediaContext.uploadFileExists,
   });
 
   const total = items.length;
