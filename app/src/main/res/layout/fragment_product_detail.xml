@@ -175,6 +175,19 @@
             app:strokeColor="#FFD700" />
     </LinearLayout>
 
+    <!-- AI recommend button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/product_ai_recommend_btn"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:text="AI生成推荐语"
+        android:textSize="13sp"
+        android:textColor="#7C4DFF"
+        app:cornerRadius="20dp"
+        app:strokeColor="#7C4DFF" />
+
     <!-- Buy now button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/product_buy_now_btn"

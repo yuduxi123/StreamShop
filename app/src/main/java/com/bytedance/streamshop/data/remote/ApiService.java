@@ -1092,6 +1092,45 @@ public class ApiService {
         }
     }
 
+    // ---- AI Generation ----
+
+    public boolean isAiConfigured() throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "ai/status")
+                .get()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            if (!resp.isSuccessful()) return false;
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            Map<String, Object> result = client.getGson().fromJson(respBody, Map.class);
+            Object val = result.get("configured");
+            return val instanceof Boolean ? (Boolean) val : false;
+        }
+    }
+
+    public String generateAiContent(String type, Map<String, Object> context) throws IOException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("type", type);
+        body.put("context", context);
+        String json = client.getGson().toJson(body);
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "ai/generate")
+                .post(RequestBody.create(json, JSON))
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) {
+                Map<String, Object> err = client.getGson().fromJson(respBody, Map.class);
+                String errMsg = err != null && err.get("error") != null
+                        ? (String) err.get("error")
+                        : "AI generation failed: " + resp.code();
+                throw new IOException(errMsg);
+            }
+            Map<String, Object> result = client.getGson().fromJson(respBody, Map.class);
+            return (String) result.get("text");
+        }
+    }
+
     // ---- Helpers ----
 
     private <T> ApiResponse<T> executePaginated(Request request, Class<T> clazz) throws IOException {

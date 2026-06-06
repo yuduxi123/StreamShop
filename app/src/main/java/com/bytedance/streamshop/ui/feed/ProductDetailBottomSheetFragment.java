@@ -79,6 +79,7 @@ public class ProductDetailBottomSheetFragment extends BottomSheetDialogFragment 
         MaterialButton addCartBtn = view.findViewById(R.id.product_add_cart_btn);
         MaterialButton collectBtn = view.findViewById(R.id.product_collect_btn);
         MaterialButton reviewsBtn = view.findViewById(R.id.product_reviews_btn);
+        MaterialButton aiRecommendBtn = view.findViewById(R.id.product_ai_recommend_btn);
 
         Glide.with(this).load(product.getCoverUrl()).into(imageView);
         priceText.setText("¥" + (int) product.getPrice());
@@ -146,6 +147,40 @@ public class ProductDetailBottomSheetFragment extends BottomSheetDialogFragment 
                     .show(getParentFragmentManager(), "product_reviews");
         });
 
+        aiRecommendBtn.setOnClickListener(v -> {
+            if (!ApiClient.getInstance().isAuthenticated()) {
+                Toast.makeText(getContext(), "请先登录", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            aiRecommendBtn.setEnabled(false);
+            aiRecommendBtn.setText("生成中...");
+            new Thread(() -> {
+                try {
+                    Map<String, Object> ctx = new HashMap<>();
+                    ctx.put("productName", product.getTitle());
+                    ctx.put("productDescription", product.getDescription() != null ? product.getDescription() : "");
+                    ctx.put("productPrice", String.valueOf((int) product.getPrice()));
+                    ctx.put("productCategory", product.getCategory() != null ? product.getCategory() : "");
+                    String text = new ApiService().generateAiContent("product_recommendation", ctx);
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            showRecommendationDialog(text);
+                            aiRecommendBtn.setEnabled(true);
+                            aiRecommendBtn.setText("AI生成推荐语");
+                        });
+                    }
+                } catch (Exception e) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                            aiRecommendBtn.setEnabled(true);
+                            aiRecommendBtn.setText("AI生成推荐语");
+                        });
+                    }
+                }
+            }).start();
+        });
+
         loadCollectStatus(collectBtn);
 
         collectBtn.setOnClickListener(v -> {
@@ -171,6 +206,23 @@ public class ProductDetailBottomSheetFragment extends BottomSheetDialogFragment 
                 }
             }).start();
         });
+    }
+
+    private void showRecommendationDialog(String text) {
+        new AlertDialog.Builder(getContext())
+                .setTitle("AI 推荐语")
+                .setMessage(text)
+                .setPositiveButton("复制", (dialog, which) -> {
+                    android.content.ClipboardManager clipboard =
+                            (android.content.ClipboardManager) getContext()
+                                    .getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip =
+                            android.content.ClipData.newPlainText("recommendation", text);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(getContext(), "已复制到剪贴板", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("关闭", null)
+                .show();
     }
 
     private void loadCollectStatus(MaterialButton btn) {

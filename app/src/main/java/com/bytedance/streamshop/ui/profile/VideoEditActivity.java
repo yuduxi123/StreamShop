@@ -36,6 +36,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +47,8 @@ public class VideoEditActivity extends AppCompatActivity {
     private TextView headerTitle, videoInfoText, productHint;
     private ImageView coverPreview, productPreview;
     private ProgressBar videoProgress, coverProgress, productProgress;
-    private Button pickVideoBtn, pickCoverBtn, pickProductImageBtn, addProductBtn, saveBtn;
+    private Button pickVideoBtn, pickCoverBtn, pickProductImageBtn, addProductBtn, saveBtn,
+            aiTitleBtn, aiSellingPointsBtn;
     private RecyclerView productListView;
     private String editingVideoId;
     private boolean isSaving;
@@ -111,6 +113,8 @@ public class VideoEditActivity extends AppCompatActivity {
         productProgress = findViewById(R.id.video_edit_product_progress);
         productListView = findViewById(R.id.video_edit_product_list);
         productHint = findViewById(R.id.video_edit_product_hint);
+        aiTitleBtn = findViewById(R.id.video_edit_ai_title);
+        aiSellingPointsBtn = findViewById(R.id.video_edit_ai_selling_points);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, STATUS_LABELS);
@@ -125,6 +129,9 @@ public class VideoEditActivity extends AppCompatActivity {
         pickCoverBtn.setOnClickListener(v -> pickCoverLauncher.launch("image/*"));
         pickProductImageBtn.setOnClickListener(v -> pickProductImageLauncher.launch("image/*"));
         addProductBtn.setOnClickListener(v -> addOrUpdateProduct());
+
+        aiTitleBtn.setOnClickListener(v -> generateAiTitle());
+        aiSellingPointsBtn.setOnClickListener(v -> generateAiSellingPoints());
 
         // Product list
         productListAdapter = new ProductListAdapter();
@@ -597,6 +604,88 @@ public class VideoEditActivity extends AppCompatActivity {
                 });
             }
         }).start();
+    }
+
+    // ---- AI Generation ----
+
+    private void generateAiTitle() {
+        aiTitleBtn.setEnabled(false);
+        aiTitleBtn.setText("生成中...");
+        new Thread(() -> {
+            try {
+                Map<String, Object> ctx = new HashMap<>();
+                ctx.put("productName", productNameInput.getText().toString().trim());
+                ctx.put("productPrice", productPriceInput.getText().toString().trim());
+                ctx.put("videoContent", titleInput.getText().toString().trim());
+                String text = new ApiService().generateAiContent("video_title", ctx);
+                runOnUiThread(() -> {
+                    String[] titles = text.split("\n");
+                    showTitlePicker(titles);
+                    aiTitleBtn.setEnabled(true);
+                    aiTitleBtn.setText("AI生成标题");
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    aiTitleBtn.setEnabled(true);
+                    aiTitleBtn.setText("AI生成标题");
+                });
+            }
+        }).start();
+    }
+
+    private void generateAiSellingPoints() {
+        String name = productNameInput.getText().toString().trim();
+        String price = productPriceInput.getText().toString().trim();
+        if (name.isEmpty()) {
+            Toast.makeText(this, "请先输入商品名称", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        aiSellingPointsBtn.setEnabled(false);
+        aiSellingPointsBtn.setText("生成中...");
+        new Thread(() -> {
+            try {
+                Map<String, Object> ctx = new HashMap<>();
+                ctx.put("productName", name);
+                ctx.put("productPrice", price);
+                String text = new ApiService().generateAiContent("product_selling_points", ctx);
+                runOnUiThread(() -> {
+                    showSellingPointsDialog(text);
+                    aiSellingPointsBtn.setEnabled(true);
+                    aiSellingPointsBtn.setText("AI生成卖点");
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    aiSellingPointsBtn.setEnabled(true);
+                    aiSellingPointsBtn.setText("AI生成卖点");
+                });
+            }
+        }).start();
+    }
+
+    private void showTitlePicker(String[] titles) {
+        new AlertDialog.Builder(this)
+                .setTitle("选择标题")
+                .setItems(titles, (dialog, which) -> titleInput.setText(titles[which]))
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showSellingPointsDialog(String text) {
+        new AlertDialog.Builder(this)
+                .setTitle("AI 卖点文案")
+                .setMessage(text)
+                .setPositiveButton("复制", (dialog, which) -> {
+                    android.content.ClipboardManager clipboard =
+                            (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip =
+                            android.content.ClipData.newPlainText("selling_points", text);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(this, "已复制到剪贴板", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("关闭", null)
+                .show();
     }
 
     // ---- Helpers ----

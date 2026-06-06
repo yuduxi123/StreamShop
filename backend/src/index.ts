@@ -28,6 +28,7 @@ import danmakuRoutes from './routes/danmaku';
 import uploadRoutes from './routes/upload';
 import messageRoutes from './routes/message';
 import feedRoutes from './routes/feed';
+import aiRoutes from './routes/ai';
 import { createMediaServer } from './mediaServer';
 
 const app = express();
@@ -63,6 +64,7 @@ app.use('/api/danmaku', danmakuRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/feed', feedRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

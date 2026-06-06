@@ -34,7 +34,6 @@ import com.bytedance.streamshop.domain.model.Video;
 import com.bytedance.streamshop.ui.analytics.AnalyticsDashboardActivity;
 import com.bytedance.streamshop.ui.login.LoginActivity;
 import com.bytedance.streamshop.ui.order.OrderListActivity;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 
 import java.io.File;
@@ -55,7 +54,7 @@ public class ProfileFragment extends Fragment {
     private TextView usernameTextLoggedOut;
     private TextView accountText;
     private TextView loginBtn;
-    private MaterialButton logoutBtn;
+    private ImageButton logoutBtn;
     private View statsRow;
     private View actionsRow;
     private RecyclerView videoGrid;

@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center_vertical"
-        android:background="@android:color/white"
+        android:background="#1A1A1A"
         android:paddingHorizontal="4dp">
 
         <ImageButton
@@ -29,18 +29,20 @@
             android:layout_weight="1"
             android:text="新建视频"
             android:textSize="18sp"
-            android:textColor="@android:color/black"
+            android:textColor="#FFFFFF"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/video_edit_save"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="wrap_content"
+            android:minHeight="0dp"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="16dp"
             android:text="保存"
             android:textSize="13sp"
             android:backgroundTint="#1a1a2e"
-            android:textColor="@android:color/white"
-            android:paddingHorizontal="16dp" />
+            android:textColor="@android:color/white" />
     </LinearLayout>
 
     <!-- Form -->
@@ -71,6 +73,16 @@
                 android:textSize="14sp"
                 android:hint="请输入视频标题"
                 android:singleLine="true" />
+
+            <Button
+                android:id="@+id/video_edit_ai_title"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginTop="8dp"
+                android:text="AI生成标题"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#7C4DFF" />
 
             <!-- Video file picker -->
             <TextView
@@ -255,6 +267,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
                         android:text="绑定时间点（分:秒）"
                         android:textSize="12sp"
                         android:textColor="#999999"
@@ -263,14 +276,16 @@
                     <EditText
                         android:id="@+id/video_edit_product_timestamp"
                         android:layout_width="0dp"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:layout_gravity="center_vertical"
                         android:background="@null"
-                        android:textSize="14sp"
+                        android:textSize="12sp"
                         android:hint="0:00"
                         android:inputType="text"
                         android:singleLine="true"
-                        android:gravity="end" />
+                        android:gravity="end"
+                        android:paddingVertical="4dp" />
                 </LinearLayout>
 
                 <Button
@@ -282,6 +297,16 @@
                     android:textSize="13sp"
                     android:textColor="#1a1a2e"
                     android:backgroundTint="#E8E8E8" />
+
+                <Button
+                    android:id="@+id/video_edit_ai_selling_points"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="4dp"
+                    android:text="AI生成卖点"
+                    android:textSize="13sp"
+                    android:textColor="#7C4DFF"
+                    android:backgroundTint="#EDE7F6" />
 
                 <View
                     android:layout_width="match_parent"
