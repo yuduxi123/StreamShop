@@ -22,7 +22,6 @@ import com.bytedance.streamshop.data.remote.LiveWebSocketClient;
 import com.bytedance.streamshop.domain.model.Product;
 import com.bytedance.streamshop.ui.feed.ProductDetailBottomSheetFragment;
 import com.bytedance.streamshop.ui.profile.AuthorProfileActivity;
-import com.bytedance.streamshop.util.SystemBarInsets;
 import com.bumptech.glide.Glide;
 
 import android.view.SurfaceHolder;
@@ -40,7 +39,6 @@ import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import android.util.DisplayMetrics;
 import android.util.Log;
 
 import java.net.InetAddress;
@@ -54,6 +52,12 @@ import java.util.Map;
 
 public class AnchorLiveActivity extends AppCompatActivity implements ConnectCheckerRtmp {
     private static final String TAG = "AnchorLive";
+    private static final int[][] VIDEO_PROFILES = {
+            {1280, 720, 30, 1200 * 1024},
+            {960, 540, 30, 900 * 1024},
+            {640, 480, 24, 700 * 1024}
+    };
+    private static final int STREAM_ROTATION = 90;
 
     private String roomId;
     private String roomTitle;
@@ -119,9 +123,6 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
     }
 
     private void initViews() {
-        View topBar = findViewById(R.id.anchor_top_bar);
-        SystemBarInsets.applyStatusBarPadding(topBar);
-
         cameraPreview = findViewById(R.id.anchor_camera_preview);
         cameraPreview.setZOrderMediaOverlay(true);
         cameraPreview.getHolder().addCallback(new SurfaceHolder.Callback() {
@@ -254,16 +255,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
         // statusBadge removed:("连接中");
 
         try {
-            rtmpCamera1 = new RtmpCamera1(cameraPreview, this);
-            rtmpCamera1.setReTries(10);
-
-            // Match video aspect ratio to screen so preview fills the display
-            DisplayMetrics dm = getResources().getDisplayMetrics();
-            int baseW = 720;
-            int encodeW = (int) (baseW * ((float) dm.heightPixels / dm.widthPixels));
-            encodeW = (encodeW / 2) * 2; // round to even
-            int bitrate = (int) (1200 * 1024 * ((float) (encodeW * baseW) / (1280 * 720)));
-            if (rtmpCamera1.prepareVideo(encodeW, baseW, 30, bitrate, 270)) {
+            if (prepareVideoWithFallback()) {
                 rtmpCamera1.prepareAudio();
                 connectingText.setText("正在连接直播服务器...");
                 rtmpCamera1.startStream(rtmpUrl);
@@ -276,6 +268,36 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
             Toast.makeText(this, "启动摄像头失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
             finish();
         }
+    }
+
+    private boolean prepareVideoWithFallback() {
+        for (int[] profile : VIDEO_PROFILES) {
+            int width = profile[0];
+            int height = profile[1];
+            int fps = profile[2];
+            int bitrate = profile[3];
+            try {
+                rtmpCamera1 = new RtmpCamera1(cameraPreview, this);
+                rtmpCamera1.setReTries(10);
+                Log.d(TAG, "Trying camera video profile: " + width + "x" + height + "@" + fps);
+                if (rtmpCamera1.prepareVideo(width, height, fps, bitrate, STREAM_ROTATION)) {
+                    Log.d(TAG, "Camera video profile selected: " + width + "x" + height + "@" + fps);
+                    return true;
+                }
+                safeStopCamera(rtmpCamera1);
+            } catch (Exception e) {
+                Log.w(TAG, "Camera video profile failed: " + width + "x" + height + "@" + fps, e);
+                safeStopCamera(rtmpCamera1);
+            }
+            rtmpCamera1 = null;
+        }
+        return false;
+    }
+
+    private void safeStopCamera(RtmpCamera1 camera) {
+        if (camera == null) return;
+        try { camera.stopStream(); } catch (Exception ignored) {}
+        try { camera.stopPreview(); } catch (Exception ignored) {}
     }
 
     @Override
@@ -512,7 +534,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 }
             }
         } catch (Exception ignored) {}
-        return "10.17.24.7";
+        return "10.208.69.9";
     }
 
     @Override

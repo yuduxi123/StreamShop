@@ -19,13 +19,12 @@ public final class SystemBarInsets {
         content.post(() -> {
             if (content.getChildCount() == 0) return;
             View target = content.findViewWithTag(STATUS_BAR_INSET_TAG);
-            if (target != null) {
-                applyStatusBarPadding(target);
-            }
+            applyStatusBarPadding(target != null ? target : content.getChildAt(0));
         });
     }
 
     public static void applyStatusBarPadding(View view) {
+        if (view == null) return;
         final int initialLeft = view.getPaddingLeft();
         final int initialTop = view.getPaddingTop();
         final int initialRight = view.getPaddingRight();
