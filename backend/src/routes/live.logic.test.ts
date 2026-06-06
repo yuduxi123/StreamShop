@@ -1,5 +1,10 @@
 import assert from 'assert';
-import { buildLiveStreamUrl, resolveLiveStartUpdates } from './live.logic';
+import {
+  buildLiveStreamUrl,
+  getNextLiveRoomProductDisplayOrder,
+  resolveLiveStartUpdates,
+  sortLiveRoomProductBindings,
+} from './live.logic';
 
 assert.equal(
   buildLiveStreamUrl('10.208.69.9', 'room-123'),
@@ -36,5 +41,24 @@ assert.deepEqual(
     likeCount: 0,
   }
 );
+
+assert.deepEqual(
+  sortLiveRoomProductBindings([
+    { id: 'room_product-3', liveRoomId: 'room', productId: 'product-3', displayOrder: 2, isExplaining: false },
+    { id: 'room_product-1', liveRoomId: 'room', productId: 'product-1', displayOrder: 0, isExplaining: false },
+    { id: 'room_product-2', liveRoomId: 'room', productId: 'product-2', displayOrder: 1, isExplaining: true },
+  ]).map(binding => binding.productId),
+  ['product-1', 'product-2', 'product-3']
+);
+
+assert.equal(
+  getNextLiveRoomProductDisplayOrder([
+    { id: 'room_product-1', liveRoomId: 'room', productId: 'product-1', displayOrder: 0, isExplaining: false },
+    { id: 'room_product-3', liveRoomId: 'room', productId: 'product-3', displayOrder: 2, isExplaining: false },
+  ]),
+  3
+);
+
+assert.equal(getNextLiveRoomProductDisplayOrder([]), 0);
 
 console.log('live.logic tests passed');

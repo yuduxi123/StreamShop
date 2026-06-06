@@ -78,6 +78,7 @@ public class LiveRoomActivity extends AppCompatActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private int streamRetryCount = 0;
     private boolean streamLoaded = false;
+    private String currentStreamUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,7 +196,12 @@ public class LiveRoomActivity extends AppCompatActivity {
             showStreamPlaceholder("直播画面未接入");
             return;
         }
+        if (!LiveStreamRefreshPolicy.shouldPrepareStream(currentStreamUrl, streamLoaded, streamUrl)) {
+            return;
+        }
+        currentStreamUrl = streamUrl;
         streamLoaded = true;
+        streamRetryCount = 0;
         showStreamPlaceholder("正在加载直播画面...");
         Log.d(TAG, "Playing live stream: " + streamUrl);
         MediaItem mediaItem = MediaItem.fromUri(streamUrl);
@@ -209,10 +215,6 @@ public class LiveRoomActivity extends AppCompatActivity {
                 Map<String, Object> room = apiService.getRoomDetail(roomId);
                 if (room == null) return;
                 List<Map<String, Object>> roomProducts = (List<Map<String, Object>>) room.get("products");
-                if (roomProducts != null) {
-                    products.clear();
-                    products.addAll(roomProducts);
-                }
                 String streamUrl = (String) room.get("streamUrl");
                 Map<String, Object> anchor = (Map<String, Object>) room.get("anchor");
                 String avatarUrl = null;
@@ -233,8 +235,8 @@ public class LiveRoomActivity extends AppCompatActivity {
                                 .placeholder(R.drawable.ic_avatar_placeholder)
                                 .into(anchorAvatar);
                     }
+                    updateProducts(roomProducts);
                     playStream(streamUrl);
-                    productAdapter.notifyDataSetChanged();
                     if (TextUtils.isEmpty(streamUrl)) {
                         scheduleStreamRetry();
                     }
@@ -243,6 +245,26 @@ public class LiveRoomActivity extends AppCompatActivity {
                 Log.e(TAG, "Load live room detail failed", e);
             }
         }).start();
+    }
+
+    private void loadRoomProducts() {
+        new Thread(() -> {
+            try {
+                Map<String, Object> room = apiService.getRoomDetail(roomId);
+                if (room == null) return;
+                List<Map<String, Object>> roomProducts = (List<Map<String, Object>>) room.get("products");
+                runOnUiThread(() -> updateProducts(roomProducts));
+            } catch (Exception e) {
+                Log.e(TAG, "Load live room products failed", e);
+            }
+        }).start();
+    }
+
+    private void updateProducts(List<Map<String, Object>> roomProducts) {
+        if (roomProducts == null) return;
+        products.clear();
+        products.addAll(roomProducts);
+        productAdapter.notifyDataSetChanged();
     }
 
     private void scheduleStreamRetry() {
@@ -320,7 +342,7 @@ public class LiveRoomActivity extends AppCompatActivity {
                     if ("explaining".equals(action)) {
                         Toast.makeText(LiveRoomActivity.this, "主播正在讲解商品 #" + productId.substring(0, 6), Toast.LENGTH_SHORT).show();
                     } else if ("added".equals(action) || "removed".equals(action) || "reordered".equals(action)) {
-                        loadRoomDetail();
+                        loadRoomProducts();
                     }
                 });
             }

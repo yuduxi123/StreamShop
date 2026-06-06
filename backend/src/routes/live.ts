@@ -3,7 +3,11 @@ import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from '../websocket/wsServer';
-import { resolveLiveStartUpdates } from './live.logic';
+import {
+  getNextLiveRoomProductDisplayOrder,
+  resolveLiveStartUpdates,
+  sortLiveRoomProductBindings,
+} from './live.logic';
 
 interface LiveRoomData {
   id: string;
@@ -63,7 +67,7 @@ router.get('/rooms', (req: Request, res: Response) => {
   const enriched = result.data.map(room => {
     const users = userStorage.query(u => u.id === room.anchorId);
     const anchor = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
-    const bindings = lrpStorage.query(b => b.liveRoomId === room.id);
+    const bindings = sortLiveRoomProductBindings(lrpStorage.query(b => b.liveRoomId === room.id));
     const products = bindings.map(b => productStorage.findById(b.productId)).filter(Boolean);
     return { ...room, anchor, products, productBindings: bindings };
   });
@@ -80,7 +84,7 @@ router.get('/rooms/:id', (req: Request, res: Response) => {
   }
   const users = userStorage.query(u => u.id === room.anchorId);
   const anchor = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
-  const bindings = lrpStorage.query(b => b.liveRoomId === room.id);
+  const bindings = sortLiveRoomProductBindings(lrpStorage.query(b => b.liveRoomId === room.id));
   const products = bindings.map(b => productStorage.findById(b.productId)).filter(Boolean);
   res.json({ ...room, anchor, products, productBindings: bindings });
 });
@@ -242,11 +246,14 @@ router.post('/rooms/:id/products', authMiddleware, (req: AuthRequest, res: Respo
     res.status(409).json({ error: 'Product already bound to this live room' });
     return;
   }
+  const roomBindings = lrpStorage.query(b => b.liveRoomId === roomId);
   const binding: LiveRoomProduct = {
     id: bindingId,
     liveRoomId: roomId,
     productId,
-    displayOrder: displayOrder || 0,
+    displayOrder: typeof displayOrder === 'number'
+      ? displayOrder
+      : getNextLiveRoomProductDisplayOrder(roomBindings),
     isExplaining: false,
   };
   lrpStorage.create(binding);
