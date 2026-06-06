@@ -1,13 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+import { getDB } from './database';
+import { Document, Filter } from 'mongodb';
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 
 export class StorageService<T extends { id: string }> {
   private filePath: string;
+  private collectionName: string;
 
   constructor(filename: string) {
     this.filePath = path.join(DATA_DIR, filename);
+    this.collectionName = filename.replace(/\.json$/, '');
     this.ensureFile();
   }
 
@@ -29,7 +33,7 @@ export class StorageService<T extends { id: string }> {
     }
   }
 
-  private write(data: T[]): void {
+  write(data: T[]): void {
     fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), 'utf-8');
   }
 
@@ -49,6 +53,7 @@ export class StorageService<T extends { id: string }> {
     const data = this.read();
     data.push(item);
     this.write(data);
+    this.pushToMongo(item, 'insert');
     return item;
   }
 
@@ -58,6 +63,7 @@ export class StorageService<T extends { id: string }> {
     if (index === -1) return undefined;
     data[index] = { ...data[index], ...updates };
     this.write(data);
+    this.pushToMongo(data[index], 'update');
     return data[index];
   }
 
@@ -65,8 +71,9 @@ export class StorageService<T extends { id: string }> {
     const data = this.read();
     const index = data.findIndex(item => item.id === id);
     if (index === -1) return false;
-    data.splice(index, 1);
+    const removed = data.splice(index, 1)[0];
     this.write(data);
+    this.pushToMongo(removed, 'delete');
     return true;
   }
 
@@ -76,5 +83,42 @@ export class StorageService<T extends { id: string }> {
     const start = (page - 1) * limit;
     const paged = data.slice(start, start + limit);
     return { data: paged, total, page, limit };
+  }
+
+  // --- MongoDB sync ---
+
+  private async pushToMongo(item: T, action: 'insert' | 'update' | 'delete'): Promise<void> {
+    const db = getDB();
+    if (!db) return;
+    try {
+      if (action === 'insert') {
+        await db.collection(this.collectionName).insertOne(item as unknown as Document);
+      } else if (action === 'update') {
+        await db.collection(this.collectionName).updateOne(
+          { id: item.id } as Filter<Document>,
+          { $set: item as unknown as Document },
+          { upsert: true },
+        );
+      } else {
+        await db.collection(this.collectionName).deleteOne({ id: item.id } as Filter<Document>);
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  async syncFromMongo(): Promise<boolean> {
+    const db = getDB();
+    if (!db) return false;
+    try {
+      const docs = await db.collection(this.collectionName).find({}).toArray();
+      if (docs.length === 0) return false;
+      const items = docs.map((d: any) => {
+        const { _id, ...rest } = d;
+        return rest as T;
+      });
+      this.write(items);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

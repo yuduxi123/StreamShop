@@ -1,7 +1,13 @@
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { WebSocketServer } from './websocket/wsServer';
+import { connectDB, getDB, disconnectDB } from './services/database';
+import { StorageService } from './services/storage.service';
 
 // Route imports
 import authRoutes from './routes/auth';
@@ -22,8 +28,6 @@ import uploadRoutes from './routes/upload';
 import messageRoutes from './routes/message';
 import feedRoutes from './routes/feed';
 import { createMediaServer } from './mediaServer';
-import path from 'path';
-import os from 'os';
 
 const app = express();
 const server = http.createServer(app);
@@ -86,9 +90,59 @@ app.locals.serverIp = localIp;
 const mediaServer = createMediaServer(localIp);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`StreamShop API running on http://localhost:${PORT}`);
-  console.log(`WebSocket server ready`);
-  mediaServer.run();
-  console.log(`Media server: RTMP on rtmp://${localIp}:1935/live, HTTP-FLV on http://${localIp}:8000/live`);
+
+const DATA_DIR = path.join(__dirname, '..', 'src', 'data');
+
+async function syncDataFromMongo(): Promise<void> {
+  const db = getDB();
+  if (!db) return;
+
+  const jsonFiles = fs.existsSync(DATA_DIR)
+    ? fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'))
+    : [];
+
+  for (const file of jsonFiles) {
+    const name = file.replace('.json', '');
+    const storage = new StorageService<any>(file);
+    const localCount = storage.findAll().length;
+
+    const cloudCount = await db.collection(name).countDocuments();
+
+    if (cloudCount > 0) {
+      await storage.syncFromMongo();
+      console.log(`[MongoDB] ↓ Pulled ${name} (${storage.findAll().length} records from cloud)`);
+    } else if (localCount > 0) {
+      for (const item of storage.findAll()) {
+        const { _id, ...rest } = item as any;
+        try { await db.collection(name).insertOne(rest as any); } catch {}
+      }
+      console.log(`[MongoDB] ↑ Pushed ${name} (${localCount} records to cloud)`);
+    }
+  }
+}
+
+async function start(): Promise<void> {
+  await connectDB();
+  if (getDB()) {
+    console.log('[MongoDB] Syncing data...');
+    await syncDataFromMongo();
+  }
+
+  server.listen(PORT, () => {
+    console.log(`StreamShop API running on http://localhost:${PORT}`);
+    console.log(`WebSocket server ready`);
+    mediaServer.run();
+    console.log(`Media server: RTMP on rtmp://${localIp}:1935/live, HTTP-FLV on http://${localIp}:8000/live`);
+  });
+}
+
+start().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+  console.log('\nShutting down...');
+  await disconnectDB();
+  process.exit(0);
 });

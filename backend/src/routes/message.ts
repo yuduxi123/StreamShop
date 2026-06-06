@@ -10,7 +10,7 @@ interface MessageData {
   senderId: string;
   receiverId: string;
   content: string;
-  type?: 'text' | 'forward';
+  type?: 'text' | 'forward' | 'order_remind';
   videoId?: string;
   status: 'sent' | 'delivered' | 'read';
   createdAt: string;
