@@ -5,7 +5,7 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingHorizontal="12dp"
-    android:background="#1A1A1A">
+    android:background="@color/background_dark">
 
     <!-- Danmaku on/off toggle (far left) -->
     <ImageView

@@ -22,7 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="13sp"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:text="x1" />
 
 </LinearLayout>

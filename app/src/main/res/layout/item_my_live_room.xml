@@ -15,7 +15,7 @@
         android:background="#FF3B30"
         android:gravity="center"
         android:text="删除"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary_dark"
         android:textSize="13sp" />
 
     <!-- Foreground card (slides left to reveal delete) -->
@@ -23,7 +23,7 @@
         android:id="@+id/liveroom_item_foreground"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="8dp"
+        app:cardCornerRadius="0dp"
         app:cardElevation="2dp">
 
         <LinearLayout
@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary_light"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -69,7 +69,7 @@
                         android:id="@+id/liveroom_item_online"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:visibility="gone" />
 
@@ -85,7 +85,7 @@
                         android:gravity="center"
                         android:background="@drawable/bg_status_ended"
                         android:text="未开播"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         android:textSize="11sp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -97,7 +97,7 @@
                         android:insetBottom="0dp"
                         android:text="开始"
                         android:textSize="11sp"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         app:cornerRadius="15dp"
                         app:backgroundTint="#FF3B30"
                         android:visibility="gone" />
@@ -111,7 +111,7 @@
                         android:insetBottom="0dp"
                         android:text="结束"
                         android:textSize="11sp"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         app:cornerRadius="15dp"
                         app:backgroundTint="#999999"
                         android:visibility="gone" />

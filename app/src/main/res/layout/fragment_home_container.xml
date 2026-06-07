@@ -11,7 +11,7 @@
         android:id="@+id/home_tab_layout"
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         app:tabIndicatorColor="#FFFFFF"
         app:tabIndicatorHeight="2dp"
         app:tabMode="fixed"

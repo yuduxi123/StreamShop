@@ -15,7 +15,7 @@
             android:id="@+id/msg_sender_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="11sp"
             android:layout_marginBottom="2dp"
             android:visibility="gone" />
@@ -27,7 +27,7 @@
         android:background="@drawable/bg_message_received"
         android:maxWidth="260dp"
         android:padding="12dp"
-        android:textColor="#333333"
+        android:textColor="@color/text_primary_light"
         android:textSize="15sp" />
 
     </LinearLayout>

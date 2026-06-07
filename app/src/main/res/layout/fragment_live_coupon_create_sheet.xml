@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1A1A"
+    android:background="@color/background_dark"
     android:fillViewport="true">
 
     <LinearLayout
@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="优惠券名称"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="12dp" />
         <EditText
@@ -48,7 +48,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="优惠类型"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <RadioGroup
@@ -79,7 +79,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="优惠值"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <LinearLayout
@@ -116,7 +116,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="最低消费金额"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <EditText
@@ -138,7 +138,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="发放数量"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <EditText
@@ -160,7 +160,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="使用有效期"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <Spinner
@@ -176,7 +176,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="领取时限（超时观众端自动消失）"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <Spinner
@@ -192,7 +192,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="适用范围"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:layout_marginTop="16dp" />
         <RadioGroup

@@ -65,7 +65,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:textColor="#999999"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:visibility="gone"
                     android:text="¥0" />
@@ -90,7 +90,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textColor="#999999"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp"
                 android:text="库存充足" />
 
@@ -102,7 +102,7 @@
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_intro_btn"
                 android:text="介绍"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary_dark"
                 android:textSize="10sp"
                 android:gravity="center"
                 android:clickable="true"
@@ -116,7 +116,7 @@
                 android:layout_marginTop="2dp"
                 android:background="@drawable/bg_intro_btn"
                 android:text="查看评价"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary_dark"
                 android:textSize="9sp"
                 android:gravity="center"
                 android:clickable="true"

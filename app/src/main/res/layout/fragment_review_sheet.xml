@@ -68,7 +68,7 @@
         android:id="@+id/review_input"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:background="#F5F5F5"
+        android:background="@color/background_light"
         android:padding="12dp"
         android:textSize="14sp"
         android:hint="写下你的评价..."

@@ -4,14 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="56dp"
         android:gravity="center_vertical"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         android:paddingHorizontal="16dp">
 
         <ImageButton
@@ -28,11 +28,11 @@
             android:layout_marginStart="12dp"
             android:text="我的订单"
             android:textSize="18sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" />
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
 
     <!-- Status tabs -->
     <com.google.android.material.tabs.TabLayout
@@ -41,9 +41,9 @@
         android:layout_height="44dp"
         android:background="@android:color/white"
         app:tabMode="fixed"
-        app:tabSelectedTextColor="#FF3B30"
-        app:tabIndicatorColor="#FF3B30"
-        app:tabTextColor="#666666" />
+        app:tabSelectedTextColor="@color/primary"
+        app:tabIndicatorColor="@color/primary"
+        app:tabTextColor="@color/text_secondary" />
 
     <!-- Order list -->
     <androidx.recyclerview.widget.RecyclerView

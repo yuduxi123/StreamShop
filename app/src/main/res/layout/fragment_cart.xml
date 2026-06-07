@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="#1A1A1A">
+        android:background="@color/background_dark">
 
         <TextView
             android:layout_width="wrap_content"
@@ -18,7 +18,7 @@
             android:layout_gravity="center"
             android:text="购物车"
             android:textSize="16sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textStyle="bold" />
 
         <TextView
@@ -28,7 +28,7 @@
             android:layout_gravity="center_vertical|end"
             android:text="管理"
             android:textSize="14sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:clickable="true"
             android:focusable="true"
             android:paddingHorizontal="16dp"
@@ -59,7 +59,7 @@
             android:layout_height="wrap_content"
             android:text="购物车是空的"
             android:textSize="16sp"
-            android:textColor="#999999" />
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 
     <!-- Bottom bar -->
@@ -85,7 +85,7 @@
             android:layout_weight="1"
             android:gravity="end"
             android:textSize="13sp"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:text="合计：" />
 
         <TextView

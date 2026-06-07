@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/collection_videos_grid"
@@ -18,7 +18,7 @@
         android:gravity="center"
         android:text="暂无收藏视频"
         android:textSize="15sp"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:visibility="gone" />
 
 </FrameLayout>

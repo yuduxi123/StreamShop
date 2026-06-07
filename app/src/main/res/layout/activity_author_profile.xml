@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,7 +16,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#1A1A1A"
+            android:background="@color/background_dark"
             android:paddingTop="48dp"
             android:paddingBottom="24dp">
 
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary_dark"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -74,7 +74,7 @@
                         android:id="@+id/author_likes_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:text="0" />
@@ -82,7 +82,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:text="获赞" />
                 </LinearLayout>
@@ -102,7 +102,7 @@
                         android:id="@+id/author_following_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:text="0" />
@@ -110,7 +110,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:text="关注" />
                 </LinearLayout>
@@ -130,7 +130,7 @@
                         android:id="@+id/author_followers_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/text_primary_dark"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:text="0" />
@@ -138,7 +138,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:text="粉丝" />
                 </LinearLayout>
@@ -159,7 +159,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="24dp"
                     android:text="关注"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary_dark"
                     android:textSize="14sp"
                     app:cornerRadius="20dp"
                     app:backgroundTint="#FF3B30" />
@@ -172,7 +172,7 @@
                     android:layout_marginStart="12dp"
                     android:paddingHorizontal="24dp"
                     android:text="发消息"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary_dark"
                     android:textSize="14sp"
                     app:cornerRadius="20dp"
                     app:backgroundTint="#007AFF" />
@@ -195,7 +195,7 @@
             android:layout_height="200dp"
             android:gravity="center"
             android:text="暂无作品"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="15sp"
             android:visibility="gone" />
 

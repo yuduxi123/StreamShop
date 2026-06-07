@@ -20,7 +20,7 @@
             android:background="#FF9500"
             android:gravity="center"
             android:text="置顶"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="13sp" />
 
         <TextView
@@ -30,7 +30,7 @@
             android:background="#FF3B30"
             android:gravity="center"
             android:text="删除"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -71,7 +71,7 @@
                 android:id="@+id/conv_username"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary_light"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -82,7 +82,7 @@
                 android:layout_marginTop="4dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#999999"
+                android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
         </LinearLayout>
 
@@ -118,7 +118,7 @@
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_circle_orange"
                 android:gravity="center"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary_dark"
                 android:textSize="10sp"
                 android:visibility="gone" />
         </LinearLayout>

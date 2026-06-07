@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="#1A1A1A"
+        android:layout_height="56dp"
+        android:background="@color/background_dark"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="我的直播"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -55,7 +55,7 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="暂无直播，点击上方创建"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:textSize="15sp"
         android:visibility="gone" />
 </LinearLayout>
