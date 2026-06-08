@@ -181,6 +181,7 @@ public class OrderListActivity extends AppCompatActivity {
                 h.actionBtn2.setText("催单");
                 h.actionBtn2.setBackgroundColor(0xFFFF9500);
                 h.actionBtn2.setVisibility(View.VISIBLE);
+                h.actionBtn3.setVisibility(View.GONE);
                 h.actionBtn1.setOnClickListener(v -> {
                     closeOpenItem();
                     confirmReceive(orderId);
@@ -190,14 +191,23 @@ public class OrderListActivity extends AppCompatActivity {
                     remindOrder(orderId);
                 });
             } else if ("completed".equals(status)) {
-                // Completed: show 评价 only
+                // Completed: show 评价 + 删除
                 h.actionBtn1.setText("评价");
                 h.actionBtn1.setBackgroundColor(0xFFFF9500);
                 h.actionBtn2.setVisibility(View.GONE);
+                h.actionBtn3.setVisibility(View.VISIBLE);
+                h.actionBtn3.setText("删除");
+                h.actionBtn3.setBackgroundColor(0xFFE53935);
                 h.actionBtn1.setOnClickListener(v -> {
                     closeOpenItem();
                     showReviewSheet(orderId, finalProductId);
                 });
+                h.actionBtn3.setOnClickListener(v -> {
+                    closeOpenItem();
+                    deleteOrder(orderId);
+                });
+            } else {
+                h.actionBtn3.setVisibility(View.GONE);
             }
 
             // Only enable swipe for paid/shipped/completed
@@ -219,7 +229,7 @@ public class OrderListActivity extends AppCompatActivity {
                 float newTrans = h.swipeStartTrans + dx;
 
                 if (newTrans > 0) newTrans = 0;
-                float maxSwipe = "completed".equals(status) ? -buttonPanelWidth / 2 : -buttonPanelWidth;
+                float maxSwipe = -buttonPanelWidth;
                 if (newTrans < maxSwipe) newTrans = maxSwipe;
 
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
@@ -315,6 +325,28 @@ public class OrderListActivity extends AppCompatActivity {
                     .show();
         }
 
+        private void deleteOrder(String orderId) {
+            new AlertDialog.Builder(OrderListActivity.this)
+                    .setTitle("删除订单")
+                    .setMessage("确定要删除该订单吗？删除后无法恢复。")
+                    .setPositiveButton("确定", (d, w) -> {
+                        new Thread(() -> {
+                            try {
+                                apiService.deleteOrder(orderId);
+                                runOnUiThread(() -> {
+                                    Toast.makeText(OrderListActivity.this, "订单已删除", Toast.LENGTH_SHORT).show();
+                                    loadOrders();
+                                });
+                            } catch (Exception e) {
+                                runOnUiThread(() ->
+                                        Toast.makeText(OrderListActivity.this, "删除失败", Toast.LENGTH_SHORT).show());
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        }
+
         private void showReviewSheet(String orderId, String productId) {
             if (productId == null) {
                 Toast.makeText(OrderListActivity.this, "无法获取商品信息", Toast.LENGTH_SHORT).show();
@@ -331,7 +363,7 @@ public class OrderListActivity extends AppCompatActivity {
             TextView orderId, statusText, amountText;
             ViewGroup productsContainer, actionsContainer;
             View foreground;
-            TextView actionBtn1, actionBtn2;
+            TextView actionBtn1, actionBtn2, actionBtn3;
             float swipeStartX, swipeStartTrans;
 
             ViewHolder(View v) {
@@ -339,6 +371,7 @@ public class OrderListActivity extends AppCompatActivity {
                 foreground = v.findViewById(R.id.order_foreground);
                 actionBtn1 = v.findViewById(R.id.order_action_btn1);
                 actionBtn2 = v.findViewById(R.id.order_action_btn2);
+                actionBtn3 = v.findViewById(R.id.order_action_btn3);
                 orderId = v.findViewById(R.id.order_item_id);
                 statusText = v.findViewById(R.id.order_item_status);
                 amountText = v.findViewById(R.id.order_item_amount);

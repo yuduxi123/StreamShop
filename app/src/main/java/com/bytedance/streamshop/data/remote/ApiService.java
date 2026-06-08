@@ -590,6 +590,18 @@ public class ApiService {
         }
     }
 
+    public Map<String, Object> deleteOrder(String orderId) throws IOException {
+        Request request = new Request.Builder()
+                .url(client.getBaseUrl() + "orders/" + orderId)
+                .delete()
+                .build();
+        try (Response resp = client.getHttpClient().newCall(request).execute()) {
+            String respBody = resp.body() != null ? resp.body().string() : "{}";
+            if (!resp.isSuccessful()) throw new IOException("Delete failed: " + resp.code());
+            return client.getGson().fromJson(respBody, Map.class);
+        }
+    }
+
     public Map<String, Object> remindOrder(String orderId) throws IOException {
         Request request = new Request.Builder()
                 .url(client.getBaseUrl() + "orders/" + orderId + "/remind")

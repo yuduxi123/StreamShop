@@ -312,6 +312,23 @@ router.patch('/:id/receive', (req: AuthRequest, res: Response) => {
   res.json(updated);
 });
 
+// DELETE /api/orders/:id - delete a completed order
+router.delete('/:id', (req: AuthRequest, res: Response) => {
+  const order = orderStorage.findById(req.params.id as string);
+  if (!order || order.userId !== req.user!.id) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  if (order.status !== 'completed') {
+    res.status(400).json({ error: 'Can only delete completed orders' });
+    return;
+  }
+  const items = orderItemStorage.query(i => i.orderId === order.id);
+  items.forEach(item => orderItemStorage.delete(item.id));
+  orderStorage.delete(order.id);
+  res.json({ success: true });
+});
+
 // POST /api/orders/:id/remind - send reminder message to merchant
 router.post('/:id/remind', (req: AuthRequest, res: Response) => {
   const order = orderStorage.findById(req.params.id as string);

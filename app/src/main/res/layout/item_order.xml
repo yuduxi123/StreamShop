@@ -33,6 +33,16 @@
             android:text="催单"
             android:textColor="@color/text_primary_dark"
             android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/order_action_btn3"
+            android:layout_width="60dp"
+            android:layout_height="match_parent"
+            android:background="#FF3B30"
+            android:gravity="center"
+            android:text="删除"
+            android:textColor="@color/text_primary_dark"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <!-- Foreground content (slides left to reveal buttons) -->
