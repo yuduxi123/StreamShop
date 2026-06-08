@@ -12,18 +12,19 @@
   七、页面导航地图
   八、关键代码模式讲解
   九、所有API接口速查表
-  十、答辩常见问题准备
+  十、AIGC 内容生成详解
+  十一、UI 设计系统详解
+  十二、答辩常见问题准备
 
 ================================================================================
 一、项目概述
 ================================================================================
 
-StreamShop 是一个仿抖音风格的短视频直播电商平台，当前核心包含两个子系统：
+StreamShop 是一个仿抖音风格的短视频直播电商平台，包含三个子系统：
 
-  1. Android App（Java）     — 用户端 + 创作者/商家端，刷视频、看直播、下单购物、发布视频、开播和看运营数据
+  1. Android App（Java）     — 用户端，刷视频、看直播、下单购物
   2. Express 后端（TypeScript）— REST API + WebSocket 服务
-
-仓库中保留的 React admin 是早期 Web 管理端原型/历史残留，当前不作为核心演示路径。
+  3. React 管理后台（Vite）   — 管理员管理商品/订单/直播间/视频
 
 核心功能：
   - 短视频上下滑动浏览（像抖音一样）
@@ -38,10 +39,10 @@ StreamShop 是一个仿抖音风格的短视频直播电商平台，当前核心
 ================================================================================
 
 ┌─────────────────────────┐
-│ Android 客户端              │  ← 消费者 + 创作者/商家
-│ Java + AndroidX + Media3   │
+│   React 管理后台 (admin)    │  ← 管理员操作
+│   Vite + React 19 + TS    │
 └────────────┬────────────┘
-             │ HTTP REST API / WebSocket
+             │ HTTP REST API
 ┌────────────▼────────────┐
 │   Express 后端 (backend)   │  ← 核心服务器
 │   Node.js + TypeScript    │
@@ -89,10 +90,14 @@ StreamShop 是一个仿抖音风格的短视频直播电商平台，当前核心
   │   ├── flashsale.ts       → 秒杀活动
   │   ├── recommend.ts       → 商品推荐算法
   │   ├── stats.ts           → 数据看板统计
-  │   └── upload.ts          → 文件上传（视频/图片）
+  │   ├── upload.ts          → 文件上传（视频/图片）
+  │   ├── ai.ts              → AIGC 内容生成（DeepSeek API）
+  │   └── feed.ts            → 混合 Feed 流
   ├── services/
   │   ├── auth.service.ts    → JWT 生成/验证 + 密码加密
-  │   └── storage.service.ts → JSON 文件读写基础类
+  │   ├── storage.service.ts → JSON 文件读写基础类
+  │   ├── ai.service.ts      → DeepSeek API 封装（5 种 Prompt 模板）
+  │   └── feed.logic.ts      → Feed 流合并算法
   └── websocket/wsServer.ts  → WebSocket 房间管理
 
 3.2 认证流程（JWT 机制）
@@ -655,13 +660,226 @@ MainActivity
 【用户】 /api/users
   GET  /:id               — 用户公开信息
 
+【AIGC】 /api/ai
+  GET  /status            — 检查 AI 是否已配置（DeepSeek API Key 有效）
+  POST /generate          — 生成 AI 内容（需认证，参数 type + context）
+
+【Feed】 /api/feed
+  GET  /                  — 混合 Feed 流（视频 + 直播卡片）
+
 ================================================================================
-十、答辩常见问题准备
+十、AIGC 内容生成详解
+================================================================================
+
+10.1 概述
+  项目集成了 DeepSeek 大语言模型，为商家提供 AI 辅助内容创作能力。
+  支持 5 种内容生成类型，覆盖视频发布和直播带货场景。
+
+10.2 技术选型：为什么用 DeepSeek？
+  - API 完全兼容 OpenAI SDK（openai npm 包），零迁移成本
+  - 国内可直接访问，无需代理
+  - 中文理解和生成能力出色（中文电商场景的标题/卖点/话术）
+  - 价格远低于 GPT-4（约 1/10）
+  - 替换方便：改 AI_BASE_URL 和 AI_MODEL 环境变量即可换其他兼容模型
+
+10.3 后端实现（ai.service.ts）
+
+  DeepSeek API 调用：
+    - 使用 openai npm 包（OpenAI 兼容 SDK）
+    - baseURL: https://api.deepseek.com/v1
+    - 模型: deepseek-chat（可配置）
+    - temperature: 0.8（平衡创造性和一致性）
+    - max_tokens: 600（足够生成 200 字以内中文）
+
+  5 种 Prompt 模板（全部为中文，绑定电商场景）：
+
+    1. video_title（视频标题生成）
+       输入: productName, productDescription, productPrice, productCategory, videoContent
+       输出: 5 个候选标题（15 字以内），换行分隔
+       用途: 视频编辑页"AI生成标题"按钮 → AlertDialog 列表选择
+
+    2. product_selling_points（商品卖点提炼）
+       输入: productName, productDescription, productPrice, productCategory
+       输出: 5 条卖点（30 字以内），换行分隔
+       用途: 视频编辑页"AI生成卖点"按钮 → 弹窗展示 + 一键复制
+
+    3. product_description（商品描述生成）
+       输入: productName, productDescription, productPrice, productCategory
+       输出: 80-150 字详细描述
+       用途: 商家发布商品时辅助写描述
+
+    4. live_commentary（直播讲解话术）
+       输入: productName, productDescription, productPrice, productCategory, originalPrice
+       输出: 30 秒口播脚本（80-120 字），口语化风格
+       用途: 主播直播时参考讲解脚本
+
+    5. product_recommendation（商品推荐语）
+       输入: productName, productDescription, productPrice, productCategory
+       输出: 60-100 字推荐文案
+       用途: 商品详情弹窗"AI生成推荐语"按钮 → 弹窗展示 + 一键复制
+
+10.4 后端路由（ai.ts）
+
+  GET /api/ai/status
+    - 返回 { configured: true/false }
+    - configured = AI_API_KEY 已设置且非空且非占位符
+    - Android 端据此决定是否显示 AI 按钮
+
+  POST /api/ai/generate（需认证）
+    - 请求体: { type: string, context: object }
+    - type 校验: 必须为 5 种允许值之一，否则返回 400
+    - context: 包含商品信息的键值对（productName, productPrice 等）
+    - 调用 ai.service.ts 的 generateText()
+    - 返回: { text: string, type: string }
+    - 错误处理: 401（API Key 无效）、429（频率限制）、500（通用错误）
+
+10.5 Android 端集成
+
+  ApiService（API 层）:
+    - isAiConfigured(Callback<Boolean>) → GET /api/ai/status
+      控制 AI 按钮的可见性
+    - generateAiContent(String type, Map<String, Object> context, Callback<String>)
+      → POST /api/ai/generate → 返回生成文本
+
+  VideoEditActivity（视频编辑页）:
+    - "AI生成标题"按钮（video_edit_ai_title）
+      → 收集表单中的商品名/价格/描述/视频内容
+      → generateAiContent("video_title", context)
+      → 解析换行分隔的 5 个标题 → AlertDialog 列表
+      → 用户点击选中 → 填入标题 EditText
+
+    - "AI生成卖点"按钮（video_edit_ai_selling_points）
+      → 收集商品名/价格
+      → generateAiContent("product_selling_points", context)
+      → 弹窗展示卖点文本 + "复制"按钮 → ClipboardManager
+
+    按钮可见性: onCreate 中异步检查 isAiConfigured()
+    → 已配置 → VISIBLE / 未配置 → GONE
+
+  ProductDetailBottomSheetFragment（商品详情弹窗）:
+    - "AI生成推荐语"按钮（product_ai_recommend_btn）
+      → 收集商品名/描述/价格/分类
+      → generateAiContent("product_recommendation", context)
+      → 弹窗展示推荐文案 + "复制"按钮
+
+================================================================================
+十一、UI 设计系统详解
+================================================================================
+
+11.1 概述
+  项目经过全局 UI 美化，建立了基于 Material Design 3 的完整设计系统。
+  所有颜色通过 colors.xml 统一管理，常用组件通过 styles.xml 复用。
+  支持一键换肤（改 colors.xml 中的 primary 值即可全局生效）。
+
+11.2 色彩体系（colors.xml — 33 色）
+
+  7 大类别：
+
+  【Primary 主色】
+    primary          #E63946  — 品牌红（按钮、关注、品牌元素）
+    primary_dark     #C5303C  — 品牌红深色（按下态）
+    accent           #FF6B35  — 强调橙
+    purple_primary   #7C4DFF  — 紫色（AIGC 按钮、关注按钮）
+
+  【Background 背景】
+    background_dark  #1A1A1A  — 深色背景（顶部栏、深色页面）
+    background_light #F5F5F5  — 浅色背景（页面底色）
+    surface          #FFFFFF  — 卡片表面白
+    dark_surface     #1a1a2e  — 深色表面（启动页）
+
+  【Text 文字】
+    text_primary_dark    #FFFFFF  — 深色背景上的白色文字
+    text_primary_light   #333333  — 浅色背景上的深色文字
+    text_secondary       #999999  — 次要文字（灰色）
+    text_hint            #CCCCCC  — 输入提示文字
+
+  【Accent 强调】
+    gold            #FFD700  — 金色（收藏/金币）
+    live_red        #FF3B30  — 直播红（LIVE 标签/直播入口）
+    green_success   #4CAF50  — 绿色（支付成功/已完成）
+    blue_info       #2196F3  — 蓝色（运营分析/信息提示）
+    orange_warning  #FF9800  — 橙色（待支付/警告）
+    price_red       #E53935  — 价格红
+    orange_tag      #FF6B35  — 标签橙
+
+  【Overlay 叠加】
+    overlay_dark    #99000000 — 深色叠加（60%透明黑）
+    overlay_medium  #66000000 — 中等叠加（40%透明黑）
+    overlay_light   #33000000 — 浅色叠加（20%透明黑）
+
+  【Semantic 语义】
+    collect_gold    #FFD700  — 收藏金
+    live_tag_bg     #E6FF3B30 — 直播标签背景（90%透明直播红）
+
+  【UI Elements 组件】
+    input_bg        #F5F5F5  — 输入框背景
+    input_stroke    #E0E0E0  — 输入框描边
+    card_white      #FFFFFF  — 卡片白
+    tab_inactive    #999999  — Tab 未选中
+    border_light    #E0E0E0  — 浅色边框
+    shadow_color    #1A000000 — 阴影色（10%透明黑）
+    divider         #EEEEEE  — 分割线
+
+11.3 组件样式库（styles.xml — 10 种）
+
+  TopBar         — 顶部栏：56dp 高 + 黑底 + 居中垂直
+  TopBarTitle    — 标题：18sp 白色粗体
+  AvatarSmall    — 小头像 40dp（列表项、评论）
+  AvatarMedium   — 中头像 56dp（作者信息、聊天）
+  AvatarLarge    — 大头像 80dp（个人主页）
+  PriceText      — 价格文字：品牌红 16sp 粗体
+  PriceTextLarge — 大价格文字：品牌红 22sp 粗体
+  SectionTitle   — 区块标题：深色 16sp 粗体
+  InputField     — 输入框：@color/input_bg 背景 + 8dp 圆角 + 12dp 内边距 + 14sp
+  CardContainer  — 卡片容器：白底 + 2dp elevation
+  Divider        — 分割线：0.5dp 高 + divider 色
+  Badge          — 标签角标：10sp 白字 + 小内边距
+
+11.4 标准化规范
+
+  顶部栏: 56dp 高度、@color/background_dark 黑底、@color/text_primary_dark 白字
+  头像:   40dp（小）/ 56dp（中）/ 80dp（大）三档，覆盖全部 28 个布局文件
+  输入框: @color/input_bg 背景 + 8dp 圆角 + 12dp 内边距 + 14sp 文字
+  卡片:   2dp elevation + @color/surface 白底
+  分割线: 0.5dp 高 + @color/divider (#EEEEEE)
+
+11.5 批量颜色迁移策略
+
+  问题: 50+ 布局文件中存在 200+ 处硬编码颜色值（#1A1A1A, #333333, #999999 等）
+
+  方法:
+    阶段 1 — 扩展 colors.xml：新增所有需要的语义颜色定义（14 个新颜色）
+    阶段 2 — 分 Pattern 批量替换：
+      - #F5F5F5 → @color/background_light（背景灰）
+      - #1A1A1A → @color/background_dark（深色背景）
+      - #333333 → @color/text_primary_light（主文字色）
+      - #999999 → @color/text_secondary（次要文字色）
+      - #666666 → @color/text_secondary（次要文字色）
+      - #FFFFFF → @color/text_primary_dark（深色底白字）
+      - #EEEEEE → @color/divider（分割线）
+    阶段 3 — 逐页验证：编译通过 + 视觉回归
+
+  关键决策: 保留 #FF3B30 在约 38 处语义位置不动
+    — 直播标签 (LIVE badge)
+    — 直播入口图标 tint
+    — 弹幕发送按钮背景
+    — 购物车角标
+    — 这些位置承载"直播红"语义，不应被品牌红 #E63946 覆盖
+
+11.6 视频图标自定义
+  将 ic_video_icon.xml 从相机镜头图标改为用户提供的 SVG：
+    — 矩形外框（48×48 viewport 内的圆角矩形）
+    — 中央播放三角
+    — 统一 strokeWidth=4, strokeColor=#333333
+    — 在 24dp×24dp 实际渲染尺寸下清晰可辨
+
+================================================================================
+十二、答辩常见问题准备
 ================================================================================
 
 Q1: 为什么选择这个项目？
   答：短视频+直播电商是当前最热门的商业模式（抖音/快手/TikTok）。
-      本项目实现了这种模式的 Android 客户端和后端主链路，用户端与商家端合并在同一个 App 中，
+      本项目实现了这种模式的完整前端+后端+管理后台，技术栈全面，
       涵盖了 Android、Node.js、WebSocket、REST API 等多种技术。
 
 Q2: 为什么后端用 JSON 文件而不用数据库？
@@ -710,10 +928,9 @@ Q9: 即时通讯怎么实现？
       服务端维护每个房间的成员列表，收到消息后向房间所有人广播。
       支持的消息类型：弹幕、评论、点赞、商品切换、优惠券推送。
 
-Q10: 管理端功能放在哪里？
-   答：当前核心管理能力主要放在 Android 客户端里，同一个账号既可以作为消费者，也可以作为创作者/商家。
-       个人中心和直播相关页面提供视频发布/编辑、商品绑定、主播开播、直播商品管理和运营分析。
-       React admin 是早期 Web 管理端原型，当前 dashboard 与后端统计接口字段未完全对齐，不作为核心演示路径。
+Q10: 管理后台用的什么技术？
+   答：React 19 + TypeScript + Vite + React Router，
+       调用和 Android 相同的 REST API。
 
 Q11: 商品-视频时间点绑定怎么实现的？
   答：这是一个完整的全链路功能——后端存储、Android 展示和交互。
@@ -745,6 +962,53 @@ Q12: 商品卡片吸附滚动和 Touch 冲突怎么解决的？
   区域内所有水平滑动都归商品卡片控制；ACTION_UP/CANCEL 恢复。
   同时把 LayoutManager + SnapHelper + OnTouchListener 初始化移到构造函数，
   避免每次 bind() 重复创建导致 "OnFlingListener already set" 崩溃。
+
+Q13: AIGC 内容生成是怎么实现的？
+  答：后端接入 DeepSeek API（deepseek-chat 模型），通过 OpenAI 兼容 SDK 调用。
+
+  流程：Android 按钮点击 → ApiService.generateAiContent(type, context)
+  → POST /api/ai/generate → ai.ts 路由校验 type → ai.service.ts 构造 Prompt
+  → DeepSeek API → 返回生成文本 → Android 弹窗展示。
+
+  5 种 Prompt 模板：视频标题（5 个候选 15 字以内）、商品卖点（5 条 30 字以内）、
+  商品描述（80-150 字）、直播话术（30 秒口播脚本）、商品推荐语（60-100 字）。
+
+  选择 DeepSeek 的原因：国内直连无需代理、API 兼容 OpenAI SDK、
+  中文效果好、价格低。改环境变量即可换其他模型。
+
+Q14: UI 设计系统是怎么建立的？
+  答：分 4 个 Phase 渐进式推进——
+
+  Phase 1（设计基础）：扩展 colors.xml 从 19 色到 33 色，
+  新增 styles.xml 10 种复用组件样式，将 colorPrimary 从 #FF3B30 改为
+  更深邃的品牌红 #E63946。
+
+  Phase 2（组件标准化）：顶部栏统一 56dp 黑底白字（15 个页面），
+  输入框统一背景+圆角+内边距（6 个页面），
+  头像收窄为 40/56/80dp 三档（28 个布局文件）。
+
+  Phase 3（核心页面美化）：Feed 页、直播页、个人主页、直播列表、
+  视频编辑页、订单页、登录注册页、聊天页共 8 大类页面逐一优化。
+
+  Phase 4（细节打磨）：统一 elevation 层级、分割线规范、系统栏适配。
+
+  最后批量迁移 200+ 处硬编码颜色到 @color/ 引用，
+  保留 #FF3B30 在 38 处语义位置（直播红/价格红不被品牌红覆盖）。
+
+Q15: 批量修改 200+ 处颜色值是怎么保证不出错的？
+  答：关键是顺序——先扩展 colors.xml 定义所有需要的颜色（编译无影响），
+  再用 replace_all 按 Pattern 分批替换（每种颜色一次操作），
+  最后编译验证。
+
+  7 种 Pattern 的替换：
+  #F5F5F5→@color/background_light, #1A1A1A→@color/background_dark,
+  #333333→@color/text_primary_light, #999999→@color/text_secondary,
+  #666666→@color/text_secondary, #FFFFFF(文字)→@color/text_primary_dark,
+  #EEEEEE→@color/divider。
+
+  风险控制：两个颜色值语义不同即使是同一色值也不统一替换
+  （如 #FF3B30 是直播红，与品牌红 #E63946 分开）；编译不通过时
+  回退到文件级别逐一检查。
 
 ================================================================================
                           — 全文完 —

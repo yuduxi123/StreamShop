@@ -4,7 +4,7 @@
   项目路径: D:\AndriodProjects\StreamShop
 ================================================================================
 
-本文档记录了从项目启动至今（7个迭代）遇到的所有技术问题、Bug及其完整解决方案。
+本文档记录了从项目启动至今（9个迭代）遇到的所有技术问题、Bug及其完整解决方案。
 每个问题包含：问题描述、根本原因、解决思路、具体代码修改。
 
 ================================================================================
@@ -1377,8 +1377,8 @@ Tab 间通信:
    npm run seed    # 初始化种子数据（首次或需要重置数据时）
    npm run dev     # 启动 Express + MediaServer (端口 3000 + RTMP 1935)
 
-2. 启动 React admin 原型（可选，历史残留，非核心演示路径）:
-   cd D:\AndriodProjects\StreamShop\admin
+2. 启动管理后台（可选）:
+   cd D:\AndriodProjects\StreamShop\admin-web
    npm run dev
 
 3. 编译安装 Android App:
@@ -1616,5 +1616,210 @@ Fragment 在 Tab 切换时会被销毁（onDestroyView），其中的 ExoPlayer
    原因：N 个商品均匀分布在视频的 N+1 等分点上，避免端点
 
 ================================================================================
-  全文完 — 共计 39 个问题，覆盖 7 个开发迭代
+十三、AIGC 功能问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 40: DeepSeek API 返回 401 Unauthorized
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+调用 AI 生成接口时，后端返回 401 错误，Android 端 Toast 提示"AI 生成失败"。
+
+【根本原因】
+DeepSeek API Key 未正确配置。ai.service.ts 中 isConfigured() 检查
+AI_API_KEY 是否存在且非空。若 .env 文件中 AI_API_KEY 缺失或是占位符
+（如 sk-your-api-key），则 AI 功能不可用。
+
+【解决方式】
+1. 在 backend/.env 中设置正确的 AI_API_KEY（格式 sk-xxxxxxxx）
+2. 后端 ai.ts 路由在 isConfigured() 返回 false 时返回明确的错误信息
+3. Android 端在调用前先调 isAiConfigured() 检查，未配置时隐藏 AI 按钮
+
+【涉及文件】
+- backend/.env
+- backend/src/routes/ai.ts
+- backend/src/services/ai.service.ts
+- app/.../data/remote/ApiService.java（isAiConfigured 方法）
+- app/.../ui/profile/VideoEditActivity.java（按配置状态显示/隐藏 AI 按钮）
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 41: AI 生成内容为空或质量差
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+调用 AI 生成接口后返回的内容是空字符串，或者生成的中文文案不通顺、
+不符合电商场景。
+
+【根本原因】
+1. Prompt 中的 context 参数缺失关键字段（productName/productDescription 为空）
+2. Temperature 参数设置不当（过高导致随机性大，过低导致重复）
+3. max_tokens 限制过小，截断了生成内容
+
+【解决方式】
+1. Android 端在构造 context HashMap 时，对空值字段填入占位文本（如"暂无"）
+2. 后端 ai.service.ts 中 temperature 设为 0.8（在创造性与一致性间平衡）
+3. max_tokens 设为 600（足够生成 200 字以内的中文内容）
+4. Prompt 模板中明确指定字数范围、语言风格、输出格式
+
+【涉及文件】
+- backend/src/services/ai.service.ts
+- app/.../ui/profile/VideoEditActivity.java
+- app/.../ui/feed/ProductDetailBottomSheetFragment.java
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 42: AI 按钮在编辑页面不显示
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+视频编辑页面的"AI生成标题"和"AI生成卖点"按钮不显示，
+即使后端 AI 已正确配置。
+
+【根本原因】
+Android 端需要在 UI 线程中异步检查 AI 配置状态。
+在 onCreate 中调用 ApiService.isAiConfigured() 是异步网络请求，
+但按钮的 visibility 在请求完成前就已设置（默认为 gone）。
+
+【解决方式】
+在 isAiConfigured() 的回调中动态设置按钮可见性：
+  ApiService.isAiConfigured(new ApiService.Callback<Boolean>() {
+      @Override
+      public void onSuccess(Boolean configured) {
+          if (configured) {
+              aiTitleBtn.setVisibility(View.VISIBLE);
+              aiSellingPointsBtn.setVisibility(View.VISIBLE);
+          }
+      }
+  });
+
+同时在 onFailure 回调中将按钮保持隐藏（隐藏 API 异常时的误导性按钮）。
+
+【涉及文件】
+- app/src/main/java/com/bytedance/streamshop/ui/profile/VideoEditActivity.java
+
+================================================================================
+十四、UI 美化问题
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 43: 批量颜色替换后编译失败
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+将布局文件中硬编码的颜色值批量替换为 @color/ 引用后，
+执行 gradlew assembleDebug 编译失败，报"resource not found"错误。
+
+【根本原因】
+替换时引用了 colors.xml 中尚未定义的颜色名称。
+例如将 #E0E0E0 替换为 @color/border_light 时，
+border_light 尚未加入 colors.xml。
+
+【解决方式】
+严格遵循顺序：先扩展 colors.xml（新增所有需要的颜色定义），
+然后再批量替换布局文件中的硬编码值。
+使用两阶段策略：
+  阶段 1：只改 colors.xml（无编译影响）
+  阶段 2：批量替换布局文件（此时所有引用已有效）
+
+【涉及文件】
+- app/src/main/res/values/colors.xml（先改）
+- 50+ 布局 XML 文件（后改）
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 44: @color/primary 与 #FF3B30 语义冲突
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+将 colorPrimary 从 #FF3B30 改为 #E63946（品牌红）后，
+直播相关的红色元素（如"LIVE"标签、直播入口图标、价格红）变得
+不够醒目，与直播的场景氛围不匹配。
+
+【根本原因】
+#FF3B30（亮红）和 #E63946（深红）虽然都是红色，但在 UI 中承载不同的
+语义角色。亮红更适合"正在直播"的紧迫感和价格的促销感，深红更适合
+品牌标识和按钮。
+
+【解决思路】
+不强行统一所有红色，而是建立红色两级语义：
+  - @color/primary (#E63946)：品牌色 → 按钮、关注、品牌元素
+  - @color/live_red (#FF3B30)：功能色 → 直播标签、价格、直播入口
+
+批量替换时保留布局中 38 处 #FF3B30 不动，
+这些位置在语义上属于 live_red 而非 primary。
+
+涉及保留 #FF3B30 的位置：
+  - 直播标签/直播入口图标 tint
+  - 价格文字（PriceText 样式引用 @color/primary，已包含）
+  - "LIVE" 角标背景
+  - 弹幕发送按钮背景
+  - 购物车角标
+
+【涉及文件】
+- app/src/main/res/values/colors.xml
+- 多个布局文件中保留 #FF3B30 的约 38 处位置
+- app/src/main/res/values/styles.xml（PriceText 引用 @color/primary）
+
+═══════════════════════════════════════════════════════════════════════════════
+问题 45: 自定义视频图标 SVG strokeWidth 转换不一致
+═══════════════════════════════════════════════════════════════════════════════
+
+【问题描述】
+将用户提供的 SVG 代码转换为 Android Vector XML（ic_video_icon.xml）后，
+图标在部分设备上描边粗细不一致，矩形框描边比播放三角粗。
+
+【根本原因】
+用户提供的 SVG 中两个 path 使用了不同的 stroke-width 单位。
+第一个 path（矩形框）的 stroke-width 与第二个 path（播放三角）
+在 Android 渲染时因为 viewport 缩放比例不同而产生粗细差异。
+
+【解决思路】
+统一两个 path 的 strokeWidth 为 4（在 48×48 viewport 下），
+确保在 24dp×24dp 的实际渲染尺寸下描边粗细一致。
+同时使用 strokeLineCap="round" 和 strokeLineJoin="round"
+让矩形框的四个角和播放三角的角都呈现圆角效果。
+
+【涉及文件】
+- app/src/main/res/drawable/ic_video_icon.xml
+
+================================================================================
+附录 E: 第 8-9 迭代新增技术决策
+================================================================================
+
+6. AIGC 模型选型 — DeepSeek vs OpenAI vs 文心一言
+   最终选择：DeepSeek (deepseek-chat)
+   原因：国内可直接访问无需代理，API 完全兼容 OpenAI SDK，
+         中文理解能力出色，价格远低于 GPT-4，替换成本低
+   文件：backend/src/services/ai.service.ts, backend/.env
+
+7. 颜色引用统一策略
+   选择：先扩展 colors.xml 定义，再批量替换布局文件
+   原因：避免编译时找不到资源引用；保留语义色（如 #FF3B30 直播红）
+         不被品牌色覆盖；每个 Phase 修改后可独立验证
+   文件：app/src/main/res/values/colors.xml（33 色定义）
+
+================================================================================
+附录 F: DeepSeek API 调试方法
+================================================================================
+
+1. 检查 AI 配置状态:
+   curl http://localhost:3000/api/ai/status
+   返回 {"configured": true} 表示 API Key 已配置
+
+2. 测试 AI 生成（需先登录获取 Token）:
+   curl -X POST http://localhost:3000/api/ai/generate \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -d '{"type":"video_title","context":{"productName":"运动鞋","productPrice":"299","productDescription":"轻便透气运动鞋"}}'
+
+3. 直接测试 DeepSeek API（确认 API Key 有效）:
+   curl https://api.deepseek.com/v1/chat/completions \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer sk-xxxxxxxx" \
+     -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}],"max_tokens":50}'
+
+4. Android 端查看 AI 请求日志:
+   在 Logcat 中过滤 "AiService" 或 "ApiService" 标签
+
+================================================================================
+  全文完 — 共计 45 个问题，覆盖 9 个开发迭代
 ================================================================================

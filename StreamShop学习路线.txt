@@ -1,5 +1,5 @@
 ﻿================================================================================
-        StreamShop 快速学习路线 —— 从零到答辩 ready，2天冲刺方案
+        StreamShop 快速学习路线 —— 从零到答辩 ready，3天冲刺方案
 ================================================================================
 
 【阅读指南】
@@ -16,13 +16,14 @@
     第 1 天上午：Part 1（底层概念，2-3 小时）
     第 1 天下午：Part 2 前半（Java + Android 核心 + 直播基础，4 小时）
     第 2 天上午：Part 2 后半（网络 + 视频 + 直播推流 + UI + 后端，4 小时）
-    第 2 天下午：Part 3 + Part 4（架构 + 21 个模拟答辩题，3 小时）
+    第 2 天下午：Part 3 + Part 4（架构 + 24 个模拟答辩题，3 小时）
+    第 3 天上午：Part 6 + Part 7（AIGC 集成 + UI 设计系统，3 小时）
+    第 3 天下午：复习 + 实战练习（2-3 小时）
 
-  重点新增内容（第 6 迭代后更新）：
-    2.5b 直播推流技术 —— Camera1/RTMP/pedroSG94/node-media-server 全链路
-    Q7-Q8b —— 直播推流+实时通信+技术坑 详细问答
-    Q16-Q20 —— 运营分析、Fragment 生命周期、摄像头权限、数据准确性问题
-    3.3 模块速览 —— 新增直播推流细节、运营分析、即时通讯
+  最新更新内容（第 8-9 迭代新增）：
+    Part 6 — AIGC 内容生成：DeepSeek API / 5 种 Prompt 模板 / Android 端交互
+    Part 7 — UI 设计系统：Material3 33 色体系 / 10 种组件样式 / 批量迁移方法论
+    Q22-Q24 — AIGC 实现原理 / UI 设计系统 / 批量颜色替换策略
 
 
 ================================================================================
@@ -645,13 +646,15 @@ Part 2：每个技术的"是什么-为什么-怎么用"
 Part 3：项目架构一遍通
 ================================================================================
 
-3.1 核心架构全景图
+3.1 三端架构全景图
 
 ┌──────────────────────────────────────────────────┐
-│          Android 客户端 (消费者 + 创作者/商家)        │
-│  刷视频/看直播/购物下单，也能发布视频、开播、看运营数据    │
+│              React 管理后台 (admin)                 │
+│          电脑上打开的网页，管理员用                    │
+│       登录后管理商品/订单/直播/视频                    │
 └─────────────────────┬────────────────────────────┘
-                      │  调 REST API / WebSocket
+                      │  调 REST API
+                      │  (和 App 调用同一个后端)
 ┌─────────────────────▼────────────────────────────┐
 │           Express 后端 (backend)                   │
 │                                                   │
@@ -790,8 +793,7 @@ Q1: 你这个项目是做什么的？
   用户可以在 App 上刷短视频——视频里面嵌入了商品卡片，
   点击就可以购买。同时还有直播间功能，实时弹幕互动、抢优惠券。
   另外还有完整的购物车→下单→支付链路，以及用户系统，
-  基本上是一个完整的电商平台。后端用 Node.js，商家/运营能力主要内置在 Android 客户端。
-  仓库里的 React admin 是早期 Web 管理端原型，目前不作为核心演示路径。
+  基本上是一个完整的电商平台。后端用 Node.js，管理后台用 React。
 
 ---
 
@@ -810,7 +812,7 @@ Q2: 项目用了哪些技术？
     认证：JWT + bcryptjs
     实时通信：ws 库
     存储：JSON 文件（用 StorageService 封装了增删改查和分页）
-    Web 管理原型：React 19 + Vite + TypeScript（历史残留，非核心演示路径）
+    管理后台：React 19 + Vite + TypeScript
 
 ---
 
@@ -1111,7 +1113,269 @@ Q21: 商品-视频时间点绑定是什么？怎么实现的？
 
 
 ================================================================================
-Part 5：2天冲刺时间表
+Part 5：Mock Q&A 追加（AIGC + UI 设计系统）
+================================================================================
+
+Q22: AIGC 内容生成是怎么实现的？
+
+  话术：项目集成了 DeepSeek 大语言模型，通过 OpenAI 兼容 SDK 调用。
+  后端 ai.service.ts 设计了 5 种中文 Prompt 模板——视频标题、商品卖点、
+  商品描述、直播话术、商品推荐语。Android 端在视频编辑页有两个 AI 按钮
+  （AI生成标题、AI生成卖点），商品详情弹窗有"AI生成推荐语"按钮。
+
+  流程：按钮点击 → 收集表单中的商品信息作为 context
+  → ApiService.generateAiContent(type, context) → POST /api/ai/generate
+  → ai.ts 路由校验 type → ai.service.ts 构造 Prompt → DeepSeek API
+  → 返回生成文本 → AlertDialog 展示（标题可选填，卖点/推荐语可复制）。
+
+  选择 DeepSeek 的原因：国内直连无代理、API 完全兼容 OpenAI SDK、
+  中文电商场景效果好、价格为 GPT-4 的 1/10。
+
+
+Q23: UI 设计系统是怎么回事？为什么重要？
+
+  话术：全局 UI 美化前，50+ 个布局文件中颜色值全部硬编码（#1A1A1A、
+  #333333、#999999 等），要改一个颜色需要逐文件翻找，极易遗漏。
+
+  美化分 4 个 Phase 推进：
+    1. 扩展 colors.xml 到 33 个语义化颜色（Primary/Background/Text/
+       Accent/Overlay/Semantic/UI Elements 7 大类）
+    2. 新增 styles.xml 10 种复用组件样式（TopBar/Avatar/PriceText/
+       InputField/CardContainer/Divider/Badge 等）
+    3. 组件标准化：顶部栏 56dp、头像 40/56/80dp 三档、输入框 8dp 圆角
+    4. 批量迁移 200+ 处硬编码值到 @color/ 引用
+
+  结果：改品牌色只需改 colors.xml 中一行，全局生效。
+  保留 #FF3B30 在 38 处语义位置不动（直播红、价格红不应被品牌红覆盖）。
+
+
+Q24: 怎么保证批量改 200+ 处颜色不出错？
+
+  话术：关键是顺序——先扩展 colors.xml 定义所有需要的颜色（编译无影响），
+  再按 Pattern 分批替换布局文件（每种颜色一次 replace_all），最后编译验证。
+
+  7 种 Pattern：F5F5F5→background_light, 1A1A1A→background_dark,
+  333333→text_primary_light, 999999→text_secondary, FFFFFF→text_primary_dark,
+  EEEEEE→divider, 666666→text_secondary。
+
+  两个安全原则：
+    1. 同一色值不同语义不统一替换（#FF3B30 是直播红≠品牌红 #E63946）
+    2. 每批替换后立即编译检查，出问题回退到文件级排查
+
+
+================================================================================
+Part 6：AIGC 与 AI 集成
+================================================================================
+
+6.1 AI 在电商直播中的价值
+
+  为什么要在电商 App 中集成 AI？
+    - 商家最大的痛点是"不会写文案"——标题怎么写才吸引人？卖点怎么提炼？
+    - AI 可以秒级生成多种文案备选，商家只需挑选和微调
+    - 直播带货场景下，主播需要即兴话术，AI 可提前生成参考脚本
+
+  本项目集成的 5 种 AI 生成能力：
+    1. 视频标题     → 15 字以内，5 个候选，适合信息流推荐
+    2. 商品卖点     → 30 字以内，5 条，适合商品卡片展示
+    3. 商品描述     → 80-150 字，适合商品详情页
+    4. 直播话术     → 30 秒口播脚本，口语化，适合主播参考
+    5. 商品推荐语   → 60-100 字，适合"猜你喜欢"场景
+
+
+6.2 DeepSeek API 对接原理
+
+  DeepSeek 是一个国产大语言模型，提供与 OpenAI 完全兼容的 API 接口。
+
+  调用方式：
+    - 使用 openai npm 包（不必修改代码，只改 baseURL）
+    - baseURL → https://api.deepseek.com/v1
+    - 模型 → deepseek-chat
+    - 请求格式：{ model, messages: [{role:"user", content: prompt}], temperature, max_tokens }
+
+  核心参数调优：
+    - temperature=0.8：适度创造性（太低 → 重复，太高 → 跑题）
+    - max_tokens=600：上限约 200 个中文字（电商文案不需太长）
+
+  如何替换成其他模型：
+    只需改 backend/.env 中的 2 个环境变量：
+      AI_BASE_URL=https://api.openai.com/v1   → 换 OpenAI
+      AI_MODEL=gpt-4o                          → 换 GPT-4o
+    （通义千问、智谱 GLM 等国产模型也兼容 OpenAI 接口）
+
+
+6.3 Prompt Engineering（提示词设计）
+
+  好的 Prompt 决定 AI 输出质量。本项目的 5 个 Prompt 模板遵循共同设计原则：
+
+    1. 角色设定：明确 AI 的身份（"你是电商文案专家"）
+    2. 输入上下文：把 Android 端收集的商品信息填入
+    3. 输出约束：字数范围 + 语言风格 + 格式要求
+
+  以"视频标题"Prompt 为例：
+    "你是一个短视频电商平台的文案专家。请根据以下商品信息，
+     生成 5 个吸引人的短视频标题（每个 15 字以内，中文）：
+     商品名称：{productName}
+     商品描述：{productDescription}
+     价格：¥{productPrice}
+     分类：{productCategory}
+     视频内容概要：{videoContent}
+     要求：标题简洁有力，突出卖点，适合信息流推荐。"
+
+  关键技巧：
+    - "每个 15 字以内"——控制长度适配移动端
+    - "适合信息流推荐"——设定场景约束风格
+    - "突出卖点"——明确评判标准
+
+
+6.4 Android 端 AIGC 交互设计
+
+  VideoEditActivity 中的两个 AI 按钮：
+
+  AI生成标题流程：
+    点击按钮 → 收集 productName/productPrice/videoContent 等表单字段
+    → ApiService.generateAiContent("video_title", context)
+    → 解析返回文本（换行分隔的 5 个标题）
+    → AlertDialog 显示列表
+    → 用户点击选中 → setText 填入标题 EditText
+
+  AI生成卖点流程：
+    点击按钮 → 同上收集商品信息
+    → ApiService.generateAiContent("product_selling_points", context)
+    → 弹窗展示文本 + "复制"按钮
+    → ClipboardManager 复制到系统剪贴板
+
+  按钮可见性控制：
+    onCreate 时异步调用 ApiService.isAiConfigured()：
+      返回 true  → VISIBLE（显示按钮）
+      返回 false → GONE（隐藏按钮，避免点了报错）
+      请求失败  → GONE（网络异常时保守隐藏）
+
+  ProductDetailBottomSheetFragment 中的 AI 按钮：
+    "AI生成推荐语"按钮 → generateAiContent("product_recommendation", ctx)
+    → 弹窗展示推荐文案 + "复制"按钮
+
+
+================================================================================
+Part 7：Android UI 设计系统
+================================================================================
+
+7.1 为什么需要设计系统？
+
+  问题场景（UI 美化前）：
+    - 50+ 个 XML 布局文件中颜色全部硬编码（#1A1A1A, #333333, #999999...）
+    - 顶部栏高度在 40dp/48dp/56dp 之间跳，有的用 Toolbar 有的手写 LinearLayout
+    - 头像尺寸从 30dp 到 80dp 有 10 种不同值
+    - 输入框背景有的是 #F8F8F8，有的是 #F5F5F5，有的是 @android:color/white
+    - 要改一个主色需要逐文件查找替换，极易遗漏，且无法一键换主题
+
+  设计系统的作用（类比）：
+    就像乐高积木的标准化接口——所有积木块（组件）遵循统一的尺寸和连接方式，
+    你可以任意组合，但每个块的规格是固定的。改一块，所有使用它的地方同步变。
+
+
+7.2 Material Design 3 色彩体系
+
+  Google 的 Material Design 3（Material You）定义了完整的色彩角色：
+
+  色彩角色层级：
+    Primary（主色）       → 品牌标识色，按钮/选中态/关键元素
+    Secondary（辅色）     → 辅助强调色
+    Tertiary（第三色）    → 对比强调色
+    Error（错误色）       → 错误提示/删除按钮
+    Surface（表面色）     → 卡片/弹窗背景
+    Background（背景色）  → 页面底色
+    OnXxx（搭配色）       → 叠加在 Xxx 上的文字/图标颜色
+
+  本项目扩展后 33 色的组织方式（7 大类）：
+    Primary（4 色）  → primary / primary_dark / accent / purple_primary
+    Background（4 色）→ dark / light / surface / dark_surface
+    Text（4 色）     → primary_dark / primary_light / secondary / hint
+    Accent（7 色）   → gold / live_red / green_success / blue_info /
+                       orange_warning / price_red / orange_tag
+    Overlay（3 色）  → dark(60%) / medium(40%) / light(20%)
+    Semantic（2 色） → collect_gold / live_tag_bg
+    UI Elements（9 色）→ input_bg / input_stroke / card_white / tab_inactive /
+                         border_light / shadow_color / divider / black / white
+
+
+7.3 组件样式标准化
+
+  styles.xml 中的 10 种复用样式：
+
+    TopBar         — 所有页面顶部栏统一：56dp 高、黑底、居中垂直
+    TopBarTitle    — 标题文字：18sp 白色粗体
+    AvatarSmall    — 40dp（列表项、评论）
+    AvatarMedium   — 56dp（作者信息、聊天头像）
+    AvatarLarge    — 80dp（个人主页大图）
+    PriceText      — 品牌红 16sp 粗体（卡片上的价格）
+    PriceTextLarge — 品牌红 22sp 粗体（详情页大价格）
+    SectionTitle   — 深色 16sp 粗体（区块标题）
+    InputField     — 统一输入框：input_bg + 8dp 圆角 + 12dp 内边距 + 14sp
+    CardContainer  — 白底 + 2dp elevation
+    Divider        — 0.5dp 高 + divider 色
+    Badge          — 10sp 白字小标签
+
+  标准化后的规范：
+    - 顶部栏：56dp 高度 × @color/background_dark 背景 × 白色文字，覆盖 15 个页面
+    - 头像：40dp（小）/ 56dp（中）/ 80dp（大），覆盖 28 个布局文件
+    - 输入框：@color/input_bg + 8dp 圆角 + 12dp padding + 14sp，覆盖 6 个页面
+
+
+7.4 渐进式 UI 重构方法论
+
+  不要一次性大改全部文件（风险高，出了问题难定位），而是分阶段推进：
+
+  阶段 1 — 基础设施（0 风险）：
+    只改 colors.xml 和 styles.xml，不影响现有布局编译
+    → 验证：编译通过即可
+
+  阶段 2 — 组件标准化（低风险）：
+    逐页面改顶部栏高度/头像尺寸/输入框样式
+    → 验证：每改一个页面就 build + 截图对比
+
+  阶段 3 — 颜色批量迁移（中风险）：
+    按 Pattern 分批替换（每种颜色一次 replace_all）
+    → 验证：每批替换后编译 + grep 确认无遗漏
+
+  阶段 4 — 细节打磨（低风险）：
+    elevation/分割线/间距微调
+    → 验证：安装到模拟器浏览所有页面
+
+  关键安全原则：
+    1. 先定义后引用（先扩展 colors.xml，再替换布局文件）
+    2. 保留语义色（#FF3B30 直播红 ≠ #E63946 品牌红）
+    3. 每 Phase 可独立回退（Git commit 每个 Phase 完成后）
+
+
+7.5 颜色迁移实战：从硬编码到资源引用
+
+  迁移前状态示例（fragment_profile.xml 片段）：
+    <LinearLayout
+        android:background="#1A1A1A"    ← 硬编码深色背景
+        android:paddingTop="40dp">
+
+        <TextView
+            android:textColor="#FFFFFF" ← 硬编码白色文字
+            android:textSize="18sp" />
+
+  迁移后：
+    <LinearLayout
+        android:background="@color/background_dark"  ← 语义引用
+        android:paddingTop="24dp">                   ← 适配状态栏
+
+        <TextView
+            android:textColor="@color/text_primary_dark" ← 语义引用
+            android:textSize="18sp"
+            style="@style/TopBarTitle" />               ← 复用样式
+
+  迁移效果：
+    - colors.xml 成为"单一真相源"（Single Source of Truth）
+    - 支持一键换肤：改 primary 值 → 全局按钮/价格/关注色同步变化
+    - 代码可读性提升：@color/text_primary_dark 比 #FFFFFF 更能表达意图
+
+
+================================================================================
+Part 8：3天冲刺时间表
 ================================================================================
 
 ═══════════════════════════════════════════════════════
@@ -1146,30 +1410,56 @@ Part 5：2天冲刺时间表
     □ 11:10-12:00 读 Part 3（架构 + 数据流 + 模块速览）
                   重点看直播和运营分析的新模块
 
-  下午（13:00-17:00）— Part 4：答辩模拟
-    □ 13:00-14:30 遮住答案，依次回答 21 个问题
+  下午（13:00-17:00）— Part 4 + Part 5：答辩模拟
+    □ 13:00-14:30 遮住答案，依次回答 24 个问题
                   答不出来的做标记，再看答案
     □ 14:30-15:00 重点复习标记过的问题
-                  直播相关（Q7-Q8b）和实战坑（Q17-Q20）是高频考题
+                  直播（Q7-Q8b）、实战坑（Q17-Q20）、AIGC（Q22）、UI（Q23-Q24）
     □ 15:00-16:00 模拟答辩：找一个人（或自己录音）提问，
                   你对着代码和架构图讲
     □ 16:00-17:00 查漏补缺：
-                  - 过一遍 API 速查表（确认每个接口的用途）
-                  - 打开关键文件看一眼：
-                    AnchorLiveActivity.java（直播推流核心）
-                    stats.ts（运营分析数据来源）
-                    AnalyticsDashboardActivity.java（图表展示）
+                  - 过一遍 API 速查表（确认每个接口的用途，特别是 /api/ai/generate）
+                  - 打开关键文件看一眼
+
+═══════════════════════════════════════════════════════
+  第 3 天 —— 学 AIGC + UI 设计系统 + 综合复习
+═══════════════════════════════════════════════════════
+
+  上午（9:00-12:00）— Part 6 + Part 7
+    □ 9:00-10:15  读 Part 6（AIGC 与 AI 集成）
+                  重点：DeepSeek API 调用链 + 5 种 Prompt 模板设计
+                  打开：backend/src/services/ai.service.ts
+                        backend/src/routes/ai.ts
+                        VideoEditActivity.java（AI 按钮部分）
+    □ 10:15-10:30 休息
+    □ 10:30-12:00 读 Part 7（UI 设计系统）
+                  重点：33 色体系 + 10 种组件样式 + 批量迁移方法论
+                  打开：app/src/main/res/values/colors.xml
+                        app/src/main/res/values/styles.xml
+
+  下午（13:00-16:00）— 综合复习
+    □ 13:00-14:00 快速重读 Q22-Q24（AIGC + UI 相关问题）
+    □ 14:00-15:00 完整模拟答辩：24 个问题随机抽查
+    □ 15:00-16:00 打开关键文件浏览：
+                  - colors.xml（33 色定义）
+                  - styles.xml（10 种样式）
+                  - ai.service.ts（5 个 Prompt 模板）
+                  - VideoEditActivity.java（AI 按钮交互）
+                  - AnchorLiveActivity.java（直播推流核心）
+                  - VideoViewHolder.java（视频播放核心）
+                  - stats.ts（运营分析数据计算）
 
 ═══════════════════════════════════════════════════════
   答辩当天早上
 ═══════════════════════════════════════════════════════
-    □ 快速过一遍 Part 4 的 21 个问题（重点：Q7-Q8b 直播, Q17-Q19 实战坑）
+    □ 快速过一遍 Part 4 和 Part 5 的 24 个问题
+      （重点：Q7-Q8b 直播, Q17-Q19 实战坑, Q22 AIGC, Q23-Q24 UI 设计）
     □ 打开项目代码看一眼关键位置：
         - AnchorLiveActivity.java（直播推流核心，tryStartStreaming 权限控制）
         - VideoViewHolder.java（视频播放核心）
-        - ApiService.java（网络请求）
+        - backend/src/services/ai.service.ts（AIGC Prompt 模板）
+        - app/src/main/res/values/colors.xml（33 色体系）
         - backend/src/routes/stats.ts（运营分析数据计算）
-        - backend/src/mediaServer.ts（RTMP 服务器）
     □ 深呼吸，自信去答辩
 
 
@@ -1191,12 +1481,14 @@ Part 5：2天冲刺时间表
   1. 看代码比看文档更能理解——文档读到不懂的地方，直接打开对应的
      源代码文件看一下，立刻能明白"原来代码就是这样写的"。
      推荐对照阅读：
-       学习路线 Part 2.2（Activity）        → 打开 MainActivity.java
-       学习路线 Part 2.3（OkHttp）           → 打开 ApiService.java
-       学习路线 Part 2.4（ExoPlayer）        → 打开 VideoViewHolder.java
-       学习路线 Part 2.5b（直播推流）         → 打开 AnchorLiveActivity.java
-       学习路线 Part 2.6（JWT）             → 打开 backend/src/middleware/auth.ts
-       学习路线 Q18（运营分析）              → 打开 backend/src/routes/stats.ts
+       学习路线 Part 2.2（Activity）             → 打开 MainActivity.java
+       学习路线 Part 2.3（OkHttp）               → 打开 ApiService.java
+       学习路线 Part 2.4（ExoPlayer）            → 打开 VideoViewHolder.java
+       学习路线 Part 2.5b（直播推流）             → 打开 AnchorLiveActivity.java
+       学习路线 Part 2.6（JWT）                 → 打开 backend/src/middleware/auth.ts
+       学习路线 Q18（运营分析）                  → 打开 backend/src/routes/stats.ts
+       学习路线 Part 6（AIGC）                  → 打开 backend/src/services/ai.service.ts
+       学习路线 Part 7（UI 设计系统）             → 打开 colors.xml + styles.xml
 
   2. 用"给别人讲课"的方式复习——假装你在给一个完全不懂技术的同学
      讲这个项目，用最直白的话。如果你能讲清楚，说明你真懂了。
@@ -1205,17 +1497,20 @@ Part 5：2天冲刺时间表
      手写记忆效果远好于看文字。
 
   4. 不懂的词别跳过——看到 HTTP、JWT、REST、WebSocket、RTMP、
-     H.264 这些词不懂，立刻回头查 Part 1 或 Part 2 中的解释。
+     H.264、AIGC、DeepSeek、Material Design 这些词不懂，
+     立刻回头查 Part 1 或 Part 2 或 Part 6/7 中的解释。
      这些都是答辩老师会问的。
 
   5. 少就是多——不要贪多。Part 1 + Part 2（尤其是 2.5b 直播推流）
-     + Part 4 的 21 个问题是核心。Part 3 是串联全文的桥梁。
-     后台管理（React）部分按早期原型/历史残留处理，答辩主线放在 Android 客户端内的商家/运营能力。
+     + Part 4 的 24 个问题是核心。Part 3 是串联全文的桥梁。
+     Part 6（AIGC）和 Part 7（UI 设计系统）是新增亮点，答辩加分的利器。
+     后台管理（React）部分不是答辩重点，简单了解就行。
 
   6. 配套文档：
      - `答辩准备指南.txt` → 20 分钟速成版，适合临时抱佛脚
-     - `项目问题与解决方案汇总.txt` → 39 个问题 的详细记录，适合查具体问题
-     - 本文件 → 系统学习，适合答辩前 2 天开始看
+     - `项目问题与解决方案汇总.txt` → 45 个问题的详细记录，适合查具体问题
+     - `StreamShop答辩知识点全解.txt` → 全面技术参考，适合深度学习
+     - 本文件 → 系统学习，适合答辩前 3 天开始看
 
 ================================================================================
                            — 全文完 —

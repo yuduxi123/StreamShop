@@ -587,7 +587,7 @@ public class AnchorLiveActivity extends AppCompatActivity implements ConnectChec
                 }
             }
         } catch (Exception ignored) {}
-        return "172.20.10.3";
+        return "10.17.24.7";
     }
 
     @Override
