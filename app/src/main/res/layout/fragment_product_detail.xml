@@ -50,7 +50,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp"
             android:text="¥0"
             android:paddingTop="4dp" />
@@ -73,7 +73,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:textColor="#666666"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp"
         android:lineSpacingExtra="4dp"
         android:text="商品描述" />
@@ -91,7 +91,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:text="已售 0 件" />
 
@@ -99,7 +99,7 @@
             android:id="@+id/product_stock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:text="库存 0 件" />
     </LinearLayout>
@@ -124,7 +124,7 @@
             android:layout_weight="1"
             android:text="选择优惠券"
             android:textSize="13sp"
-            android:textColor="#666666" />
+            android:textColor="@color/text_secondary" />
 
         <TextView
             android:id="@+id/product_coupon_discount"

@@ -50,7 +50,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="11sp"
             android:text="已售 0" />
     </LinearLayout>

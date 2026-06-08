@@ -27,7 +27,7 @@
             android:id="@+id/search_user_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary_light"
             android:textSize="15sp" />
 
         <TextView
@@ -35,7 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="#999999"
+            android:textColor="@color/text_secondary"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -49,6 +49,6 @@
         android:paddingHorizontal="14dp"
         android:paddingVertical="5dp"
         android:text="关注"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary_dark"
         android:textSize="12sp" />
 </LinearLayout>

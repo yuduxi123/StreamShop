@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="#1A1A1A"
+        android:layout_height="56dp"
+        android:background="@color/background_dark"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="创建直播间"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -39,7 +39,7 @@
             android:gravity="center"
             android:paddingHorizontal="16dp"
             android:text="保存"
-            android:textColor="#007AFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="15sp"
             android:clickable="true"
             android:focusable="true" />
@@ -61,7 +61,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="直播间标题"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary_light"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -81,7 +81,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="封面图片"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary_light"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -114,7 +114,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textColor="#999999"
+                android:textColor="@color/text_secondary"
                 android:textSize="11sp"
                 android:visibility="gone" />
 
@@ -124,7 +124,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="直播商品"
-                android:textColor="#333333"
+                android:textColor="@color/text_primary_light"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -208,7 +208,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="未选择图片"
-                android:textColor="#999999"
+                android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
 
         </LinearLayout>

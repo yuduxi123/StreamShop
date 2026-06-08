@@ -20,7 +20,7 @@
             android:background="#FF9500"
             android:gravity="center"
             android:text="编辑"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="13sp" />
 
         <TextView
@@ -30,7 +30,7 @@
             android:background="#FF3B30"
             android:gravity="center"
             android:text="删除"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -83,8 +83,8 @@
                     android:textSize="12sp"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="2dp"
-                    android:background="#F5F5F5"
-                    android:textColor="#999999" />
+                    android:background="@color/background_light"
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/my_video_views"
@@ -92,7 +92,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textSize="12sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/my_video_likes"
@@ -100,7 +100,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textSize="12sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/text_secondary" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

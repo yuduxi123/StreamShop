@@ -37,7 +37,7 @@
             android:id="@+id/anchor_top_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="48dp"
+            android:minHeight="56dp"
             android:layout_gravity="top"
             android:tag="status_bar_inset"
             android:orientation="horizontal"
@@ -57,8 +57,8 @@
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/anchor_self_avatar"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:src="@drawable/ic_avatar_placeholder"
                     android:scaleType="centerCrop"
                     app:shapeAppearanceOverlay="@style/CircleImageView" />
@@ -82,7 +82,7 @@
                 android:layout_height="28dp"
                 android:gravity="center"
                 android:paddingHorizontal="8dp"
-                android:textColor="#FF9500"
+                android:textColor="@color/orange_warning"
                 android:textSize="11sp"
                 android:text="热度: 0" />
 
@@ -256,7 +256,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary_dark"
                     android:textSize="13sp"
                     android:text="正在准备摄像头..." />
             </LinearLayout>

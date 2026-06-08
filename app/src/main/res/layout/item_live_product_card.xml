@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:scaleType="centerCrop"
-            android:background="#f5f5f5" />
+            android:background="@color/background_light" />
 
         <TextView
             android:id="@+id/live_product_price"

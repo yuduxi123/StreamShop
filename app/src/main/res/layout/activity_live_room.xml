@@ -51,7 +51,7 @@
             android:id="@+id/live_top_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="48dp"
+            android:minHeight="56dp"
             android:layout_gravity="top"
             android:tag="status_bar_inset"
             android:orientation="horizontal"
@@ -71,8 +71,8 @@
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/live_anchor_avatar"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:src="@drawable/ic_avatar_placeholder"
                     android:scaleType="centerCrop"
                     app:shapeAppearanceOverlay="@style/CircleImageView" />
@@ -166,7 +166,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_marginBottom="4dp"
-                android:textColor="#FF9500"
+                android:textColor="@color/orange_warning"
                 android:textSize="12sp"
                 android:text="热度: 0" />
 

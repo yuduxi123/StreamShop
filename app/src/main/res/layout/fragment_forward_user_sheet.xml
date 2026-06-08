@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1A1A1A">
+    android:background="@color/background_dark">
 
     <!-- Header -->
     <TextView
@@ -12,7 +12,7 @@
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
         android:text="转发给"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary_dark"
         android:textSize="16sp"
         android:textStyle="bold" />
 
@@ -37,7 +37,7 @@
         android:layout_weight="1"
         android:gravity="center"
         android:text="还没有关注任何人"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp"
         android:visibility="gone" />
 </LinearLayout>

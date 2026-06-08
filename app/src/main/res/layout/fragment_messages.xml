@@ -2,14 +2,14 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="@color/background_light"
     android:orientation="vertical">
 
     <!-- Top bar -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         android:paddingHorizontal="12dp">
 
         <TextView
@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="消息"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -60,7 +60,7 @@
         android:layout_height="200dp"
         android:gravity="center"
         android:text="暂无消息"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:textSize="15sp"
         android:visibility="gone" />
 </LinearLayout>

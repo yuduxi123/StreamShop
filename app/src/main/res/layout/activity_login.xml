@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1A1A1A">
+    android:background="@color/background_dark">
 
     <!-- Branding header area -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:background="#1A1A1A">
+        android:background="@color/background_dark">
 
         <!-- Back button (id=toolbar for backward compat) -->
         <ImageView
@@ -42,7 +42,7 @@
                 android:layout_marginTop="12dp"
                 android:text="StreamShop"
                 android:textSize="28sp"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary_dark"
                 android:textStyle="bold"
                 android:letterSpacing="0.05" />
 
@@ -52,7 +52,7 @@
                 android:layout_marginTop="6dp"
                 android:text="边看边买，发现好物"
                 android:textSize="13sp"
-                android:textColor="#999999" />
+                android:textColor="@color/text_secondary" />
         </LinearLayout>
     </FrameLayout>
 
@@ -71,10 +71,10 @@
             android:layout_height="48dp"
             android:layout_marginTop="12dp"
             android:background="@android:color/transparent"
-            app:tabIndicatorColor="#FF3B30"
+            app:tabIndicatorColor="@color/primary"
             app:tabIndicatorHeight="2dp"
-            app:tabSelectedTextColor="#333333"
-            app:tabTextColor="#999999"
+            app:tabSelectedTextColor="@color/text_primary_light"
+            app:tabTextColor="@color/text_secondary"
             app:tabMode="fixed"
             app:tabGravity="fill">
 

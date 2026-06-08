@@ -4,14 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="56dp"
         android:gravity="center_vertical"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         android:paddingHorizontal="4dp">
 
         <ImageButton
@@ -29,7 +29,7 @@
             android:layout_weight="1"
             android:text="我的收藏"
             android:textSize="18sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -39,17 +39,17 @@
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:background="@android:color/white"
-        app:tabIndicatorColor="#FF3B30"
+        app:tabIndicatorColor="@color/primary"
         app:tabIndicatorFullWidth="false"
-        app:tabSelectedTextColor="#FF3B30"
-        app:tabTextColor="#666666"
+        app:tabSelectedTextColor="@color/primary"
+        app:tabTextColor="@color/text_secondary"
         app:tabMode="fixed"
         app:tabGravity="fill" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE" />
+        android:background="@color/divider" />
 
     <!-- Swipeable pages -->
     <androidx.viewpager2.widget.ViewPager2

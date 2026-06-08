@@ -3,14 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center_vertical"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         android:paddingHorizontal="4dp">
 
         <ImageButton
@@ -29,7 +29,7 @@
             android:layout_weight="1"
             android:text="新建视频"
             android:textSize="18sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textStyle="bold" />
 
         <Button
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:text="视频标题 *"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="4dp" />
 
             <EditText
@@ -90,7 +90,7 @@
                 android:layout_height="wrap_content"
                 android:text="视频文件 *"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="4dp" />
 
@@ -117,7 +117,7 @@
                     android:layout_marginTop="8dp"
                     android:text="未选择"
                     android:textSize="12sp"
-                    android:textColor="#999999"
+                    android:textColor="@color/text_secondary"
                     android:visibility="gone" />
 
                 <ProgressBar
@@ -135,7 +135,7 @@
                 android:layout_height="wrap_content"
                 android:text="封面图片"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="4dp" />
 
@@ -179,7 +179,7 @@
                 android:layout_height="wrap_content"
                 android:text="关联商品"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="4dp" />
 
@@ -213,7 +213,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
                     android:layout_marginTop="8dp"
-                    android:background="#F5F5F5"
+                    android:background="@color/background_light"
                     android:paddingHorizontal="12dp"
                     android:textSize="14sp"
                     android:hint="商品名称"
@@ -224,7 +224,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
                     android:layout_marginTop="4dp"
-                    android:background="#F5F5F5"
+                    android:background="@color/background_light"
                     android:paddingHorizontal="12dp"
                     android:textSize="14sp"
                     android:hint="价格 (¥)"
@@ -236,7 +236,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
                     android:layout_marginTop="4dp"
-                    android:background="#F5F5F5"
+                    android:background="@color/background_light"
                     android:paddingHorizontal="12dp"
                     android:textSize="14sp"
                     android:hint="原价/划线价（选填）"
@@ -248,7 +248,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
                     android:layout_marginTop="4dp"
-                    android:background="#F5F5F5"
+                    android:background="@color/background_light"
                     android:paddingHorizontal="12dp"
                     android:textSize="14sp"
                     android:hint="库存（件数）"
@@ -261,7 +261,7 @@
                     android:layout_marginTop="4dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:background="#F5F5F5"
+                    android:background="@color/background_light"
                     android:paddingHorizontal="12dp">
 
                     <TextView
@@ -270,7 +270,7 @@
                         android:layout_gravity="center_vertical"
                         android:text="绑定时间点（分:秒）"
                         android:textSize="12sp"
-                        android:textColor="#999999"
+                        android:textColor="@color/text_secondary"
                         android:layout_marginEnd="8dp" />
 
                     <EditText
@@ -345,7 +345,7 @@
                 android:layout_height="wrap_content"
                 android:text="标签（逗号分隔）"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="4dp" />
 
@@ -364,7 +364,7 @@
                 android:layout_height="wrap_content"
                 android:text="状态"
                 android:textSize="13sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="4dp" />
 

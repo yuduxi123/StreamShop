@@ -15,4 +15,84 @@
         <item name="android:textStyle">bold</item>
         <item name="textAllCaps">false</item>
     </style>
+
+    <!-- Top bar: 56dp height, dark background, white text -->
+    <style name="TopBar">
+        <item name="android:background">@color/background_dark</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">16dp</item>
+    </style>
+
+    <!-- Top bar title -->
+    <style name="TopBarTitle">
+        <item name="android:textColor">@color/text_primary_dark</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Avatar size tiers (use with ShapeableImageView + CircleImageView overlay) -->
+    <style name="AvatarSmall">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+    </style>
+    <style name="AvatarMedium">
+        <item name="android:layout_width">56dp</item>
+        <item name="android:layout_height">56dp</item>
+    </style>
+    <style name="AvatarLarge">
+        <item name="android:layout_width">80dp</item>
+        <item name="android:layout_height">80dp</item>
+    </style>
+
+    <!-- Price text -->
+    <style name="PriceText">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Price text (large, for detail pages) -->
+    <style name="PriceTextLarge">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Section title -->
+    <style name="SectionTitle">
+        <item name="android:textColor">@color/text_primary_light</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
+
+    <!-- Input field -->
+    <style name="InputField">
+        <item name="android:background">@drawable/bg_edit_text</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_primary_light</item>
+    </style>
+
+    <!-- Card container (use with MaterialCardView or as base) -->
+    <style name="CardContainer">
+        <item name="android:background">@color/surface</item>
+        <item name="android:elevation">2dp</item>
+    </style>
+
+    <!-- Section divider -->
+    <style name="Divider">
+        <item name="android:background">@color/divider</item>
+        <item name="android:layout_height">0.5dp</item>
+    </style>
+
+    <!-- Badge / tag -->
+    <style name="Badge">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:paddingHorizontal">6dp</item>
+        <item name="android:paddingVertical">2dp</item>
+        <item name="android:gravity">center</item>
+    </style>
 </resources>

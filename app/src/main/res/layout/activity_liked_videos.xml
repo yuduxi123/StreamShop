@@ -3,14 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@color/background_light">
 
     <!-- Top bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="56dp"
         android:gravity="center_vertical"
-        android:background="#1A1A1A"
+        android:background="@color/background_dark"
         android:paddingHorizontal="4dp">
 
         <ImageButton
@@ -28,7 +28,7 @@
             android:layout_weight="1"
             android:text="我的点赞"
             android:textSize="18sp"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary_dark"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -48,7 +48,7 @@
         android:gravity="center"
         android:text="暂无点赞视频"
         android:textSize="15sp"
-        android:textColor="#999999"
+        android:textColor="@color/text_secondary"
         android:visibility="gone" />
 
 </LinearLayout>
