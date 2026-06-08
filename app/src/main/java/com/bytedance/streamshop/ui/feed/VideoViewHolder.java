@@ -232,6 +232,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
     public void play() {
         if (player != null && video != null) {
+            restartFromBeginningIfNeeded();
             isPlaying = true;
             player.setPlayWhenReady(true);
             if (danmakuView != null) danmakuView.play();
@@ -365,6 +366,7 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
                             }
                         }
                     } else {
+                        markPlaybackEnded();
                         if (playbackModeListener != null) {
                             playbackModeListener.onVideoEnded();
                         }
@@ -383,6 +385,32 @@ public class VideoViewHolder extends RecyclerView.ViewHolder {
 
         player.setPlayWhenReady(false);
         isPlaying = false;
+    }
+
+    private void restartFromBeginningIfNeeded() {
+        if (player == null) return;
+        if (!VideoReplayPolicy.shouldRestartFromBeginning(
+                player.getPlaybackState(),
+                player.getCurrentPosition(),
+                player.getDuration())) {
+            return;
+        }
+        player.seekTo(0);
+        pendingSeekMs = 0;
+        if (seekBar != null) seekBar.setProgress(0);
+        if (currentTimeText != null) currentTimeText.setText(formatTime(0));
+        if (danmakuView != null) danmakuView.setPlaybackPosition(0);
+    }
+
+    private void markPlaybackEnded() {
+        isPlaying = false;
+        stopProgressUpdates();
+        if (player != null) {
+            player.setPlayWhenReady(false);
+        }
+        if (danmakuView != null) {
+            danmakuView.pause();
+        }
     }
 
     private void prepareAndPlay(String url) {

@@ -23,11 +23,6 @@ router.post('/generate', authMiddleware, async (req: AuthRequest, res: Response)
       return;
     }
 
-    if (!isConfigured()) {
-      res.status(503).json({ error: 'AI service is not configured. Set AI_API_KEY in .env' });
-      return;
-    }
-
     const result = await generateText({ type, context });
     res.json(result);
   } catch (err: any) {

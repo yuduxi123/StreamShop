@@ -1,6 +1,8 @@
 # StreamShop — 直播电商 App
 
-一个完整的直播电商应用，由 Android 客户端、Node.js 后端、React 管理后台三部分组成。
+一个直播电商 demo 应用，核心由 Android 客户端和 Node.js 后端组成。用户在同一个 Android 客户端内既可以作为普通消费者刷视频、看直播、购物下单，也可以作为创作者/商家发布视频、管理商品、开播和查看运营数据。
+
+`admin/` 目录保留了早期 React Web 管理端原型，但当前不作为核心演示路径；收尾和答辩时，商家/运营能力主要按 Android 客户端内的创作者、主播和运营分析模块讲解。
 
 ## 项目结构
 
@@ -8,7 +10,7 @@
 StreamShop/
 ├── app/                    # Android 客户端 (Java, Gradle)
 ├── backend/                # 后端 API 服务 (Node.js, Express, TypeScript)
-├── admin/                  # 管理后台 (React, Vite, TypeScript)
+├── admin/                  # 早期 Web 管理端原型 (React, Vite, TypeScript)，非核心演示路径
 └── project.txt            # 项目需求文档
 ```
 
@@ -43,17 +45,14 @@ StreamShop/
 | 上传 | `POST /api/upload` (multer 文件上传) | 已完成 |
 | 推荐 | `GET /api/recommend` (基于标签/类目) | 已完成 |
 
-### 管理后台
+### 商家/运营能力
 
-| 页面 | 功能 | 状态 |
+| 入口 | 功能 | 状态 |
 |------|------|------|
-| 登录 | 管理员登录 | 已完成 |
-| 仪表盘 | 数据概览看板 | 已完成 |
-| 视频管理 | 列表/新建/编辑/删除/上下架 | 已完成 |
-| 商品管理 | 列表/新建/编辑/删除/上下架 | 已完成 |
-| 订单管理 | 订单列表/详情 | 已完成 |
-| 直播间 | 创建/配置直播间、设置讲解商品 | 已完成 |
-| 优惠券 | 优惠券管理 | 已完成 |
+| Android 个人中心 | 我的视频管理、新建/编辑/删除作品、头像上传裁剪 | 已完成 |
+| Android 直播模块 | 我的直播间、创建/配置直播间、主播开播、讲解商品 | 已完成 |
+| Android 运营分析 | 播放/点赞/评论 KPI、视频表现、商品转化和 GMV 排行 | 已完成 |
+| React Web 原型 | 早期管理端页面，当前 dashboard 与后端统计字段未完全对齐 | 历史残留，不作为核心演示路径 |
 
 ## 技术栈
 
@@ -61,7 +60,7 @@ StreamShop/
 |-----|------|
 | Android | Java 11, Gradle Kotlin DSL, ExoPlayer (Media3), Glide, OkHttp, Gson, Android-Image-Cropper |
 | 后端 | Node.js, Express, TypeScript, JWT (jsonwebtoken), bcryptjs, WebSocket (ws), multer |
-| 管理后台 | React 19, TypeScript, Vite, React Router |
+| Web 管理原型 | React 19, TypeScript, Vite, React Router（历史残留，非核心演示路径） |
 | 数据存储 | 本地 JSON 文件持久化 + 可选 MongoDB Atlas 云端同步 |
 
 ## 快速开始
@@ -83,12 +82,12 @@ MONGODB_URI=你的 MongoDB Atlas 连接串
 
 配置后启动后端会自动连接 `streamshop` 数据库：云端已有集合时会先拉取到本地 JSON；云端为空但本地 JSON 有数据时会把本地数据推到云端。后续通过接口新增、修改、删除的数据也会同步到 MongoDB。
 
-### 2. 启动管理后台
+### 2. 启动 Web 管理原型（可选）
 
 ```bash
 cd admin
 npm install
-npm run dev       # 启动 Vite 开发服务器
+npm run dev       # 启动 Vite 开发服务器；该端当前仅作为早期原型参考
 ```
 
 ### 3. 运行 Android App
@@ -111,4 +110,4 @@ npm run dev       # 启动 Vite 开发服务器
 3. 直播模块：直播间列表、WebSocket 实时通信、弹幕系统
 4. 订单系统：下单流程、模拟支付、订单管理
 5. 互动功能：点赞、评论、收藏
-6. 个人中心 + 运营后台：视频管理、头像上传裁剪、管理后台全部页面、优惠券/秒杀
+6. 个人中心 + 客户端运营能力：视频管理、头像上传裁剪、主播开播、直播商品管理、运营分析、优惠券/秒杀

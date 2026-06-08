@@ -1,4 +1,10 @@
-# React + TypeScript + Vite
+# StreamShop React Admin Prototype
+
+This directory is an early React Web admin prototype retained for reference. The current project presentation and core demo path use the Android client for both consumer and merchant/creator operations: publishing videos, managing products, starting live streams, managing live products, and viewing analytics.
+
+The dashboard page is not currently treated as a stable demo surface because its frontend data contract is not fully aligned with the backend stats response. Keep this app as a historical prototype/extension unless the API contract is explicitly repaired.
+
+## Original Vite Notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

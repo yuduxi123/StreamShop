@@ -16,7 +16,7 @@ import android.util.Log;
 public class ApiClient {
     // 雷电模拟器不支持 10.0.2.2，用电脑局域网 IP
     // 如果换了 WiFi 导致 IP 变化，需要同步修改这里
-    private static final String BASE_URL = "http://10.17.24.7:3000/api/";
+    private static final String BASE_URL = "http://172.20.10.3:3000/api/";
     private static ApiClient instance;
     private final OkHttpClient httpClient;
     private final Gson gson;
@@ -143,9 +143,9 @@ public class ApiClient {
                         Thread.sleep(1000L * i); // 1s, 2s backoff
                     }
                     response = chain.proceed(request);
-                    if (response.isSuccessful()) return response;
-                    // Only retry on server errors (5xx)
-                    if (response.code() < 500) return response;
+                    if (!ApiRetryPolicy.shouldRetryResponse(response.code(), i, MAX_RETRIES)) {
+                        return response;
+                    }
                     response.close();
                 } catch (IOException e) {
                     lastEx = e;

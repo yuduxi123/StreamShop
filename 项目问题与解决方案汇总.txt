@@ -1377,8 +1377,8 @@ Tab 间通信:
    npm run seed    # 初始化种子数据（首次或需要重置数据时）
    npm run dev     # 启动 Express + MediaServer (端口 3000 + RTMP 1935)
 
-2. 启动管理后台（可选）:
-   cd D:\AndriodProjects\StreamShop\admin-web
+2. 启动 React admin 原型（可选，历史残留，非核心演示路径）:
+   cd D:\AndriodProjects\StreamShop\admin
    npm run dev
 
 3. 编译安装 Android App:

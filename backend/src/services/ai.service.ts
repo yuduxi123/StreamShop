@@ -39,10 +39,51 @@ export interface GenerateResponse {
   type: string;
 }
 
+export function generateFallbackText(req: GenerateRequest): GenerateResponse {
+  const ctx = req.context || {};
+  const productName = String(ctx.productName || '这款商品');
+  const description = String(ctx.productDescription || '品质出众');
+  const price = String(ctx.productPrice || '?');
+  const category = String(ctx.productCategory || '好物');
+  const originalPrice = String(ctx.originalPrice || '');
+
+  const templates: Record<string, string> = {
+    video_title: [
+      `${productName}闭眼入不踩雷`,
+      `${category}好物推荐`,
+      `${productName}实测真香`,
+      `预算内的高质感选择`,
+      `今天就看这款${category}`,
+    ].join('\n'),
+    product_selling_points: [
+      `${productName}主打${description}，日常使用和送礼都合适`,
+      `到手价约¥${price}，兼顾质感和性价比`,
+      `细节设计更贴近真实使用场景，减少选择成本`,
+      `适合想要快速提升体验的用户，实用不花哨`,
+      `库存有限时更适合尽早下单，避免错过优惠`,
+    ].join('\n'),
+    product_description:
+      `${productName}是一款适合短视频带货场景推荐的${category}商品，特点是${description}。当前价格约¥${price}，适合追求实用、质感和性价比的用户。`,
+    live_commentary:
+      `来看这款${productName}，它的核心优势是${description}。现在直播间价格约¥${price}${originalPrice ? `，原价¥${originalPrice}` : ''}，适合想要入手${category}的朋友，喜欢的话可以先加购再慢慢看细节。`,
+    product_recommendation:
+      `${productName}真的很适合近期入手，${description}，日常搭配和使用都不挑场景。现在价格约¥${price}，属于${category}里比较有性价比的一款，喜欢实用好物的可以重点看看。`,
+  };
+
+  return {
+    text: templates[req.type] || `${productName}主打${description}，当前价格约¥${price}，适合正在挑选${category}的用户参考。`,
+    type: req.type,
+  };
+}
+
 export async function generateText(req: GenerateRequest): Promise<GenerateResponse> {
   const promptFn = PROMPTS[req.type];
   if (!promptFn) {
     throw new Error(`Unsupported generation type: ${req.type}`);
+  }
+
+  if (!isConfigured()) {
+    return generateFallbackText(req);
   }
 
   const userMessage = promptFn(req.context);
