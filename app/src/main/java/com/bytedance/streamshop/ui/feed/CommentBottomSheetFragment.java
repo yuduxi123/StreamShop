@@ -155,12 +155,19 @@ public class CommentBottomSheetFragment extends BottomSheetDialogFragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Comment comment = comments.get(position);
             if (comment.getUser() != null) {
-                holder.username.setText(comment.getUser().getUsername());
+                String username = comment.getUser().getUsername();
+                holder.username.setText(username != null && !username.isEmpty() ? username : "用户");
                 Glide.with(holder.itemView)
                         .load(comment.getUser().getAvatarUrl())
                         .circleCrop()
+                        .placeholder(R.drawable.ic_avatar_placeholder)
+                        .error(R.drawable.ic_avatar_placeholder)
                         .skipMemoryCache(true)
                         .into(holder.avatar);
+            } else {
+                holder.username.setText("用户");
+                Glide.with(holder.itemView).clear(holder.avatar);
+                holder.avatar.setImageResource(R.drawable.ic_avatar_placeholder);
             }
             holder.content.setText(comment.getContent());
             holder.time.setText(formatTime(comment.getCreatedAt()));

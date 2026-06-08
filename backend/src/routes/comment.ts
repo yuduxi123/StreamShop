@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { StorageService } from '../services/storage.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { enrichComment } from './comment.logic';
 
 interface CommentData {
   id: string;
@@ -51,11 +52,8 @@ router.get('/', (req: Request, res: Response) => {
   const start = (page - 1) * limit;
   const paged = comments.slice(start, start + limit);
 
-  const enriched = paged.map(comment => {
-    const users = userStorage.query(u => u.id === comment.userId);
-    const user = users.length > 0 ? { id: users[0].id, username: users[0].username, avatarUrl: users[0].avatarUrl } : null;
-    return { ...comment, user };
-  });
+  const users = userStorage.findAll();
+  const enriched = paged.map(comment => enrichComment(comment, users));
 
   res.json({ data: enriched, total, page, limit });
 });
@@ -94,7 +92,7 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     }
   }
 
-  res.status(201).json(comment);
+  res.status(201).json(enrichComment(comment, userStorage.findAll()));
 });
 
 // DELETE /api/comments/:id
