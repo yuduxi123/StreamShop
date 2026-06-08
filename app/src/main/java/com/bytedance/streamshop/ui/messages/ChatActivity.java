@@ -5,12 +5,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -178,9 +180,8 @@ public class ChatActivity extends AppCompatActivity {
         @Override
         public int getItemViewType(int position) {
             Map<String, Object> msg = messages.get(position);
-            String senderId = (String) msg.get("senderId");
             String type = (String) msg.get("type");
-            boolean isSent = currentUserId != null && currentUserId.equals(senderId);
+            boolean isSent = MessageDisplayPolicy.isSentByCurrentUser(currentUserId, msg.get("senderId"));
             if ("forward".equals(type)) {
                 return isSent ? VIEW_TYPE_SENT_FORWARD : VIEW_TYPE_RECEIVED_FORWARD;
             }
@@ -210,6 +211,8 @@ public class ChatActivity extends AppCompatActivity {
             Map<String, Object> msg = messages.get(pos);
             String type = (String) msg.get("type");
             if ("forward".equals(type)) {
+                h.setForwardAlignment(MessageDisplayPolicy.isSentByCurrentUser(
+                        currentUserId, msg.get("senderId")));
                 String title = (String) msg.get("videoTitle");
                 if (title == null) {
                     String content = (String) msg.get("content");
@@ -223,14 +226,16 @@ public class ChatActivity extends AppCompatActivity {
                             .centerCrop()
                             .into(h.forwardCover);
                 }
-                h.itemView.setOnClickListener(v -> {
+                View.OnClickListener openForwardListener = v -> {
                     String videoId = (String) msg.get("videoId");
                     if (videoId != null) {
                         Intent intent = new Intent(ChatActivity.this, ForwardedVideoActivity.class);
                         intent.putExtra("video_id", videoId);
                         startActivity(intent);
                     }
-                });
+                };
+                View clickTarget = h.forwardCard != null ? h.forwardCard : h.itemView;
+                clickTarget.setOnClickListener(openForwardListener);
             } else if ("order_remind".equals(type)) {
                 String content = (String) msg.get("content");
                 if (h.orderContent != null) h.orderContent.setText(content != null ? content : "");
@@ -265,6 +270,8 @@ public class ChatActivity extends AppCompatActivity {
             TextView content;
             TextView forwardTitle;
             ImageView forwardCover;
+            ViewGroup forwardContainer;
+            View forwardCard;
             TextView senderName;
             TextView orderContent;
             VH(View v) {
@@ -272,8 +279,16 @@ public class ChatActivity extends AppCompatActivity {
                 content = v.findViewById(R.id.msg_content);
                 forwardTitle = v.findViewById(R.id.msg_forward_title);
                 forwardCover = v.findViewById(R.id.msg_forward_cover);
+                forwardContainer = v.findViewById(R.id.msg_forward_container);
+                forwardCard = v.findViewById(R.id.msg_forward_card);
                 senderName = v.findViewById(R.id.msg_sender_name);
                 orderContent = v.findViewById(R.id.msg_order_content);
+            }
+
+            void setForwardAlignment(boolean sent) {
+                if (forwardContainer instanceof LinearLayout) {
+                    ((LinearLayout) forwardContainer).setGravity(sent ? Gravity.END : Gravity.START);
+                }
             }
         }
     }

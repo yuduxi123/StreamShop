@@ -1,40 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="240dp"
-    android:layout_height="160dp"
-    android:layout_margin="4dp"
-    android:clickable="true"
-    android:focusable="true"
-    android:background="@drawable/bg_message_forward">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/msg_forward_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="start"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="4dp">
 
-    <ImageView
-        android:id="@+id/msg_forward_cover"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop" />
+    <FrameLayout
+        android:id="@+id/msg_forward_card"
+        android:layout_width="240dp"
+        android:layout_height="160dp"
+        android:background="@drawable/bg_message_forward"
+        android:clickable="true"
+        android:focusable="true">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_gravity="bottom"
-        android:background="#80000000" />
+        <ImageView
+            android:id="@+id/msg_forward_cover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop" />
 
-    <TextView
-        android:id="@+id/msg_forward_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:padding="8dp"
-        android:textColor="@color/text_primary_dark"
-        android:textSize="12sp"
-        android:maxLines="1"
-        android:ellipsize="end" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_gravity="bottom"
+            android:background="#80000000" />
 
-    <ImageView
-        android:id="@+id/msg_forward_play"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_gravity="center"
-        android:src="@drawable/ic_play_indicator"
-        android:alpha="0.8" />
-</FrameLayout>
+        <TextView
+            android:id="@+id/msg_forward_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:padding="8dp"
+            android:textColor="@color/text_primary_dark"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/msg_forward_play"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:alpha="0.8"
+            android:src="@drawable/ic_play_indicator" />
+    </FrameLayout>
+</LinearLayout>
