@@ -1,6 +1,10 @@
-# StreamShop — 直播电商 App
+# StreamShop · 原创直播电商项目
 
-一个直播电商 demo 应用，核心由 Android 客户端和 Node.js 后端组成。用户在同一个 Android 客户端内既可以作为普通消费者刷视频、看直播、购物下单，也可以作为创作者/商家发布视频、管理商品、开播和查看运营数据。
+`Android / Java` · `Node.js / TypeScript` · `短视频与直播`
+
+[项目导航](https://github.com/yuduxi123) · [依赖与来源](ATTRIBUTION.md)
+
+由作者原创开发的直播电商 demo 应用，核心由 Android 客户端和 Node.js 后端组成。用户在同一个 Android 客户端内既可以作为普通消费者刷视频、看直播、购物下单，也可以作为创作者/商家发布视频、管理商品、开播和查看运营数据。
 
 `admin/` 目录保留了早期 React Web 管理端原型，但当前不作为核心演示路径；收尾和答辩时，商家/运营能力主要按 Android 客户端内的创作者、主播和运营分析模块讲解。
 
